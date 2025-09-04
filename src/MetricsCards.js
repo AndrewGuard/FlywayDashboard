@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Card, CardContent, Typography, Grid } from '@mui/material';
 
 const metrics = [
+  { label: 'Databases Deployed To', value: 12 }, // Replace 12 with real count from Flyway schema histories
   { label: 'Migrations', value: 42 },
   { label: 'Errors', value: 3 },
   { label: 'CDC Objects', value: 7 },

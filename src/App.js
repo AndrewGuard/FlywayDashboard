@@ -1,7 +1,13 @@
+
+import Box from '@mui/material/Box';
+import CssBaseline from '@mui/material/CssBaseline';
+import AppBar from '@mui/material/AppBar';
+import Toolbar from '@mui/material/Toolbar';
+import Typography from '@mui/material/Typography';
 import Sidebar from './Sidebar';
 import MetricsCards from './MetricsCards';
 import MetricsChart from './MetricsChart';
-import { Box, CssBaseline, Toolbar, AppBar, Typography, Container } from '@mui/material';
+import TopPlatformsWidgets from './TopPlatformsWidgets';
 
 function App() {
   return (
@@ -17,6 +23,7 @@ function App() {
       <Sidebar />
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <Toolbar />
+        <TopPlatformsWidgets />
         <MetricsCards />
         <Box sx={{ mt: 4 }}>
           <MetricsChart />
