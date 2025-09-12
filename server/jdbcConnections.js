@@ -3,6 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const router = express.Router();
 
+const { getFlywayHistory } = require('./flywayHistory');
+
 const configPath = path.join(__dirname, 'jdbc-connections.json');
 if (!fs.existsSync(configPath)) fs.writeFileSync(configPath, JSON.stringify([]));
 
@@ -23,3 +25,13 @@ router.post('/', (req, res) => {
 });
 
 module.exports = router;
+
+// Get Flyway migration history from all databases
+router.get('/history', async (req, res) => {
+  try {
+    const data = await getFlywayHistory();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});

@@ -8,6 +8,7 @@ import Sidebar from './Sidebar';
 import MetricsCards from './MetricsCards';
 import MetricsChart from './MetricsChart';
 import TopPlatformsWidgets from './TopPlatformsWidgets';
+import MigrationHistory from './MigrationHistory';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
         <Box sx={{ mt: 4 }}>
           <MetricsChart />
         </Box>
+        <MigrationHistory />
       </Box>
     </Box>
   );

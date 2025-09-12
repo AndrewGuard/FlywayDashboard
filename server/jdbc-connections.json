@@ -1,1 +1,5 @@
-[]
+[
+	"jdbc:sqlserver://localhost\\sqlexpress:1433;databaseName=northwind_test;encrypt=true;integratedSecurity=true;trustServerCertificate=true",
+	"jdbc:sqlserver://localhost\\sqlexpress:1433;databaseName=northwind_qa;encrypt=true;integratedSecurity=true;trustServerCertificate=true",
+	"jdbc:sqlserver://localhost\\sqlexpress:1433;databaseName=northwind_prod;encrypt=true;integratedSecurity=true;trustServerCertificate=true"
+]

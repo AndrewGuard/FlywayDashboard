@@ -11,9 +11,10 @@
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
+    "mssql": "^11.0.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "react-scripts": "5.0.1",
+    "react-scripts": "^5.0.1",
     "recharts": "^3.1.2",
     "web-vitals": "^2.1.4"
   },
@@ -40,5 +41,12 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@pmmmwh/react-refresh-webpack-plugin": "^0.6.1",
+    "html-webpack-plugin": "^5.6.4",
+    "source-map-loader": "^5.0.0",
+    "webpack": "^5.101.3",
+    "webpack-dev-server": "^5.2.2"
   }
 }
