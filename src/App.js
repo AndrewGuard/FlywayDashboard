@@ -9,6 +9,7 @@ import MetricsCards from './MetricsCards';
 import MetricsChart from './MetricsChart';
 import TopPlatformsWidgets from './TopPlatformsWidgets';
 import MigrationHistory from './MigrationHistory';
+import JdbcConnectionsList from './JdbcConnectionsList';
 
 function App() {
   return (
@@ -29,7 +30,8 @@ function App() {
         <Box sx={{ mt: 4 }}>
           <MetricsChart />
         </Box>
-        <MigrationHistory />
+  <MigrationHistory />
+  <JdbcConnectionsList />
       </Box>
     </Box>
   );

@@ -22,6 +22,7 @@ async function getFlywayHistory() {
     }
     await sql.close();
   }
+  console.log("Results: ", JSON.stringify(results, null, 2));
   return results;
 }
 

@@ -1,25 +1,27 @@
 import * as React from 'react';
-import { Card, CardContent, Typography, Grid } from '@mui/material';
-
-const metrics = [
-  { label: 'Databases Deployed To', value: 12 }, // Replace 12 with real count from Flyway schema histories
-  { label: 'Migrations', value: 42 },
-  { label: 'Errors', value: 3 },
-  { label: 'CDC Objects', value: 7 },
-  { label: 'Pending', value: 5 },
-];
+import { Card, CardContent, Typography, Grid, CircularProgress } from '@mui/material';
+import useMigrationDeployments from './useMigrationDeployments';
 
 export default function MetricsCards() {
+  const { deployments, loading } = useMigrationDeployments();
+
+  if (loading) return <CircularProgress sx={{ mt: 2 }} />;
+
   return (
     <Grid container spacing={2}>
-      {metrics.map((metric) => (
-        <Grid item xs={12} sm={6} md={3} key={metric.label}>
+      {deployments.map((env) => (
+        <Grid item xs={12} sm={6} md={3} key={env.dbName}>
           <Card>
             <CardContent>
               <Typography variant="h6" color="textSecondary" gutterBottom>
-                {metric.label}
+                {env.dbName}
               </Typography>
-              <Typography variant="h4">{metric.value}</Typography>
+              {env.error ? (
+                <Typography color="error">Error: {env.error}</Typography>
+              ) : (
+                <Typography variant="h4">{env.count}</Typography>
+              )}
+              <Typography variant="caption">Deployments</Typography>
             </CardContent>
           </Card>
         </Grid>
