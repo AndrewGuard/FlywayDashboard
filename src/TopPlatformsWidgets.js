@@ -22,9 +22,9 @@ export default function TopPlatformsWidgets() {
                 <Typography variant="subtitle1" fontWeight={700} gutterBottom>
                   {platform.platform}
                 </Typography>
-                <Typography variant="caption" color="text.secondary" gutterBottom>
+                {/* <Typography variant="caption" color="text.secondary" gutterBottom>
                   {platform.connStr || ''}
-                </Typography>
+                </Typography> */}
                 <Typography variant="h5" color="primary.main" gutterBottom>
                   {platform.deployments} Deployments
                 </Typography>

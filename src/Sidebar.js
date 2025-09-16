@@ -33,14 +33,14 @@ export default function Sidebar() {
           by Redgate
         </Typography>
       </Box>
-      <List>
+      {/* <List>
         {navItems.map((item, index) => (
           <ListItem button key={item.text} sx={{ '&:hover': { backgroundColor: '#4a4e69' } }}>
             <ListItemIcon sx={{ color: '#fff' }}>{item.icon}</ListItemIcon>
             <ListItemText primary={item.text} />
           </ListItem>
         ))}
-      </List>
+      </List> */}
     </Drawer>
   );
 }
