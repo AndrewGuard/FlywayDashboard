@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, Button } from '@mui/material';
 
+function getDbNameFromConnStr(connStr) {
+  if (!connStr) return 'Unknown DB';
+  const match = connStr.match(/databaseName=([^;]+)/);
+  return match ? match[1] : connStr;
+}
+
 export default function MigrationHistory() {
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState([]);
@@ -40,8 +46,13 @@ export default function MigrationHistory() {
         </Button>
       </Box>
       {history.map((db, i) => (
-        <Box key={db.dbName || i} sx={{ mb: 4 }}>
-          <Typography variant="h6" sx={{ mb: 1 }}>{db.dbName || 'Unknown DB'}</Typography>
+        <Box key={db.dbName || db.connStr || i} sx={{ mb: 4 }}>
+          <Typography variant="h6" sx={{ mb: 1 }}>
+            {db.dbName
+              || (db.connStr && getDbNameFromConnStr(db.connStr))
+              || (db.connectionString && getDbNameFromConnStr(db.connectionString))
+              || 'Unknown DB'}
+          </Typography>
           {db.error ? (
             <Typography color="error">Error: {db.error}</Typography>
           ) : (

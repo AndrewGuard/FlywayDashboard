@@ -31,7 +31,7 @@ function App() {
           <MetricsChart />
         </Box>
   <MigrationHistory />
-  <JdbcConnectionsList />
+  {/* <JdbcConnectionsList /> */}
       </Box>
     </Box>
   );

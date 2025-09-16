@@ -10,7 +10,7 @@ async function getFlywayHistory() {
 
   for (const connStr of connections) {
     // Parse connection string for mssql config
-    const match = connStr.match(/databaseName=([^;]+).*?integratedSecurity=true/);
+    const match = connStr.match(/databaseName=([^;]+)/);
     const dbName = match ? match[1] : 'unknown';
     const config = parseJdbcToMssqlConfig(connStr);
     console.log(`[Flyway] Attempting connection to DB: ${dbName}`);
@@ -19,10 +19,10 @@ async function getFlywayHistory() {
       await sql.connect(config);
       console.log(`[Flyway] Connected to ${dbName}`);
       const res = await sql.query('SELECT * FROM flyway_schema_history ORDER BY installed_rank DESC');
-      results.push({ dbName, history: res.recordset });
+      results.push({ dbName, connStr, history: res.recordset });
     } catch (err) {
       console.error(`[Flyway] Error connecting to ${dbName}:`, err);
-      results.push({ dbName, error: err.message });
+      results.push({ dbName, connStr, error: err.message });
     }
     await sql.close();
   }
