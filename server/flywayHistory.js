@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const sql = require('mssql');
+const { Client: PgClient } = require('pg');
 
 const configPath = path.join(__dirname, 'jdbc-connections.json');
 
@@ -9,23 +10,59 @@ async function getFlywayHistory() {
   const results = [];
 
   for (const connStr of connections) {
-    // Parse connection string for mssql config
-    const match = connStr.match(/databaseName=([^;]+)/);
-    const dbName = match ? match[1] : 'unknown2';
-    const config = parseJdbcToMssqlConfig(connStr);
-    // console.log(`[Flyway] Attempting connection to DB: ${dbName}`);
-    // console.log(`[Flyway] Connection config:`, JSON.stringify(config, null, 2));
-    try {
-      await sql.connect(config);
-      console.log(`[Flyway] Connected to ${dbName}`);
-      const res = await sql.query('SELECT * FROM flyway_schema_history ORDER BY installed_rank DESC');
-      results.push({ dbName, connStr, history: res.recordset });
-    } catch (err) {
-      console.error(`[Flyway] Error connecting to ${dbName}:`, err);
-      results.push({ dbName, connStr, error: err.message });
+    let dbName = 'unknown';
+    let history = [];
+    let error = null;
+    if (/^jdbc:postgresql:/i.test(connStr)) {
+      // Parse PostgreSQL JDBC
+      const pgConfig = parseJdbcToPgConfig(connStr);
+      dbName = pgConfig.database || 'unknown';
+      const client = new PgClient(pgConfig);
+      try {
+        await client.connect();
+        const res = await client.query('SELECT * FROM flyway_schema_history ORDER BY installed_rank DESC');
+        history = res.rows;
+      } catch (err) {
+        error = err.message;
+      } finally {
+        await client.end();
+      }
+      results.push({ dbName, connStr, history, ...(error ? { error } : {}) });
+    } else {
+      // MSSQL
+      const match = connStr.match(/databaseName=([^;]+)/);
+      dbName = match ? match[1] : 'unknown2';
+      const config = parseJdbcToMssqlConfig(connStr);
+      try {
+        await sql.connect(config);
+        const res = await sql.query('SELECT * FROM flyway_schema_history ORDER BY installed_rank DESC');
+        history = res.recordset;
+      } catch (err) {
+        error = err.message;
+      }
+      await sql.close();
+      results.push({ dbName, connStr, history, ...(error ? { error } : {}) });
     }
-    await sql.close();
   }
+function parseJdbcToPgConfig(jdbcUrl) {
+  // Example: jdbc:postgresql://localhost:5432/db?user=postgres&password=pass
+  const urlMatch = jdbcUrl.match(/^jdbc:postgresql:\/\/([^:/]+)(?::(\d+))?\/([^?]+)\??(.*)$/);
+  if (!urlMatch) return {};
+  const [, host, port, database, query] = urlMatch;
+  let user, password;
+  if (query) {
+    const params = new URLSearchParams(query);
+    user = params.get('user');
+    password = params.get('password');
+  }
+  return {
+    host,
+    port: port ? parseInt(port) : 5432,
+    database,
+    user,
+    password
+  };
+}
   console.log("[Flyway] Results: ", JSON.stringify(results, null, 2));
   return results;
 }
