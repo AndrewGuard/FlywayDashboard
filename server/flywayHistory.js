@@ -11,10 +11,10 @@ async function getFlywayHistory() {
   for (const connStr of connections) {
     // Parse connection string for mssql config
     const match = connStr.match(/databaseName=([^;]+)/);
-    const dbName = match ? match[1] : 'unknown';
+    const dbName = match ? match[1] : 'unknown2';
     const config = parseJdbcToMssqlConfig(connStr);
-    console.log(`[Flyway] Attempting connection to DB: ${dbName}`);
-    console.log(`[Flyway] Connection config:`, JSON.stringify(config, null, 2));
+    // console.log(`[Flyway] Attempting connection to DB: ${dbName}`);
+    // console.log(`[Flyway] Connection config:`, JSON.stringify(config, null, 2));
     try {
       await sql.connect(config);
       console.log(`[Flyway] Connected to ${dbName}`);

@@ -26,7 +26,7 @@ function App() {
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <Toolbar />
         <TopPlatformsWidgets />
-        <MetricsCards />
+        {/* <MetricsCards /> */}
         <Box sx={{ mt: 4 }}>
           <MetricsChart />
         </Box>
