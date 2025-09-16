@@ -74,7 +74,7 @@ export default function MigrationHistory() {
                       <TableCell>{row.description}</TableCell>
                       <TableCell>{row.type}</TableCell>
                       <TableCell>{row.installed_on}</TableCell>
-                      <TableCell>{row.success === "True" ? 'Success' : 'Failed'}</TableCell>
+                      <TableCell>{row.success === true || row.success === 1 ? 'Success' : 'Failed'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
