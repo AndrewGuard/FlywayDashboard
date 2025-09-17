@@ -5,12 +5,11 @@ import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import Sidebar from './Sidebar';
-import MetricsCards from './MetricsCards';
 import MetricsChart from './MetricsChart';
 import TopPlatformsWidgets from './TopPlatformsWidgets';
 import MigrationHistory from './MigrationHistory';
 import DeploymentSuccessRate from './DeploymentSuccessRate';
-import JdbcConnectionsList from './JdbcConnectionsList';
+import UndoMigrationsWidget from './UndoMigrationsWidget';
 
 function App() {
   return (
@@ -28,6 +27,7 @@ function App() {
         <Toolbar />
   <TopPlatformsWidgets />
   <DeploymentSuccessRate />
+  <UndoMigrationsWidget />
   {/* <MetricsCards /> */}
         <Box sx={{ mt: 4 }}>
           <MetricsChart />
