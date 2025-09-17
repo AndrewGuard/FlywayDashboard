@@ -5,9 +5,11 @@ function calculateUndoStats(migrations) {
   if (!Array.isArray(migrations) || migrations.length === 0) {
     return { total: 0, undoCount: 0, percent: 0 };
   }
-  const undoCount = migrations.filter(m =>
-    m.type && m.type.toLowerCase() === 'undo'
-  ).length;
+  const undoCount = migrations.filter(m => {
+    if (!m.type) return false;
+    const t = m.type.toLowerCase();
+    return t === 'undo' || t === 'undo_sql';
+  }).length;
   const percent = ((undoCount / migrations.length) * 100).toFixed(1);
   return { total: migrations.length, undoCount, percent };
 }
