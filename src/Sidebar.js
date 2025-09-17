@@ -29,7 +29,6 @@ const navItems = [
   { text: 'Avg Deployment Time', icon: <BarChartIcon />, section: 'avg-deployment-time' },
   { text: 'Metrics Chart', icon: <BarChartIcon />, section: 'metrics-chart' },
   { text: 'Migration History', icon: <TableChartIcon />, section: 'migration-history' },
-  { text: 'Settings', icon: <SettingsIcon />, section: 'settings' },
 ];
 
 export default function Sidebar() {
