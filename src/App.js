@@ -9,6 +9,7 @@ import MetricsCards from './MetricsCards';
 import MetricsChart from './MetricsChart';
 import TopPlatformsWidgets from './TopPlatformsWidgets';
 import MigrationHistory from './MigrationHistory';
+import DeploymentSuccessRate from './DeploymentSuccessRate';
 import JdbcConnectionsList from './JdbcConnectionsList';
 
 function App() {
@@ -25,8 +26,9 @@ function App() {
       <Sidebar />
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <Toolbar />
-        <TopPlatformsWidgets />
-        {/* <MetricsCards /> */}
+  <TopPlatformsWidgets />
+  <DeploymentSuccessRate />
+  {/* <MetricsCards /> */}
         <Box sx={{ mt: 4 }}>
           <MetricsChart />
         </Box>
