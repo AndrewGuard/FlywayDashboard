@@ -3,6 +3,7 @@ import { Card, CardContent, Typography, CircularProgress, Box, LinearProgress } 
 
 export default function DeploymentSuccessRate() {
   const [successRate, setSuccessRate] = useState(null);
+  const [totalDeployments, setTotalDeployments] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,10 +21,12 @@ export default function DeploymentSuccessRate() {
             });
           });
           setSuccessRate(total > 0 ? (success / total) * 100 : null);
+          setTotalDeployments(total);
           setLoading(false);
         })
         .catch(() => {
           setSuccessRate(null);
+          setTotalDeployments(null);
           setLoading(false);
         });
     };
@@ -44,6 +47,9 @@ export default function DeploymentSuccessRate() {
           <Box>
             <Typography variant="h4" color={successRate >= 99 ? 'success.main' : successRate >= 90 ? 'warning.main' : 'error.main'}>
               {successRate.toFixed(1)}%
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Total Deployments: {totalDeployments}
             </Typography>
             <LinearProgress variant="determinate" value={successRate} sx={{ height: 10, borderRadius: 5, mt: 1 }} />
           </Box>

@@ -10,6 +10,8 @@ import TopPlatformsWidgets from './TopPlatformsWidgets';
 import MigrationHistory from './MigrationHistory';
 import DeploymentSuccessRate from './DeploymentSuccessRate';
 import UndoMigrationsWidget from './UndoMigrationsWidget';
+import DeploymentsOverTimeWidget from './DeploymentsOverTimeWidget';
+import AverageDeploymentTimeWidget from './AverageDeploymentTimeWidget';
 
 function App() {
   return (
@@ -25,15 +27,15 @@ function App() {
       <Sidebar />
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <Toolbar />
-  <TopPlatformsWidgets />
-  <DeploymentSuccessRate />
-  <UndoMigrationsWidget />
-  {/* <MetricsCards /> */}
-        <Box sx={{ mt: 4 }}>
-          <MetricsChart />
-        </Box>
-  <MigrationHistory />
-  {/* <JdbcConnectionsList /> */}
+  <div id="top-platforms"><TopPlatformsWidgets /></div>
+  <div id="deployment-success-rate"><DeploymentSuccessRate /></div>
+  <div id="undo-migrations"><UndoMigrationsWidget /></div>
+  <div id="deployments-over-time"><DeploymentsOverTimeWidget /></div>
+  <div id="avg-deployment-time"><AverageDeploymentTimeWidget /></div>
+  <Box id="metrics-chart" sx={{ mt: 4 }}>
+    <MetricsChart />
+  </Box>
+  <div id="migration-history"><MigrationHistory /></div>
       </Box>
     </Box>
   );

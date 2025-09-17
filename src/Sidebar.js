@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+
 import Drawer from '@mui/material/Drawer';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
@@ -12,16 +13,32 @@ import ListItemText from '@mui/material/ListItemText';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import SettingsIcon from '@mui/icons-material/Settings';
-import { Box, Typography } from '@mui/material';
+import TimelineIcon from '@mui/icons-material/Timeline';
+import UndoIcon from '@mui/icons-material/Undo';
+import QueryStatsIcon from '@mui/icons-material/QueryStats';
+import TableChartIcon from '@mui/icons-material/TableChart';
 import logo from './logo.svg';
+import { Box, Typography } from '@mui/material';
+
 
 const navItems = [
-  { text: 'Dashboard', icon: <DashboardIcon /> },
-  { text: 'Metrics', icon: <BarChartIcon /> },
-  { text: 'Settings', icon: <SettingsIcon /> },
+  { text: 'Top Platforms', icon: <DashboardIcon />, section: 'top-platforms' },
+  { text: 'Deployment Success Rate', icon: <QueryStatsIcon />, section: 'deployment-success-rate' },
+  { text: 'Undo Migrations', icon: <UndoIcon />, section: 'undo-migrations' },
+  { text: 'Deployments Over Time', icon: <TimelineIcon />, section: 'deployments-over-time' },
+  { text: 'Avg Deployment Time', icon: <BarChartIcon />, section: 'avg-deployment-time' },
+  { text: 'Metrics Chart', icon: <BarChartIcon />, section: 'metrics-chart' },
+  { text: 'Migration History', icon: <TableChartIcon />, section: 'migration-history' },
+  { text: 'Settings', icon: <SettingsIcon />, section: 'settings' },
 ];
 
 export default function Sidebar() {
+  const handleNavClick = (section) => {
+    const el = document.getElementById(section);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
   return (
     <Drawer variant="permanent" anchor="left" sx={{ width: 220, flexShrink: 0, '& .MuiDrawer-paper': { width: 220, boxSizing: 'border-box', backgroundColor: '#22223b', color: '#fff' } }}>
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 3, mb: 2 }}>
@@ -33,14 +50,14 @@ export default function Sidebar() {
           by Redgate
         </Typography>
       </Box>
-      {/* <List>
-        {navItems.map((item, index) => (
-          <ListItem button key={item.text} sx={{ '&:hover': { backgroundColor: '#4a4e69' } }}>
+      <List>
+        {navItems.map((item) => (
+          <ListItem button key={item.text} onClick={() => handleNavClick(item.section)} sx={{ '&:hover': { backgroundColor: '#4a4e69' } }}>
             <ListItemIcon sx={{ color: '#fff' }}>{item.icon}</ListItemIcon>
             <ListItemText primary={item.text} />
           </ListItem>
         ))}
-      </List> */}
+      </List>
     </Drawer>
   );
 }
