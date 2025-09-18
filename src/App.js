@@ -28,9 +28,9 @@ function App() {
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <Toolbar />
   <div id="top-platforms"><TopPlatformsWidgets /></div>
+  <div id="deployments-over-time"><DeploymentsOverTimeWidget /></div>
   <div id="deployment-success-rate"><DeploymentSuccessRate /></div>
   <div id="undo-migrations"><UndoMigrationsWidget /></div>
-  <div id="deployments-over-time"><DeploymentsOverTimeWidget /></div>
   <div id="avg-deployment-time"><AverageDeploymentTimeWidget /></div>
   <Box id="metrics-chart" sx={{ mt: 4 }}>
     <MetricsChart />

@@ -10,7 +10,7 @@ export default function MetricsChart() {
     <Card sx={{ height: 340 }}>
       <CardContent>
         <Typography variant="h6" gutterBottom>
-          Migrations Over Time
+          Total Migrations Over Time
         </Typography>
         {loading ? (
           <CircularProgress sx={{ mt: 8 }} />
