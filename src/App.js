@@ -1,4 +1,4 @@
-
+import React from 'react';
 import Box from '@mui/material/Box';
 import CssBaseline from '@mui/material/CssBaseline';
 import AppBar from '@mui/material/AppBar';
@@ -12,8 +12,16 @@ import DeploymentSuccessRate from './DeploymentSuccessRate';
 import UndoMigrationsWidget from './UndoMigrationsWidget';
 import DeploymentsOverTimeWidget from './DeploymentsOverTimeWidget';
 import AverageDeploymentTimeWidget from './AverageDeploymentTimeWidget';
+import UserDefinedMetricsPage from './UserDefinedMetricsPage';
+import ChangeInDeploymentMetricsWidget from './ChangeInDeploymentMetricsWidget';
 
 function App() {
+  const [hash, setHash] = React.useState(window.location.hash);
+  React.useEffect(() => {
+    const onHashChange = () => setHash(window.location.hash);
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
@@ -27,15 +35,22 @@ function App() {
       <Sidebar />
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <Toolbar />
-  <div id="top-platforms"><TopPlatformsWidgets /></div>
-  <div id="deployments-over-time"><DeploymentsOverTimeWidget /></div>
-  <div id="deployment-success-rate"><DeploymentSuccessRate /></div>
-  <div id="undo-migrations"><UndoMigrationsWidget /></div>
-  <div id="avg-deployment-time"><AverageDeploymentTimeWidget /></div>
-  <Box id="metrics-chart" sx={{ mt: 4 }}>
-    <MetricsChart />
-  </Box>
-  <div id="migration-history"><MigrationHistory /></div>
+        {hash === '#/user-defined-metrics' ? (
+          <div id="user-defined-metrics"><UserDefinedMetricsPage /></div>
+        ) : (
+          <>
+            <div id="change-in-deployment-metrics"><ChangeInDeploymentMetricsWidget /></div>
+            <div id="top-platforms"><TopPlatformsWidgets /></div>
+            <div id="deployments-over-time"><DeploymentsOverTimeWidget /></div>
+            <div id="deployment-success-rate"><DeploymentSuccessRate /></div>
+            <div id="undo-migrations"><UndoMigrationsWidget /></div>
+            <div id="avg-deployment-time"><AverageDeploymentTimeWidget /></div>
+            <Box id="metrics-chart" sx={{ mt: 4 }}>
+              <MetricsChart />
+            </Box>
+            <div id="migration-history"><MigrationHistory /></div>
+          </>
+        )}
       </Box>
     </Box>
   );

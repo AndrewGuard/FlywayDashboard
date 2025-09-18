@@ -6,7 +6,15 @@ const { Client: PgClient } = require('pg');
 const configPath = path.join(__dirname, 'jdbc-connections.json');
 
 async function getFlywayHistory() {
-  const connections = JSON.parse(fs.readFileSync(configPath));
+  const data = JSON.parse(fs.readFileSync(configPath));
+  let connections = [];
+  if (Array.isArray(data)) {
+    connections = data;
+  } else {
+    const prod = Array.isArray(data.prod) ? data.prod : [];
+    const nonProd = Array.isArray(data.nonProd) ? data.nonProd : [];
+    connections = [...prod, ...nonProd];
+  }
   const results = [];
 
   for (const connStr of connections) {

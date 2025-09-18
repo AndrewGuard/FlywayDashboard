@@ -22,4 +22,27 @@ app.get('/api/flyway/history/all', async (req, res) => {
 	}
 });
 
+
+
+// User-defined metrics API layer
+const userDefinedMetrics = require('./userDefinedMetrics');
+
+app.get('/api/user-defined-metrics', (req, res) => {
+	try {
+		const metrics = userDefinedMetrics.getUserDefinedMetrics();
+		res.json(metrics);
+	} catch (e) {
+		res.status(500).json({ error: 'Failed to read metrics' });
+	}
+});
+
+app.post('/api/user-defined-metrics', (req, res) => {
+	try {
+		const metrics = userDefinedMetrics.setUserDefinedMetrics(req.body);
+		res.json({ success: true, metrics });
+	} catch (e) {
+		res.status(500).json({ error: 'Failed to save metrics' });
+	}
+});
+
 app.listen(5000, () => console.log('API running on port 5000'));

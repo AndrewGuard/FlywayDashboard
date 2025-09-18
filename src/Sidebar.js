@@ -22,20 +22,30 @@ import { Box, Typography } from '@mui/material';
 
 
 const navItems = [
+  { text: 'Change in Deployment Metrics', icon: <BarChartIcon />, section: 'change-in-deployment-metrics' },
   { text: 'Top Platforms', icon: <DashboardIcon />, section: 'top-platforms' },
+  { text: 'Deployments Over Time', icon: <TimelineIcon />, section: 'deployments-over-time' },
   { text: 'Deployment Success Rate', icon: <QueryStatsIcon />, section: 'deployment-success-rate' },
   { text: 'Undo Migrations', icon: <UndoIcon />, section: 'undo-migrations' },
-  { text: 'Deployments Over Time', icon: <TimelineIcon />, section: 'deployments-over-time' },
   { text: 'Avg Deployment Time', icon: <BarChartIcon />, section: 'avg-deployment-time' },
   { text: 'Metrics Chart', icon: <BarChartIcon />, section: 'metrics-chart' },
   { text: 'Migration History', icon: <TableChartIcon />, section: 'migration-history' },
+  { text: 'Deployment Metrics Configuration', icon: <SettingsIcon />, section: 'user-defined-metrics' },
 ];
 
 export default function Sidebar() {
   const handleNavClick = (section) => {
-    const el = document.getElementById(section);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (section === 'user-defined-metrics') {
+      window.location.hash = '#/user-defined-metrics';
+    } else {
+      window.location.hash = '';
+      // Wait for route to render, then scroll to section
+      setTimeout(() => {
+        const el = document.getElementById(section);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 50);
     }
   };
   return (
