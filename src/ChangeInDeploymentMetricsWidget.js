@@ -28,34 +28,40 @@ const ChangeInDeploymentMetricsWidget = () => {
         const userRes = await fetch('/api/user-defined-metrics');
         const userData = await userRes.json();
         setUserMetrics(userData);
+
         // Fetch Flyway metrics (calculate from history)
         const flywayRes = await fetch('/api/flyway/history/all');
         const flywayData = await flywayRes.json();
-        // Calculate deployments per quarter, lead time, failure rate
-        let deployments = 0, failures = 0, totalLeadTime = 0, leadTimeCount = 0;
-        Object.values(flywayData).flat().forEach(row => {
+
+        // Only use prod data for metrics
+        const prodKeys = Object.keys(flywayData).filter(k => k.toLowerCase().includes('prod'));
+        const prodRows = prodKeys.map(k => flywayData[k]).flat();
+
+        // Calculate deployments per quarter, lead time, failure rate for prod only
+        let deployments = 0, failures = 0;
+        prodRows.forEach(row => {
           if (row.type && row.type.toLowerCase() !== 'undo' && row.type.toLowerCase() !== 'undo_sql') {
             deployments++;
             if (row.success === false || row.success === 0) failures++;
-            if (row.installed_on && row.completed_on) {
-              const start = new Date(row.installed_on).getTime();
-              const end = new Date(row.completed_on).getTime();
-              if (!isNaN(start) && !isNaN(end) && end > start) {
-                totalLeadTime += (end - start) / (1000 * 60 * 60 * 24); // days
-                leadTimeCount++;
-              }
-            }
           }
         });
         // Assume 1 quarter = 90 days, so deployments per quarter = deployments in last 90 days
         let deploymentsPerQuarter = deployments;
         // If you want to filter by last 90 days, uncomment below:
         // const now = Date.now();
-        // deploymentsPerQuarter = Object.values(flywayData).flat().filter(row => {
+        // deploymentsPerQuarter = prodRows.filter(row => {
         //   const d = new Date(row.installed_on).getTime();
         //   return !isNaN(d) && (now - d) < 90 * 24 * 60 * 60 * 1000;
         // }).length;
-        const leadTimeDays = leadTimeCount > 0 ? totalLeadTime / leadTimeCount : null;
+
+        // Fetch migration-lead-times.json for lead time (days) average, prod only
+        const leadTimesRes = await fetch('/server/migration-lead-times.json');
+        const leadTimesData = await leadTimesRes.json();
+        const prodLeadTimes = Object.entries(leadTimesData)
+          .filter(([key, value]) => key.toLowerCase().includes('prod') && typeof value === 'number' && value >= 0)
+          .map(([key, value]) => value);
+        const leadTimeDays = prodLeadTimes.length > 0 ? prodLeadTimes.reduce((a, b) => a + b, 0) / prodLeadTimes.length : null;
+
         const scriptFailureRate = deployments > 0 ? (failures / deployments) * 100 : null;
         setFlywayMetrics({ deploymentsPerQuarter, leadTimeDays, scriptFailureRate });
       } catch (e) {
@@ -88,7 +94,7 @@ const ChangeInDeploymentMetricsWidget = () => {
       <CardContent>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="h6" gutterBottom>
-            Change in Deployment Metrics
+            Change in Deployment Metrics (Prod Only)
           </Typography>
           <Button
             variant="outlined"
@@ -100,6 +106,9 @@ const ChangeInDeploymentMetricsWidget = () => {
             Configure
           </Button>
         </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
+          All metrics below are calculated using <b>production</b> environments only.
+        </Typography>
         {loading ? (
           <Typography>Loading...</Typography>
         ) : error ? (

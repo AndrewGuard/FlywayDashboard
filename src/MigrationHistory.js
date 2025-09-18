@@ -64,6 +64,7 @@ export default function MigrationHistory() {
                     <TableCell>Description</TableCell>
                     <TableCell>Type</TableCell>
                     <TableCell>Installed On</TableCell>
+                    <TableCell>Lead Time (days)</TableCell>
                     <TableCell>State</TableCell>
                   </TableRow>
                 </TableHead>
@@ -74,6 +75,7 @@ export default function MigrationHistory() {
                       <TableCell>{row.description}</TableCell>
                       <TableCell>{row.type}</TableCell>
                       <TableCell>{row.installed_on}</TableCell>
+                      <TableCell>{row.leadTime !== null && row.leadTime !== undefined ? row.leadTime.toFixed(2) : '-'}</TableCell>
                       <TableCell>{row.success === true || row.success === 1 ? 'Success' : 'Failed'}</TableCell>
                     </TableRow>
                   ))}

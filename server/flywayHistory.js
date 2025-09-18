@@ -5,6 +5,8 @@ const { Client: PgClient } = require('pg');
 
 const configPath = path.join(__dirname, 'jdbc-connections.json');
 
+const { setLeadTime, getLeadTimes } = require('./leadTimeStore');
+
 async function getFlywayHistory() {
   const data = JSON.parse(fs.readFileSync(configPath));
   let connections = [];
@@ -16,6 +18,7 @@ async function getFlywayHistory() {
     connections = [...prod, ...nonProd];
   }
   const results = [];
+  const leadTimes = getLeadTimes();
 
   for (const connStr of connections) {
     let dbName = 'unknown';
@@ -35,7 +38,6 @@ async function getFlywayHistory() {
       } finally {
         await client.end();
       }
-      results.push({ dbName, connStr, history, ...(error ? { error } : {}) });
     } else {
       // MSSQL
       const match = connStr.match(/databaseName=([^;]+)/);
@@ -49,8 +51,32 @@ async function getFlywayHistory() {
         error = err.message;
       }
       await sql.close();
-      results.push({ dbName, connStr, history, ...(error ? { error } : {}) });
     }
+    // Calculate lead time for each migration
+    history = (history || []).map(row => {
+      let leadTime = null;
+      if (row.installed_on && row.script) {
+        // Try to extract timestamp from script name (e.g., V010_20250918120543__desc.sql)
+        const match = row.script.match(/_(\d{14})__/);
+        if (match) {
+          const scriptTs = match[1];
+          // Parse as YYYYMMDDHHmmss
+          const scriptDate = new Date(
+            scriptTs.slice(0,4)+'-'+scriptTs.slice(4,6)+'-'+scriptTs.slice(6,8)+'T'+
+            scriptTs.slice(8,10)+':'+scriptTs.slice(10,12)+':'+scriptTs.slice(12,14)+'Z'
+          );
+          const installedDate = new Date(row.installed_on);
+          if (!isNaN(scriptDate) && !isNaN(installedDate)) {
+            leadTime = (installedDate - scriptDate) / (1000 * 60 * 60 * 24); // days
+            // Store in file by unique key (dbName+version+script)
+            const key = `${dbName}|${row.version}|${row.script}`;
+            setLeadTime(key, leadTime);
+          }
+        }
+      }
+      return { ...row, leadTime };
+    });
+    results.push({ dbName, connStr, history, ...(error ? { error } : {}) });
   }
 function parseJdbcToPgConfig(jdbcUrl) {
   // Example: jdbc:postgresql://localhost:5432/db?user=postgres&password=pass
