@@ -39,20 +39,30 @@ const ChangeInDeploymentMetricsWidget = () => {
 
         // Calculate deployments per quarter, lead time, failure rate for prod only
         let deployments = 0, failures = 0;
+        let minDate = null, maxDate = null;
         prodRows.forEach(row => {
           if (row.type && row.type.toLowerCase() !== 'undo' && row.type.toLowerCase() !== 'undo_sql') {
             deployments++;
             if (row.success === false || row.success === 0) failures++;
+            if (row.installed_on) {
+              const d = new Date(row.installed_on).getTime();
+              if (!isNaN(d)) {
+                if (minDate === null || d < minDate) minDate = d;
+                if (maxDate === null || d > maxDate) maxDate = d;
+              }
+            }
           }
         });
-        // Assume 1 quarter = 90 days, so deployments per quarter = deployments in last 90 days
+        // Extrapolate deployments per quarter if less than 90 days of data
         let deploymentsPerQuarter = deployments;
-        // If you want to filter by last 90 days, uncomment below:
-        // const now = Date.now();
-        // deploymentsPerQuarter = prodRows.filter(row => {
-        //   const d = new Date(row.installed_on).getTime();
-        //   return !isNaN(d) && (now - d) < 90 * 24 * 60 * 60 * 1000;
-        // }).length;
+        let deploymentsExtrapolated = false;
+        if (minDate !== null && maxDate !== null) {
+          const daysSpan = (maxDate - minDate) / (1000 * 60 * 60 * 24);
+          if (daysSpan < 90 && daysSpan > 1) {
+            deploymentsPerQuarter = deployments * (90 / daysSpan);
+            deploymentsExtrapolated = true;
+          }
+        }
 
         // Fetch migration-lead-times.json for lead time (days) average, prod only
         const leadTimesRes = await fetch('/server/migration-lead-times.json');
@@ -63,7 +73,7 @@ const ChangeInDeploymentMetricsWidget = () => {
         const leadTimeDays = prodLeadTimes.length > 0 ? prodLeadTimes.reduce((a, b) => a + b, 0) / prodLeadTimes.length : null;
 
         const scriptFailureRate = deployments > 0 ? (failures / deployments) * 100 : null;
-        setFlywayMetrics({ deploymentsPerQuarter, leadTimeDays, scriptFailureRate });
+  setFlywayMetrics({ deploymentsPerQuarter, leadTimeDays, scriptFailureRate, deploymentsExtrapolated });
       } catch (e) {
         setError('Failed to load metrics');
       } finally {
@@ -78,10 +88,14 @@ const ChangeInDeploymentMetricsWidget = () => {
     const user = userMetrics?.[key] ?? null;
     const absChange = flyway !== null && user !== null ? flyway - user : null;
     const pctChange = flyway !== null && user !== null ? percentChange(flyway, user) : null;
+    let flywayDisplay = flyway !== null ? flyway.toFixed(2) : '-';
+    if (key === 'deploymentsPerQuarter' && flyway !== null && flywayMetrics?.deploymentsExtrapolated) {
+      flywayDisplay += ' (extrapolated)';
+    }
     return (
       <TableRow key={key}>
         <TableCell>{metricsLabels[key]}</TableCell>
-        <TableCell align="right" sx={{ fontWeight: 600, color: 'primary.main' }}>{flyway !== null ? flyway.toFixed(2) : '-'}</TableCell>
+        <TableCell align="right" sx={{ fontWeight: 600, color: 'primary.main' }}>{flywayDisplay}</TableCell>
         <TableCell align="right" sx={{ color: 'secondary.main' }}>{user !== null ? user : '-'}</TableCell>
         <TableCell align="right">{absChange !== null ? absChange.toFixed(2) : '-'}</TableCell>
         <TableCell align="right">{pctChange !== null ? pctChange.toFixed(1) + '%' : '-'}</TableCell>
@@ -107,7 +121,8 @@ const ChangeInDeploymentMetricsWidget = () => {
           </Button>
         </Box>
         <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
-          All metrics below are calculated using <b>production</b> environments only.
+          All metrics below are calculated using <b>production</b> environments only.<br/>
+          If less than a full quarter of data is available, <b>Deployments per Quarter</b> is extrapolated from the available data.
         </Typography>
         {loading ? (
           <Typography>Loading...</Typography>
