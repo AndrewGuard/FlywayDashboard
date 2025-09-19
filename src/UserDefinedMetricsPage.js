@@ -5,6 +5,9 @@ const initialInputs = {
   deploymentsPerQuarter: '',
   leadTimeDays: '',
   scriptFailureRate: '',
+  deploymentDurationDays: '',
+  peopleInvolved: '',
+  averageSalary: '',
 };
 
 const UserDefinedMetricsPage = () => {
@@ -22,6 +25,9 @@ const UserDefinedMetricsPage = () => {
           deploymentsPerQuarter: data.deploymentsPerQuarter ?? 20,
           leadTimeDays: data.leadTimeDays ?? 15,
           scriptFailureRate: data.scriptFailureRate ?? 10,
+          deploymentDurationDays: data.deploymentDurationDays ?? 14,
+          peopleInvolved: data.peopleInvolved ?? 3,
+          averageSalary: data.averageSalary ?? 150000,
         });
         setLoading(false);
       })
@@ -100,6 +106,39 @@ const UserDefinedMetricsPage = () => {
                 fullWidth
                 margin="normal"
                 inputProps={{ min: 0, max: 100, step: 0.1 }}
+              />
+              <TextField
+                label="How long for a deployment (days)"
+                name="deploymentDurationDays"
+                type="number"
+                value={inputs.deploymentDurationDays}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                inputProps={{ min: 1 }}
+                helperText="Default: 14 days (2 weeks)"
+              />
+              <TextField
+                label="How many people involved"
+                name="peopleInvolved"
+                type="number"
+                value={inputs.peopleInvolved}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                inputProps={{ min: 1 }}
+                helperText="Default: 3 people"
+              />
+              <TextField
+                label="Average Salary ($)"
+                name="averageSalary"
+                type="number"
+                value={inputs.averageSalary}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                inputProps={{ min: 0, step: 1000 }}
+                helperText="Default: $150,000"
               />
               <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }} disabled={loading}>
                 Save

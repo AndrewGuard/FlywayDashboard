@@ -135,7 +135,7 @@ const ChangeInDeploymentMetricsWidget = () => {
                 <TableRow>
                   <TableCell>Metric</TableCell>
                   <TableCell align="right">Flyway</TableCell>
-                  <TableCell align="right">User</TableCell>
+                  <TableCell align="right">Non Flyway</TableCell>
                   <TableCell align="right">Δ (Abs)</TableCell>
                   <TableCell align="right">Δ (%)</TableCell>
                 </TableRow>
