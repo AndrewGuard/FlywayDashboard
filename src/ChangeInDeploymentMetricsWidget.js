@@ -134,7 +134,7 @@ const ChangeInDeploymentMetricsWidget = () => {
             </TableContainer>
             <Box sx={{ mt: 3 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                Expected Value to Business (ROI)
+                Expected Value to Client (ROI)
               </Typography>
               {roi !== null && (
                 <Typography variant="body2" sx={{ mb: 1 }}>
@@ -143,7 +143,7 @@ const ChangeInDeploymentMetricsWidget = () => {
               )}
               {annualValue !== null && (
                 <Typography variant="body2" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
-                  Expected Value to Business (Annual):
+                  Expected Value to Client (Annual):
                   <span style={{ fontWeight: 700, fontSize: '1.25em', marginLeft: 8 }}>
                     ${annualValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </span>

@@ -105,7 +105,7 @@ export default function RoiCalculationPage() {
             <b>ROI:</b> {roi !== null ? (roi * 100).toFixed(1) + '%' : 'N/A'}
           </Typography>
           <Typography>
-            <b>Value to Business (after implementation cost):</b> {annualValue !== null ? '$' + annualValue.toLocaleString() : 'N/A'}
+            <b>Value to Client (after implementation cost):</b> {annualValue !== null ? '$' + annualValue.toLocaleString() : 'N/A'}
           </Typography>
           <Typography>
             <b>Annual Cost (including implementation):</b> {annualCost !== null ? '$' + annualCost.toLocaleString() : 'N/A'}
