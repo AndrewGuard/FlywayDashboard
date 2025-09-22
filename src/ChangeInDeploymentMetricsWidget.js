@@ -20,6 +20,7 @@ const ChangeInDeploymentMetricsWidget = () => {
   const [userMetrics, setUserMetrics] = useState(null);
   const [roi, setRoi] = useState(null);
   const [roiExplanation, setRoiExplanation] = useState('');
+  const [annualValue, setAnnualValue] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -57,6 +58,7 @@ const ChangeInDeploymentMetricsWidget = () => {
           const roiResult = calculateROI(userData, flywayMetricsObj);
           setRoi(roiResult.roi);
           setRoiExplanation(roiResult.roiExplanation);
+          setAnnualValue(roiResult.annualValue);
         }
       } catch (e) {
         setError('Failed to load metrics');
@@ -136,12 +138,20 @@ const ChangeInDeploymentMetricsWidget = () => {
               </Typography>
               {roi !== null && (
                 <Typography variant="body2" sx={{ mb: 1 }}>
-                  ROI: <b>{(roi * 100).toFixed(1)}%</b> &nbsp;
-                  <Button size="small" onClick={() => { window.location.hash = '#/roi-calculation'; }} sx={{ textTransform: 'none', ml: 1 }}>
-                    How is this calculated?
-                  </Button>
+                  ROI: <b>{(roi * 100).toFixed(1)}%</b>
                 </Typography>
               )}
+              {annualValue !== null && (
+                <Typography variant="body2" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
+                  Expected Value to Business (Annual):
+                  <span style={{ fontWeight: 700, fontSize: '1.25em', marginLeft: 8 }}>
+                    ${annualValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </span>
+                </Typography>
+              )}
+              <Button size="small" onClick={() => { window.location.hash = '#/roi-calculation'; }} sx={{ textTransform: 'none', ml: 1 }}>
+                How is this calculated?
+              </Button>
             </Box>
           </>
         )}
