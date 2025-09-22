@@ -30,12 +30,14 @@ export function calculateROI(userMetrics, flywayMetrics) {
   // Total value per year
   const annualValue = (valuePerDeployment * flywayDeploymentsPerYear) + deploymentIncreaseValue + failureRateSavings;
 
-  // ROI = (Value from all improvements) / (Cost of deployments w/ Flyway)
-  const annualCost = costPerDeployment * flywayDeploymentsPerYear;
+  // Add Flyway licensing cost if present
+  const flywayLicensingCost = Number(userMetrics.flywayLicensingCost) || 0;
+  // ROI = (Value from all improvements) / (Cost of deployments w/ Flyway + licensing)
+  const annualCost = (costPerDeployment * flywayDeploymentsPerYear) + flywayLicensingCost;
   const roi = annualCost > 0 ? (annualValue - annualCost) / annualCost : null;
 
   // Explanation blurb
-  const explanation = `ROI is calculated as the net value of improvements (lead time reduction, more deployments, and fewer failures) divided by the total cost of deployments with Flyway. Value is based on: (1) reduction in lead time per deployment, (2) increase in deployments per year, and (3) reduction in script failure rate. Each is multiplied by the number of people involved, their average salary, and the number of deployments per year. Cost is the total salary cost for all deployments with Flyway. ROI = (Value - Cost) / Cost.`;
+  const explanation = `ROI is calculated as the net value of improvements (lead time reduction, more deployments, and fewer failures) divided by the total cost of deployments with Flyway. Value is based on: (1) reduction in lead time per deployment, (2) increase in deployments per year, and (3) reduction in script failure rate. Each is multiplied by the number of people involved, their average salary, and the number of deployments per year. Cost is the total salary cost for all deployments with Flyway plus licensing cost. ROI = (Value - Cost) / Cost.`;
 
   return { roi, annualValue, annualCost, roiExplanation: explanation };
 }

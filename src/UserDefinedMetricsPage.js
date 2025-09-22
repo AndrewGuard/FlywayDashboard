@@ -8,6 +8,8 @@ const initialInputs = {
   deploymentDurationDays: '',
   peopleInvolved: '',
   averageSalary: '',
+  numberOfDevelopers: 10,
+  flywayLicensingCost: 30000,
 };
 
 const UserDefinedMetricsPage = () => {
@@ -28,6 +30,8 @@ const UserDefinedMetricsPage = () => {
           deploymentDurationDays: data.deploymentDurationDays ?? 14,
           peopleInvolved: data.peopleInvolved ?? 3,
           averageSalary: data.averageSalary ?? 150000,
+          numberOfDevelopers: data.numberOfDevelopers ?? 10,
+          flywayLicensingCost: data.flywayLicensingCost ?? ((data.numberOfDevelopers ?? 10) * 3000),
         });
         setLoading(false);
       })
@@ -38,7 +42,14 @@ const UserDefinedMetricsPage = () => {
   }, []);
 
   const handleChange = (e) => {
-    setInputs({ ...inputs, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    let newInputs = { ...inputs, [name]: value };
+    // If numberOfDevelopers changes, auto-update flywayLicensingCost
+    if (name === 'numberOfDevelopers') {
+      const num = Number(value) || 0;
+      newInputs.flywayLicensingCost = num * 3000;
+    }
+    setInputs(newInputs);
     setSaved(false);
   };
 
@@ -54,6 +65,7 @@ const UserDefinedMetricsPage = () => {
       .then(() => {
         setSaved(true);
         setLoading(false);
+  setTimeout(() => { window.location.hash = ''; }, 500); // Redirect to home after short delay
       })
       .catch(() => {
         setError('Failed to save metrics');
@@ -139,6 +151,28 @@ const UserDefinedMetricsPage = () => {
                 margin="normal"
                 inputProps={{ min: 0, step: 1000 }}
                 helperText="Default: $150,000"
+              />
+              <TextField
+                label="Number of Developers (for licensing)"
+                name="numberOfDevelopers"
+                type="number"
+                value={inputs.numberOfDevelopers}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                inputProps={{ min: 1 }}
+                helperText="Default: 10 users"
+              />
+              <TextField
+                label="Flyway Licensing Cost ($)"
+                name="flywayLicensingCost"
+                type="number"
+                value={inputs.flywayLicensingCost}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                inputProps={{ min: 0, step: 1000 }}
+                helperText="Default: number of users × $3,000"
               />
               <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }} disabled={loading}>
                 Save

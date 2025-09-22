@@ -1,8 +1,10 @@
 {
   "deploymentsPerQuarter": "10",
   "leadTimeDays": "20",
-  "scriptFailureRate": "15",
+  "scriptFailureRate": "5",
   "deploymentDurationDays": 14,
-  "peopleInvolved": 3,
-  "averageSalary": 150000
+  "peopleInvolved": "15",
+  "averageSalary": 150000,
+  "numberOfDevelopers": 10,
+  "flywayLicensingCost": 30000
 }
