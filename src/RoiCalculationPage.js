@@ -63,6 +63,7 @@ export default function RoiCalculationPage() {
         body: JSON.stringify(inputs),
       });
       setSaveStatus('Saved!');
+      setTimeout(() => { window.location.hash = '/'; }, 500);
     } catch {
       setSaveStatus('Failed to save');
     }

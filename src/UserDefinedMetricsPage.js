@@ -109,7 +109,7 @@ const UserDefinedMetricsPage = () => {
                 onChange={handleChange}
                 fullWidth
                 margin="normal"
-                inputProps={{ min: 0 }}
+                slotProps={{ input: { min: 0 } }}
                 helperText={"A deployment is any move from one environment to another (e.g., dev to QA, QA to prod). For example, dev → QA → prod counts as 2 deployments."}
               />
               <TextField
@@ -120,7 +120,7 @@ const UserDefinedMetricsPage = () => {
                 onChange={handleChange}
                 fullWidth
                 margin="normal"
-                inputProps={{ min: 0 }}
+                slotProps={{ input: { min: 0 } }}
                 helperText={"After a developer has created the necessary deployment script, how many days does it take for that change to reach production?"}
               />
               <TextField
@@ -131,7 +131,7 @@ const UserDefinedMetricsPage = () => {
                 onChange={handleChange}
                 fullWidth
                 margin="normal"
-                inputProps={{ min: 0, max: 100, step: 0.1 }}
+                slotProps={{ input: { min: 0, max: 100, step: 0.1 } }}
                 helperText={"If a script fails to execute, or executes the wrong change, in any environment, that is considered a script failure."}
               />
               <TextField
@@ -142,7 +142,7 @@ const UserDefinedMetricsPage = () => {
                 onChange={handleChange}
                 fullWidth
                 margin="normal"
-                inputProps={{ min: 0, step: 1000 }}
+                slotProps={{ input: { min: 0, step: 1000 } }}
                 helperText="Default: $150,000"
               />
               <TextField
@@ -153,7 +153,7 @@ const UserDefinedMetricsPage = () => {
                 onChange={handleChange}
                 fullWidth
                 margin="normal"
-                inputProps={{ min: 1 }}
+                slotProps={{ input: { min: 1 } }}
                 helperText="Default: 10 users"
               />
               <TextField
@@ -164,7 +164,7 @@ const UserDefinedMetricsPage = () => {
                 onChange={handleChange}
                 fullWidth
                 margin="normal"
-                inputProps={{ min: 0, step: 1000 }}
+                slotProps={{ input: { min: 0, step: 1000 } }}
                 helperText="Default: number of users × $3,000"
               />
               <TextField
@@ -175,7 +175,7 @@ const UserDefinedMetricsPage = () => {
                 onChange={handleChange}
                 fullWidth
                 margin="normal"
-                inputProps={{ min: 0 }}
+                slotProps={{ input: { min: 0 } }}
                 helperText="Default: 25"
               />
               <TextField
@@ -186,7 +186,7 @@ const UserDefinedMetricsPage = () => {
                 onChange={handleChange}
                 fullWidth
                 margin="normal"
-                inputProps={{ min: 0, max: 100, step: 1 }}
+                slotProps={{ input: { min: 0, max: 100, step: 1 } }}
                 helperText="Default: 25%"
               />
               <TextField
@@ -197,7 +197,7 @@ const UserDefinedMetricsPage = () => {
                 onChange={handleChange}
                 fullWidth
                 margin="normal"
-                inputProps={{ min: 0, step: 1000 }}
+                slotProps={{ input: { min: 0, step: 1000 } }}
                 helperText="Default: $125,000"
               />
               <TextField
@@ -208,7 +208,7 @@ const UserDefinedMetricsPage = () => {
                 onChange={handleChange}
                 fullWidth
                 margin="normal"
-                inputProps={{ min: 0 }}
+                slotProps={{ input: { min: 0 } }}
                 helperText="Default: 50"
               />
               <TextField
@@ -219,7 +219,7 @@ const UserDefinedMetricsPage = () => {
                 onChange={handleChange}
                 fullWidth
                 margin="normal"
-                inputProps={{ min: 0, max: 100, step: 1 }}
+                slotProps={{ input: { min: 0, max: 100, step: 1 } }}
                 helperText="Default: 25%"
               />
               <TextField
@@ -230,7 +230,7 @@ const UserDefinedMetricsPage = () => {
                 onChange={handleChange}
                 fullWidth
                 margin="normal"
-                inputProps={{ min: 0, step: 1000 }}
+                slotProps={{ input: { min: 0, step: 1000 } }}
                 helperText="Default: $100,000"
               />
               <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
