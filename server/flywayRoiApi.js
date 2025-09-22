@@ -25,7 +25,7 @@ router.post('/flyway-roi', (req, res) => {
 
     // Validation: check for missing or invalid values
     const requiredFields = [
-      'deploymentsPerQuarter', 'leadTimeDays', 'deploymentDurationDays',
+  'deploymentsPerQuarter', 'leadTimeDays', 'changeInDeploymentDurationDays',
       'peopleInvolved', 'averageSalary'
     ];
     const missing = [];

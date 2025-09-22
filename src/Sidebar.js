@@ -31,12 +31,15 @@ const navItems = [
   { text: 'Metrics Chart', icon: <BarChartIcon />, section: 'metrics-chart' },
   { text: 'Migration History', icon: <TableChartIcon />, section: 'migration-history' },
   { text: 'Deployment Metrics Configuration', icon: <SettingsIcon />, section: 'user-defined-metrics' },
+  { text: 'ROI Calculation', icon: <QueryStatsIcon />, section: 'roi-calculation' },
 ];
 
 export default function Sidebar() {
   const handleNavClick = (section) => {
     if (section === 'user-defined-metrics') {
       window.location.hash = '#/user-defined-metrics';
+    } else if (section === 'roi-calculation') {
+      window.location.hash = '#/roi-calculation';
     } else {
       window.location.hash = '';
       // Wait for route to render, then scroll to section

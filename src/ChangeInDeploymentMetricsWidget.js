@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { calculateFlywayMetrics } from './flywayMetricsUtil';
+import { calculateROI } from './roiUtil';
 import { Card, CardContent, Typography, Box, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
 
@@ -35,89 +37,26 @@ const ChangeInDeploymentMetricsWidget = () => {
         const flywayRes = await fetch('/api/flyway/history/all');
         const flywayData = await flywayRes.json();
 
-        // Only use prod data for metrics
-        const prodKeys = Object.keys(flywayData).filter(k => k.toLowerCase().includes('prod'));
-        const prodRows = prodKeys.map(k => flywayData[k]).flat();
-
-        // Calculate deployments per quarter, lead time, failure rate for prod only
-        let deployments = 0, failures = 0;
-        let minDate = null, maxDate = null;
-        prodRows.forEach(row => {
-          if (row.type && row.type.toLowerCase() !== 'undo' && row.type.toLowerCase() !== 'undo_sql') {
-            deployments++;
-            if (row.success === false || row.success === 0) failures++;
-            if (row.installed_on) {
-              const d = new Date(row.installed_on).getTime();
-              if (!isNaN(d)) {
-                if (minDate === null || d < minDate) minDate = d;
-                if (maxDate === null || d > maxDate) maxDate = d;
-              }
-            }
-          }
-        });
-        // Extrapolate deployments per quarter if less than 90 days of data
-        let deploymentsPerQuarter = deployments;
-        let deploymentsExtrapolated = false;
-        if (minDate !== null && maxDate !== null) {
-          const daysSpan = (maxDate - minDate) / (1000 * 60 * 60 * 24);
-          if (daysSpan < 90 && daysSpan > 1) {
-            deploymentsPerQuarter = deployments * (90 / daysSpan);
-            deploymentsExtrapolated = true;
-          }
-        }
-
         // Fetch migration-lead-times.json for lead time (days) average, prod only
         const leadTimesRes = await fetch('/server/migration-lead-times.json');
         const leadTimesData = await leadTimesRes.json();
-        const prodLeadTimes = Object.entries(leadTimesData)
-          .filter(([key, value]) => key.toLowerCase().includes('prod') && typeof value === 'number' && value >= 0)
-          .map(([key, value]) => value);
-        const leadTimeDays = prodLeadTimes.length > 0 ? prodLeadTimes.reduce((a, b) => a + b, 0) / prodLeadTimes.length : null;
 
-        const scriptFailureRate = deployments > 0 ? (failures / deployments) * 100 : null;
-        // Estimate deployment duration as the average of (completed_on - installed_on) for prod migrations
-        let deploymentDurations = prodRows
-          .filter(row => row.installed_on && row.completed_on)
-          .map(row => {
-            const start = new Date(row.installed_on).getTime();
-            const end = new Date(row.completed_on).getTime();
-            return !isNaN(start) && !isNaN(end) && end > start ? (end - start) / (1000 * 60 * 60 * 24) : null;
-          })
-          .filter(x => x !== null);
-        const deploymentDurationDays = deploymentDurations.length > 0 ? deploymentDurations.reduce((a, b) => a + b, 0) / deploymentDurations.length : null;
-
-        const flywayMetricsObj = { deploymentsPerQuarter, leadTimeDays, scriptFailureRate, deploymentsExtrapolated, deploymentDurationDays };
+        // Use shared utility for Flyway metrics
+        const flywayMetricsObj = calculateFlywayMetrics(flywayData, leadTimesData);
         setFlywayMetrics(flywayMetricsObj);
 
         // Save inferred metrics to backend
         await fetch('/server/flyway-inferred-metrics', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            deploymentsPerQuarter,
-            leadTimeDays,
-            deploymentDurationDays
-          })
+          body: JSON.stringify(flywayMetricsObj)
         });
 
-        // Calculate ROI and fetch explanation using inferred metrics
+        // Calculate ROI on the client using available fields
         if (userData && flywayMetricsObj) {
-          const roiRes = await fetch('/server/flyway-roi', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              flywayMetrics: {
-                deploymentsPerQuarter,
-                leadTimeDays,
-                deploymentDurationDays
-              }
-            })
-          });
-          if (roiRes.ok) {
-            const roiData = await roiRes.json();
-            setRoi(roiData.roi);
-            setRoiExplanation(roiData.roiExplanation);
-          }
+          const roiResult = calculateROI(userData, flywayMetricsObj);
+          setRoi(roiResult.roi);
+          setRoiExplanation(roiResult.roiExplanation);
         }
       } catch (e) {
         setError('Failed to load metrics');
@@ -198,7 +137,7 @@ const ChangeInDeploymentMetricsWidget = () => {
               {roi !== null && (
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   ROI: <b>{(roi * 100).toFixed(1)}%</b> &nbsp;
-                  <Button size="small" onClick={() => alert(roiExplanation)} sx={{ textTransform: 'none', ml: 1 }}>
+                  <Button size="small" onClick={() => { window.location.hash = '#/roi-calculation'; }} sx={{ textTransform: 'none', ml: 1 }}>
                     How is this calculated?
                   </Button>
                 </Typography>

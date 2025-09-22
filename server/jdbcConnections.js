@@ -50,7 +50,7 @@ async function refreshHistory() {
   try {
     cachedHistory = await getFlywayHistory();
     lastFetched = Date.now();
-    // console.log('[Flyway API] Migration history refreshed:', JSON.stringify(cachedHistory, null, 2));
+  // Removed verbose Flyway API migration history logging
   } catch (err) {
     cachedHistory = [{ error: err.message }];
     console.error('[Flyway API] Error refreshing migration history:', err);

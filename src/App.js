@@ -14,6 +14,7 @@ import DeploymentsOverTimeWidget from './DeploymentsOverTimeWidget';
 import AverageDeploymentTimeWidget from './AverageDeploymentTimeWidget';
 import UserDefinedMetricsPage from './UserDefinedMetricsPage';
 import ChangeInDeploymentMetricsWidget from './ChangeInDeploymentMetricsWidget';
+import RoiCalculationPage from './RoiCalculationPage';
 
 function App() {
   const [hash, setHash] = React.useState(window.location.hash);
@@ -37,6 +38,8 @@ function App() {
         <Toolbar />
         {hash === '#/user-defined-metrics' ? (
           <div id="user-defined-metrics"><UserDefinedMetricsPage /></div>
+        ) : hash === '#/roi-calculation' ? (
+          <RoiCalculationPage />
         ) : (
           <>
             <div id="change-in-deployment-metrics"><ChangeInDeploymentMetricsWidget /></div>

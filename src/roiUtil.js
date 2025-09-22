@@ -1,24 +1,20 @@
-// ROI calculation and explanation utility for Flyway
-
-function calculateFlywayROI({
-  userMetrics,
-  flywayMetrics
-}) {
+// Utility to calculate ROI from user and flyway metrics
+export function calculateROI(userMetrics, flywayMetrics) {
+  if (!userMetrics || !flywayMetrics) return { roi: null, roiExplanation: 'Missing metrics' };
   // Parse and coerce values
   const deploymentsPerQuarter = Number(userMetrics.deploymentsPerQuarter);
   const flywayDeploymentsPerQuarter = Number(flywayMetrics.deploymentsPerQuarter);
   const leadTimeDays = Number(userMetrics.leadTimeDays);
   const flywayLeadTimeDays = Number(flywayMetrics.leadTimeDays);
-  const userChangeInDeploymentDurationDays = Number(userMetrics.changeInDeploymentDurationDays);
-  const flywayChangeInDeploymentDurationDays = Number(flywayMetrics.changeInDeploymentDurationDays);
   const peopleInvolved = Number(userMetrics.peopleInvolved);
   const averageSalary = Number(userMetrics.averageSalary);
   const scriptFailureRate = Number(userMetrics.scriptFailureRate);
   const flywayScriptFailureRate = Number(flywayMetrics.scriptFailureRate);
 
   // Calculate cost per deployment (people * salary * duration)
-  // Use user-defined changeInDeploymentDurationDays directly for cost calculation
-  const costPerDeployment = (peopleInvolved * (averageSalary / 260) * userChangeInDeploymentDurationDays); // 260 workdays/year
+  // Use lead time as a proxy for deployment duration if not available
+  const deploymentDurationDays = Number(userMetrics.deploymentDurationDays) || leadTimeDays;
+  const costPerDeployment = (peopleInvolved * (averageSalary / 260) * deploymentDurationDays); // 260 workdays/year
   // Calculate total deployments per year
   const userDeploymentsPerYear = deploymentsPerQuarter * 4;
   const flywayDeploymentsPerYear = flywayDeploymentsPerQuarter * 4;
@@ -41,7 +37,5 @@ function calculateFlywayROI({
   // Explanation blurb
   const explanation = `ROI is calculated as the net value of improvements (lead time reduction, more deployments, and fewer failures) divided by the total cost of deployments with Flyway. Value is based on: (1) reduction in lead time per deployment, (2) increase in deployments per year, and (3) reduction in script failure rate. Each is multiplied by the number of people involved, their average salary, and the number of deployments per year. Cost is the total salary cost for all deployments with Flyway. ROI = (Value - Cost) / Cost.`;
 
-  return { roi, annualValue, annualCost, explanation };
+  return { roi, annualValue, annualCost, roiExplanation: explanation };
 }
-
-module.exports = { calculateFlywayROI };

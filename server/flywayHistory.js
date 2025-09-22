@@ -97,7 +97,7 @@ function parseJdbcToPgConfig(jdbcUrl) {
     password
   };
 }
-  console.log("[Flyway] Results: ", JSON.stringify(results, null, 2));
+  // Removed verbose Flyway schema history logging
   return results;
 }
 

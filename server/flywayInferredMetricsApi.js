@@ -13,7 +13,7 @@ router.get('/flyway-inferred-metrics', async (req, res) => {
   try {
     let data = JSON.parse(fs.readFileSync(inferredPath, 'utf8'));
     // If any inferred metric is null, recalculate from history
-    if (data.deploymentsPerQuarter == null || data.leadTimeDays == null || data.deploymentDurationDays == null) {
+  if (data.deploymentsPerQuarter == null || data.leadTimeDays == null || data.changeInDeploymentDurationDays == null) {
       const flywayHistory = await getFlywayHistory();
       // Flatten all histories into a single object keyed by dbName
       const flywayData = {};
