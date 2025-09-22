@@ -90,7 +90,7 @@ const UserDefinedMetricsPage = () => {
       <Card>
         <CardContent>
           <Typography variant="h5" gutterBottom>
-            User-Defined Deployment Metrics
+            Deployment Metrics Without Flyway (Input Data)
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             For deployments not tracked by Flyway, enter your own metrics below.
@@ -110,6 +110,7 @@ const UserDefinedMetricsPage = () => {
                 fullWidth
                 margin="normal"
                 inputProps={{ min: 0 }}
+                helperText={"A deployment is any move from one environment to another (e.g., dev to QA, QA to prod). For example, dev → QA → prod counts as 2 deployments."}
               />
               <TextField
                 label="Lead Time for Changes (days)"
@@ -120,6 +121,7 @@ const UserDefinedMetricsPage = () => {
                 fullWidth
                 margin="normal"
                 inputProps={{ min: 0 }}
+                helperText={"After a developer has created the necessary deployment script, how many days does it take for that change to reach production?"}
               />
               <TextField
                 label="Script Failure Rate (%)"
@@ -130,28 +132,7 @@ const UserDefinedMetricsPage = () => {
                 fullWidth
                 margin="normal"
                 inputProps={{ min: 0, max: 100, step: 0.1 }}
-              />
-              <TextField
-                label="How long for a deployment (days)"
-                name="deploymentDurationDays"
-                type="number"
-                value={inputs.deploymentDurationDays}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
-                inputProps={{ min: 1 }}
-                helperText="Default: 14 days (2 weeks)"
-              />
-              <TextField
-                label="How many people involved"
-                name="peopleInvolved"
-                type="number"
-                value={inputs.peopleInvolved}
-                onChange={handleChange}
-                fullWidth
-                margin="normal"
-                inputProps={{ min: 1 }}
-                helperText="Default: 3 people"
+                helperText={"If a script fails to execute, or executes the wrong change, in any environment, that is considered a script failure."}
               />
               <TextField
                 label="Average Salary ($)"
@@ -252,9 +233,14 @@ const UserDefinedMetricsPage = () => {
                 inputProps={{ min: 0, step: 1000 }}
                 helperText="Default: $100,000"
               />
-              <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }} disabled={loading}>
-                Save
-              </Button>
+              <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                <Button type="submit" variant="contained" color="primary" disabled={loading}>
+                  Save
+                </Button>
+                <Button variant="outlined" color="secondary" href="#/">
+                  Home
+                </Button>
+              </Box>
               {saved && (
                 <Typography color="success.main" sx={{ mt: 2 }}>
                   Saved!
