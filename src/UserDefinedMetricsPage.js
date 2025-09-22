@@ -10,6 +10,12 @@ const initialInputs = {
   averageSalary: '',
   numberOfDevelopers: 10,
   flywayLicensingCost: 30000,
+  dbaCount: 25,
+  dbaTimeSavedPercent: 25,
+  dbaSalary: 125000,
+  developerCount: 50,
+  developerTimeSavedPercent: 25,
+  developerSalary: 100000,
 };
 
 const UserDefinedMetricsPage = () => {
@@ -32,6 +38,12 @@ const UserDefinedMetricsPage = () => {
           averageSalary: data.averageSalary ?? 150000,
           numberOfDevelopers: data.numberOfDevelopers ?? 10,
           flywayLicensingCost: data.flywayLicensingCost ?? ((data.numberOfDevelopers ?? 10) * 3000),
+          dbaCount: data.dbaCount ?? 25,
+          dbaTimeSavedPercent: data.dbaTimeSavedPercent ?? 25,
+          dbaSalary: data.dbaSalary ?? 125000,
+          developerCount: data.developerCount ?? 50,
+          developerTimeSavedPercent: data.developerTimeSavedPercent ?? 25,
+          developerSalary: data.developerSalary ?? 100000,
         });
         setLoading(false);
       })
@@ -173,6 +185,72 @@ const UserDefinedMetricsPage = () => {
                 margin="normal"
                 inputProps={{ min: 0, step: 1000 }}
                 helperText="Default: number of users × $3,000"
+              />
+              <TextField
+                label="DBA Count"
+                name="dbaCount"
+                type="number"
+                value={inputs.dbaCount}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                inputProps={{ min: 0 }}
+                helperText="Default: 25"
+              />
+              <TextField
+                label="DBA Time Saved (%)"
+                name="dbaTimeSavedPercent"
+                type="number"
+                value={inputs.dbaTimeSavedPercent}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                inputProps={{ min: 0, max: 100, step: 1 }}
+                helperText="Default: 25%"
+              />
+              <TextField
+                label="DBA Salary ($)"
+                name="dbaSalary"
+                type="number"
+                value={inputs.dbaSalary}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                inputProps={{ min: 0, step: 1000 }}
+                helperText="Default: $125,000"
+              />
+              <TextField
+                label="Developer Count"
+                name="developerCount"
+                type="number"
+                value={inputs.developerCount}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                inputProps={{ min: 0 }}
+                helperText="Default: 50"
+              />
+              <TextField
+                label="Developer Time Saved (%)"
+                name="developerTimeSavedPercent"
+                type="number"
+                value={inputs.developerTimeSavedPercent}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                inputProps={{ min: 0, max: 100, step: 1 }}
+                helperText="Default: 25%"
+              />
+              <TextField
+                label="Developer Salary ($)"
+                name="developerSalary"
+                type="number"
+                value={inputs.developerSalary}
+                onChange={handleChange}
+                fullWidth
+                margin="normal"
+                inputProps={{ min: 0, step: 1000 }}
+                helperText="Default: $100,000"
               />
               <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }} disabled={loading}>
                 Save

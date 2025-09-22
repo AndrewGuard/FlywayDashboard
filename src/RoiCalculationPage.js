@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Paper } from '@mui/material';
+import { Box, Typography, Paper, Button } from '@mui/material';
 
 export default function RoiCalculationPage() {
   return (
@@ -25,6 +25,11 @@ export default function RoiCalculationPage() {
           ROI = (Value - Cost) / Cost<br/>
           Where Value = (Lead Time Savings + Deployment Increase Value + Failure Rate Savings)
         </Typography>
+        <Box sx={{ mt: 3 }}>
+          <Button variant="outlined" href="#/user-defined-metrics">
+            Change User-Defined Inputs
+          </Button>
+        </Box>
       </Paper>
     </Box>
   );

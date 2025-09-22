@@ -6,5 +6,11 @@
   "peopleInvolved": "15",
   "averageSalary": 150000,
   "numberOfDevelopers": 10,
-  "flywayLicensingCost": 30000
+  "flywayLicensingCost": 30000,
+  "dbaCount": 25,
+  "dbaTimeSavedPercent": 25,
+  "dbaSalary": 125000,
+  "developerCount": 50,
+  "developerTimeSavedPercent": 25,
+  "developerSalary": "100000"
 }
