@@ -1,0 +1,6 @@
+{
+  "roi": -0.19657999849245242,
+  "annualValue": 1423841.7100766501,
+  "annualCost": 1772225.868667615,
+  "roiExplanation": "ROI is calculated as the net value of lead time savings (in dollars) divided by the total cost of deployments with Flyway. Value is based on the reduction in lead time per deployment, multiplied by the number of people involved, their average salary, and the number of deployments per year. Cost is the total salary cost for all deployments with Flyway. ROI = (Value - Cost) / Cost."
+}

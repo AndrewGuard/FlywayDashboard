@@ -6,6 +6,8 @@ app.use(cors());
 app.use(express.json());
 app.use('/api/jdbc-connections', require('./jdbcConnections'));
 app.use('/server', require('./leadTimeApi'));
+app.use('/server', require('./flywayRoiApi'));
+app.use('/server', require('./flywayInferredMetricsApi'));
 
 // Add /api/flyway/history/all endpoint for UndoMigrationsWidget compatibility
 const { getFlywayHistory } = require('./flywayHistory');

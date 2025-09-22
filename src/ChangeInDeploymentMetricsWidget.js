@@ -16,6 +16,8 @@ const metricsLabels = {
 const ChangeInDeploymentMetricsWidget = () => {
   const [flywayMetrics, setFlywayMetrics] = useState(null);
   const [userMetrics, setUserMetrics] = useState(null);
+  const [roi, setRoi] = useState(null);
+  const [roiExplanation, setRoiExplanation] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -73,7 +75,50 @@ const ChangeInDeploymentMetricsWidget = () => {
         const leadTimeDays = prodLeadTimes.length > 0 ? prodLeadTimes.reduce((a, b) => a + b, 0) / prodLeadTimes.length : null;
 
         const scriptFailureRate = deployments > 0 ? (failures / deployments) * 100 : null;
-  setFlywayMetrics({ deploymentsPerQuarter, leadTimeDays, scriptFailureRate, deploymentsExtrapolated });
+        // Estimate deployment duration as the average of (completed_on - installed_on) for prod migrations
+        let deploymentDurations = prodRows
+          .filter(row => row.installed_on && row.completed_on)
+          .map(row => {
+            const start = new Date(row.installed_on).getTime();
+            const end = new Date(row.completed_on).getTime();
+            return !isNaN(start) && !isNaN(end) && end > start ? (end - start) / (1000 * 60 * 60 * 24) : null;
+          })
+          .filter(x => x !== null);
+        const deploymentDurationDays = deploymentDurations.length > 0 ? deploymentDurations.reduce((a, b) => a + b, 0) / deploymentDurations.length : null;
+
+        const flywayMetricsObj = { deploymentsPerQuarter, leadTimeDays, scriptFailureRate, deploymentsExtrapolated, deploymentDurationDays };
+        setFlywayMetrics(flywayMetricsObj);
+
+        // Save inferred metrics to backend
+        await fetch('/server/flyway-inferred-metrics', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            deploymentsPerQuarter,
+            leadTimeDays,
+            deploymentDurationDays
+          })
+        });
+
+        // Calculate ROI and fetch explanation using inferred metrics
+        if (userData && flywayMetricsObj) {
+          const roiRes = await fetch('/server/flyway-roi', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              flywayMetrics: {
+                deploymentsPerQuarter,
+                leadTimeDays,
+                deploymentDurationDays
+              }
+            })
+          });
+          if (roiRes.ok) {
+            const roiData = await roiRes.json();
+            setRoi(roiData.roi);
+            setRoiExplanation(roiData.roiExplanation);
+          }
+        }
       } catch (e) {
         setError('Failed to load metrics');
       } finally {
@@ -129,22 +174,37 @@ const ChangeInDeploymentMetricsWidget = () => {
         ) : error ? (
           <Typography color="error">{error}</Typography>
         ) : (
-          <TableContainer component={Paper} sx={{ mt: 2 }}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Metric</TableCell>
-                  <TableCell align="right">Flyway</TableCell>
-                  <TableCell align="right">Non Flyway</TableCell>
-                  <TableCell align="right">Δ (Abs)</TableCell>
-                  <TableCell align="right">Δ (%)</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {['deploymentsPerQuarter', 'leadTimeDays', 'scriptFailureRate'].map(renderRow)}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <>
+            <TableContainer component={Paper} sx={{ mt: 2 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Metric</TableCell>
+                    <TableCell align="right">Flyway</TableCell>
+                    <TableCell align="right">Non Flyway</TableCell>
+                    <TableCell align="right">Δ (Abs)</TableCell>
+                    <TableCell align="right">Δ (%)</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {['deploymentsPerQuarter', 'leadTimeDays', 'scriptFailureRate'].map(renderRow)}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                Expected Value to Business (ROI)
+              </Typography>
+              {roi !== null && (
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  ROI: <b>{(roi * 100).toFixed(1)}%</b> &nbsp;
+                  <Button size="small" onClick={() => alert(roiExplanation)} sx={{ textTransform: 'none', ml: 1 }}>
+                    How is this calculated?
+                  </Button>
+                </Typography>
+              )}
+            </Box>
+          </>
         )}
       </CardContent>
     </Card>

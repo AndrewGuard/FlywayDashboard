@@ -1,5 +1,8 @@
 {
-  "deploymentsPerQuarter": "50",
+  "deploymentsPerQuarter": "10",
   "leadTimeDays": "20",
-  "scriptFailureRate": "15"
+  "scriptFailureRate": "15",
+  "deploymentDurationDays": 14,
+  "peopleInvolved": 3,
+  "averageSalary": 150000
 }
