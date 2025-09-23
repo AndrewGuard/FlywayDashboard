@@ -8,10 +8,10 @@
   "numberOfDevelopers": 10,
   "flywayLicensingCost": "130000",
   "dbaCount": "3",
-  "dbaTimeSavedPercent": 25,
+  "dbaTimeSavedPercent": "10",
   "dbaSalary": 125000,
   "developerCount": 50,
-  "developerTimeSavedPercent": "15",
+  "developerTimeSavedPercent": "10",
   "developerSalary": "100000",
-  "estimatedImplementationHours": 100
+  "estimatedImplementationHours": "200"
 }

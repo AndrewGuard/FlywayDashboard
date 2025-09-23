@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { calculateFlywayMetrics } from './flywayMetricsUtil';
-import { calculateROI } from './roiUtil';
 import { Card, CardContent, Typography, Box, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
+
+import { calculateROI } from './roiUtil';
 
 function percentChange(current, previous) {
   if (previous === 0 || previous === null || previous === undefined) return null;
@@ -55,7 +56,7 @@ const ChangeInDeploymentMetricsWidget = () => {
 
         // Calculate ROI on the client using available fields
         if (userData && flywayMetricsObj) {
-          const roiResult = calculateROI(userData, flywayMetricsObj);
+          const roiResult = calculateROI(userData);
           setRoi(roiResult.roi);
           setRoiExplanation(roiResult.roiExplanation);
           setAnnualValue(roiResult.annualValue);

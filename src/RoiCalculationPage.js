@@ -1,29 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Typography, Paper, Button, TextField, Grid } from '@mui/material';
 
-// ROI calculation logic (copied from roiUtil.js)
-function calculateROI(userMetrics) {
-  if (!userMetrics) return { roi: null, roiExplanation: 'Missing metrics' };
-  const dbaCount = Number(userMetrics.dbaCount) || 0;
-  const dbaTimeSavedPercent = Number(userMetrics.dbaTimeSavedPercent) || 0;
-  const dbaSalary = Number(userMetrics.dbaSalary) || 0;
-  const developerCount = Number(userMetrics.developerCount) || 0;
-  const developerTimeSavedPercent = Number(userMetrics.developerTimeSavedPercent) || 0;
-  const developerSalary = Number(userMetrics.developerSalary) || 0;
-  const flywayLicensingCost = Number(userMetrics.flywayLicensingCost) || 0;
-  const estimatedImplementationHours = Number(userMetrics.estimatedImplementationHours) || 100;
-  // Assume 50% developer, 50% dba for implementation effort
-  const devImplCost = (developerSalary / 2080) * (estimatedImplementationHours * 0.5);
-  const dbaImplCost = (dbaSalary / 2080) * (estimatedImplementationHours * 0.5);
-  const implementationCost = devImplCost + dbaImplCost;
-  const dbaSavings = dbaCount * (dbaTimeSavedPercent / 100) * dbaSalary;
-  const developerSavings = developerCount * (developerTimeSavedPercent / 100) * developerSalary;
-  const annualValue = dbaSavings + developerSavings - implementationCost;
-  const annualCost = flywayLicensingCost + implementationCost;
-  const roi = annualCost > 0 ? (annualValue - annualCost) / annualCost : null;
-  const explanation = `ROI is calculated as the sum of efficiency gains for DBAs and developers (headcount × percent time saved × salary), minus the Flyway licensing cost and estimated implementation cost. Implementation cost is based on estimated hours × blended DBA/developer rate. ROI = (Value - Cost) / Cost. Value is the sum of DBA and developer savings minus implementation cost. Cost is the Flyway licensing cost plus implementation cost.`;
-  return { roi, annualValue, annualCost, implementationCost, roiExplanation: explanation };
-}
+import { calculateROI } from './roiUtil';
 
 export default function RoiCalculationPage() {
   const [inputs, setInputs] = useState(null);
