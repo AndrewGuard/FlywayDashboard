@@ -83,6 +83,10 @@ export default function RoiCalculationPage() {
         <Typography variant="body1" sx={{ mb: 2 }}>
           {roiExplanation}
         </Typography>
+        <Typography variant="body1" sx={{ mb: 3 }}>
+          <b>How does this relate to DORA?</b><br/>
+          The data points used in this ROI calculation—such as lead time for changes, deployment frequency, and failure rate—are directly related to the <a href="https://dora.dev/guides/dora-metrics-four-keys/" target="_blank" rel="noopener noreferrer">DORA metrics</a>. DORA (DevOps Research and Assessment) metrics are a set of four key performance indicators for software delivery: deployment frequency, lead time for changes, change failure rate, and time to restore service. These metrics help organizations measure and improve their software delivery performance. For more information, see the <a href="https://dora.dev/guides/dora-metrics-four-keys/" target="_blank" rel="noopener noreferrer">DORA Metrics Four Keys Guide</a>.
+        </Typography>
         <Box sx={{ mb: 3 }}>
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
