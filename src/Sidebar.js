@@ -23,6 +23,7 @@ import { Box, Typography } from '@mui/material';
 
 const navItems = [
   { text: 'Change in Deployment Metrics', icon: <BarChartIcon />, section: 'change-in-deployment-metrics' },
+  { text: 'DORA ROI Calculation', icon: <QueryStatsIcon />, section: 'roi-calculation' },
   { text: 'Top Platforms', icon: <DashboardIcon />, section: 'top-platforms' },
   { text: 'Deployments Over Time', icon: <TimelineIcon />, section: 'deployments-over-time' },
   { text: 'Deployment Success Rate', icon: <QueryStatsIcon />, section: 'deployment-success-rate' },
@@ -31,7 +32,6 @@ const navItems = [
   { text: 'Metrics Chart', icon: <BarChartIcon />, section: 'metrics-chart' },
   { text: 'Migration History', icon: <TableChartIcon />, section: 'migration-history' },
   { text: 'Deployment Metrics Configuration', icon: <SettingsIcon />, section: 'user-defined-metrics' },
-  { text: 'ROI Calculation', icon: <QueryStatsIcon />, section: 'roi-calculation' },
 ];
 
 export default function Sidebar() {
