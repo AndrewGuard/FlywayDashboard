@@ -27,3 +27,24 @@ export function calculateROI(userMetrics) {
   const explanation = `ROI is calculated as the sum of efficiency gains for DBAs and developers (headcount × percent time saved × salary), minus the Flyway licensing cost and estimated implementation cost. Implementation cost is based on estimated hours × blended DBA/developer rate. ROI = (Value - Cost) / Cost. Value is the sum of DBA and developer savings minus implementation cost. Cost is the Flyway licensing cost plus implementation cost.`;
   return { roi, annualValue, annualCost, implementationCost, roiExplanation: explanation };
 }
+
+// Example implementation (adjust as needed to match your actual logic)
+export function calculateFlywayMetrics(flywayRaw) {
+  // Calculate and return { leadTimeDays, ... } from flywayRaw
+  if (!flywayRaw) return {};
+  return {
+    leadTimeDays: flywayRaw.leadTimeDays ?? null,
+    deploymentsPerQuarter: flywayRaw.deploymentsPerQuarter ?? null,
+    // ...add other metrics as needed
+  };
+}
+
+export function calculateUserMetrics(userRaw) {
+  // Calculate and return { leadTimeDays, ... } from userRaw
+  if (!userRaw) return {};
+  return {
+    leadTimeDays: userRaw.leadTimeDays ?? null,
+    deploymentsPerQuarter: userRaw.deploymentsPerQuarter ?? null,
+    // ...add other metrics as needed
+  };
+}

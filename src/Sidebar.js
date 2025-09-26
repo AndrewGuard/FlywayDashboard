@@ -17,13 +17,15 @@ import TimelineIcon from '@mui/icons-material/Timeline';
 import UndoIcon from '@mui/icons-material/Undo';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import TableChartIcon from '@mui/icons-material/TableChart';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import logo from './logo.svg';
 import { Box, Typography } from '@mui/material';
 
 
 const navItems = [
   { text: 'Change in Deployment Metrics', icon: <BarChartIcon />, section: 'change-in-deployment-metrics' },
-  { text: 'DORA ROI Calculation', icon: <QueryStatsIcon />, section: 'roi-calculation' },
+  { text: 'DORA ROI Calculation', icon: <QueryStatsIcon />, section: 'roi-calculation' }, 
+  { text: 'Lead Time for Changes Over Time', icon: <TrendingUpIcon />, section: 'lead-time-for-changes-over-time' }, // <-- Added here
   { text: 'Top Platforms', icon: <DashboardIcon />, section: 'top-platforms' },
   { text: 'Deployments Over Time', icon: <TimelineIcon />, section: 'deployments-over-time' },
   { text: 'Deployment Success Rate', icon: <QueryStatsIcon />, section: 'deployment-success-rate' },

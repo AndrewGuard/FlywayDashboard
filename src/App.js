@@ -15,6 +15,8 @@ import AverageDeploymentTimeWidget from './AverageDeploymentTimeWidget';
 import UserDefinedMetricsPage from './UserDefinedMetricsPage';
 import ChangeInDeploymentMetricsWidget from './ChangeInDeploymentMetricsWidget';
 import RoiCalculationPage from './RoiCalculationPage';
+import LeadTimeForChangesOverTimeWidget from './LeadTimeForChangesOverTimeWidget';
+
 
 function App() {
   const [hash, setHash] = React.useState(window.location.hash);
@@ -43,6 +45,7 @@ function App() {
         ) : (
           <>
             <div id="change-in-deployment-metrics"><ChangeInDeploymentMetricsWidget /></div>
+            <div id="lead-time-for-changes-over-time"><LeadTimeForChangesOverTimeWidget /></div>
             <div id="top-platforms"><TopPlatformsWidgets /></div>
             <div id="deployments-over-time"><DeploymentsOverTimeWidget /></div>
             <div id="deployment-success-rate"><DeploymentSuccessRate /></div>

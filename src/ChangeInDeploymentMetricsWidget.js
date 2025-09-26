@@ -4,6 +4,7 @@ import { Card, CardContent, Typography, Box, Button, Table, TableBody, TableCell
 import SettingsIcon from '@mui/icons-material/Settings';
 
 import { calculateROI } from './roiUtil';
+import { loadAllMetrics } from './metricsLoader';
 
 function percentChange(current, previous) {
   if (previous === 0 || previous === null || previous === undefined) return null;
@@ -17,6 +18,30 @@ const metricsLabels = {
 };
 
 const ChangeInDeploymentMetricsWidget = () => {
+
+  // safe number helpers to avoid crashes when data is missing/invalid
+  const toNumOrNull = (v) => {
+    if (v === null || v === undefined) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+  // format numbers to 0 decimal places (nearest whole number) for display in this widget
+  const fmt1 = (v) => (v === null || v === undefined) ? '-' : (Number.isFinite(Number(v)) ? Number(v).toFixed(0) : '-');
+
+  // wrapper to ensure chart datasets always have at least two numeric points
+  const ensureChartSeries = (arr, fallback = 0) => {
+    const numeric = (arr || []).map(x => (Number.isFinite(Number(x)) ? Number(x) : null));
+    const filtered = numeric.filter(x => x !== null);
+    if (!filtered.length) {
+      // return two identical fallback points so chart renders as flat line
+      return [fallback, fallback];
+    }
+    if (filtered.length === 1) {
+      return [filtered[0], filtered[0]];
+    }
+    return numeric.map((x, i) => (x === null ? (i ? numeric[i - 1] ?? fallback : fallback) : x));
+  };
+
   const [flywayMetrics, setFlywayMetrics] = useState(null);
   const [userMetrics, setUserMetrics] = useState(null);
   const [roi, setRoi] = useState(null);
@@ -26,69 +51,43 @@ const ChangeInDeploymentMetricsWidget = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    let mounted = true;
     async function fetchMetrics() {
-      setLoading(true);
-      setError(null);
       try {
-        // Fetch user-defined metrics
-        const userRes = await fetch('/api/user-defined-metrics');
-        const userData = await userRes.json();
-        setUserMetrics(userData);
-
-        // Fetch Flyway metrics (calculate from history)
-        const flywayRes = await fetch('/api/flyway/history/all');
-        const flywayData = await flywayRes.json();
-
-        // Fetch migration-lead-times.json for lead time (days) average, prod only
-        const leadTimesRes = await fetch('/server/migration-lead-times.json');
-        const leadTimesData = await leadTimesRes.json();
-
-        // Use shared utility for Flyway metrics
-        const flywayMetricsObj = calculateFlywayMetrics(flywayData, leadTimesData);
-        setFlywayMetrics(flywayMetricsObj);
-
-        // Save inferred metrics to backend
-        await fetch('/server/flyway-inferred-metrics', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(flywayMetricsObj)
-        });
-
-        // Calculate ROI on the client using available fields
-        if (userData && flywayMetricsObj) {
-          const roiResult = calculateROI(userData);
-          setRoi(roiResult.roi);
-          setRoiExplanation(roiResult.roiExplanation);
-          setAnnualValue(roiResult.annualValue);
-        }
+        const { userData, flywayRaw, leadTimesData, flywayMetricsObj } = await loadAllMetrics();
+        if (!mounted) return;
+        if (userData) setUserMetrics(userData);
+        if (flywayMetricsObj) setFlywayMetrics(flywayMetricsObj);
       } catch (e) {
-        setError('Failed to load metrics');
+        console.error('fetchMetrics error', e);
+        if (mounted) setError('Failed to load metrics');
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false); // <- ensure loading is cleared regardless of success/failure
       }
     }
     fetchMetrics();
+    return () => { mounted = false; };
   }, []);
-
-  const renderRow = (key) => {
-    const flyway = flywayMetrics?.[key] ?? null;
-    const user = userMetrics?.[key] ?? null;
-    const absChange = flyway !== null && user !== null ? flyway - user : null;
-    const pctChange = flyway !== null && user !== null ? percentChange(flyway, user) : null;
-    let flywayDisplay = flyway !== null ? flyway.toFixed(2) : '-';
-    if (key === 'deploymentsPerQuarter' && flyway !== null && flywayMetrics?.deploymentsExtrapolated) {
-      flywayDisplay += ' (extrapolated)';
-    }
+  // ensure renderRow and any chart use safe values
+  const renderRowSafe = (key) => {
+    const f = toNumOrNull(flywayMetrics?.[key]);
+    const u = toNumOrNull(userMetrics?.[key]);
+    const abs = (f !== null && u !== null) ? Math.abs(u - f) : null;
+    const pct = (f !== null && u !== null && f !== 0) ? ((u - f) / Math.abs(f)) * 100 : null;
     return (
       <TableRow key={key}>
-        <TableCell>{metricsLabels[key]}</TableCell>
-        <TableCell align="right" sx={{ fontWeight: 600, color: 'primary.main' }}>{flywayDisplay}</TableCell>
-        <TableCell align="right" sx={{ color: 'secondary.main' }}>{user !== null ? user : '-'}</TableCell>
-        <TableCell align="right">{absChange !== null ? absChange.toFixed(2) : '-'}</TableCell>
-        <TableCell align="right">{pctChange !== null ? pctChange.toFixed(1) + '%' : '-'}</TableCell>
+        <TableCell>{metricsLabels[key] ?? key}</TableCell>
+        <TableCell align="right">{fmt1(f)}</TableCell>
+        <TableCell align="right">{fmt1(u)}</TableCell>
+        <TableCell align="right">{abs !== null ? Number(abs).toFixed(0) : '-'}</TableCell>
+        <TableCell align="right">{pct !== null ? Number(pct).toFixed(0) + '%' : '-'}</TableCell>
       </TableRow>
     );
   };
+  
+  // If there are charts in this widget, build chart data safely here (example)
+  const deploymentsSeriesFlyway = ensureChartSeries([ flywayMetrics?.deploymentsPerQuarter ], 0);
+  const deploymentsSeriesUser = ensureChartSeries([ userMetrics?.deploymentsPerQuarter ], 0);
 
   return (
     <Card sx={{ minWidth: 275, mb: 2 }}>
@@ -129,7 +128,7 @@ const ChangeInDeploymentMetricsWidget = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {['deploymentsPerQuarter', 'leadTimeDays', 'scriptFailureRate'].map(renderRow)}
+                  {['deploymentsPerQuarter', 'leadTimeDays', 'scriptFailureRate'].map(renderRowSafe)}
                 </TableBody>
               </Table>
             </TableContainer>
