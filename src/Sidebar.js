@@ -25,9 +25,10 @@ import { Box, Typography } from '@mui/material';
 const navItems = [
   { text: 'Change in Deployment Metrics', icon: <BarChartIcon />, section: 'change-in-deployment-metrics' },
   { text: 'DORA ROI Calculation', icon: <QueryStatsIcon />, section: 'roi-calculation' }, 
-  { text: 'Lead Time for Changes Over Time', icon: <TrendingUpIcon />, section: 'lead-time-for-changes-over-time' }, // <-- Added here
-  { text: 'Top Platforms', icon: <DashboardIcon />, section: 'top-platforms' },
+  { text: 'Lead Time for Changes Over Time', icon: <TrendingUpIcon />, section: 'lead-time-for-changes-over-time' }, 
   { text: 'Deployments Over Time', icon: <TimelineIcon />, section: 'deployments-over-time' },
+  { text: 'Total Migrations Over Time', icon: <TimelineIcon />, section: 'total-migrations-over-time' }, // moved here
+  { text: 'Top Platforms', icon: <DashboardIcon />, section: 'top-platforms' },
   { text: 'Deployment Success Rate', icon: <QueryStatsIcon />, section: 'deployment-success-rate' },
   { text: 'Undo Migrations', icon: <UndoIcon />, section: 'undo-migrations' },
   { text: 'Avg Deployment Time', icon: <BarChartIcon />, section: 'avg-deployment-time' },

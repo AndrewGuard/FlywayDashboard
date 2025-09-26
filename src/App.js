@@ -1,4 +1,5 @@
 import React from 'react';
+import './chartjsSetup'; // ensure chart.js components are registered before any chart renders
 import Box from '@mui/material/Box';
 import CssBaseline from '@mui/material/CssBaseline';
 import AppBar from '@mui/material/AppBar';
@@ -16,11 +17,12 @@ import UserDefinedMetricsPage from './UserDefinedMetricsPage';
 import ChangeInDeploymentMetricsWidget from './ChangeInDeploymentMetricsWidget';
 import RoiCalculationPage from './RoiCalculationPage';
 import LeadTimeForChangesOverTimeWidget from './LeadTimeForChangesOverTimeWidget';
-
+import TotalMigrationsOverTimeWidget from './TotalMigrationsOverTimeWidget';
+import { useEffect, useState } from 'react';
 
 function App() {
-  const [hash, setHash] = React.useState(window.location.hash);
-  React.useEffect(() => {
+  const [hash, setHash] = useState(window.location.hash);
+  useEffect(() => {
     const onHashChange = () => setHash(window.location.hash);
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
@@ -46,8 +48,9 @@ function App() {
           <>
             <div id="change-in-deployment-metrics"><ChangeInDeploymentMetricsWidget /></div>
             <div id="lead-time-for-changes-over-time"><LeadTimeForChangesOverTimeWidget /></div>
-            <div id="top-platforms"><TopPlatformsWidgets /></div>
             <div id="deployments-over-time"><DeploymentsOverTimeWidget /></div>
+            <div id="total-migrations-over-time"><TotalMigrationsOverTimeWidget /></div>  {/* moved here */} 
+            <div id="top-platforms"><TopPlatformsWidgets /></div>
             <div id="deployment-success-rate"><DeploymentSuccessRate /></div>
             <div id="undo-migrations"><UndoMigrationsWidget /></div>
             <div id="avg-deployment-time"><AverageDeploymentTimeWidget /></div>

@@ -4,80 +4,109 @@ const sql = require('mssql');
 const { Client: PgClient } = require('pg');
 
 const configPath = path.join(__dirname, 'jdbc-connections.json');
+const FLYWAY_HISTORY_CACHE = path.join(__dirname, 'flyway-history.json');
 
 const { setLeadTime, getLeadTimes } = require('./leadTimeStore');
 
 async function getFlywayHistory() {
-  const data = JSON.parse(fs.readFileSync(configPath));
-  let connections = [];
-  if (Array.isArray(data)) {
-    connections = data;
-  } else {
-    const prod = Array.isArray(data.prod) ? data.prod : [];
-    const nonProd = Array.isArray(data.nonProd) ? data.nonProd : [];
-    connections = [...prod, ...nonProd];
-  }
-  const results = [];
-  const leadTimes = getLeadTimes();
-
-  for (const connStr of connections) {
-    let dbName = 'unknown';
-    let history = [];
-    let error = null;
-    if (/^jdbc:postgresql:/i.test(connStr)) {
-      // Parse PostgreSQL JDBC
-      const pgConfig = parseJdbcToPgConfig(connStr);
-      dbName = pgConfig.database || 'unknown';
-      const client = new PgClient(pgConfig);
-      try {
-        await client.connect();
-        const res = await client.query('SELECT * FROM flyway_schema_history ORDER BY installed_rank DESC');
-        history = res.rows;
-      } catch (err) {
-        error = err.message;
-      } finally {
-        await client.end();
-      }
+  let pool;
+  try {
+    const data = JSON.parse(fs.readFileSync(configPath));
+    let connections = [];
+    if (Array.isArray(data)) {
+      connections = data;
     } else {
-      // MSSQL
-      const match = connStr.match(/databaseName=([^;]+)/);
-      dbName = match ? match[1] : 'unknown2';
-      const config = parseJdbcToMssqlConfig(connStr);
-      try {
-        await sql.connect(config);
-        const res = await sql.query('SELECT * FROM flyway_schema_history ORDER BY installed_rank DESC');
-        history = res.recordset;
-      } catch (err) {
-        error = err.message;
-      }
-      await sql.close();
+      const prod = Array.isArray(data.prod) ? data.prod : [];
+      const nonProd = Array.isArray(data.nonProd) ? data.nonProd : [];
+      connections = [...prod, ...nonProd];
     }
-    // Calculate lead time for each migration
-    history = (history || []).map(row => {
-      let leadTime = null;
-      if (row.installed_on && row.script) {
-        // Try to extract timestamp from script name (e.g., V010_20250918120543__desc.sql)
-        const match = row.script.match(/_(\d{14})__/);
-        if (match) {
-          const scriptTs = match[1];
-          // Parse as YYYYMMDDHHmmss
-          const scriptDate = new Date(
-            scriptTs.slice(0,4)+'-'+scriptTs.slice(4,6)+'-'+scriptTs.slice(6,8)+'T'+
-            scriptTs.slice(8,10)+':'+scriptTs.slice(10,12)+':'+scriptTs.slice(12,14)+'Z'
-          );
-          const installedDate = new Date(row.installed_on);
-          if (!isNaN(scriptDate) && !isNaN(installedDate)) {
-            leadTime = (installedDate - scriptDate) / (1000 * 60 * 60 * 24); // days
-            // Store in file by unique key (dbName+version+script)
-            const key = `${dbName}|${row.version}|${row.script}`;
-            setLeadTime(key, leadTime);
-          }
+    const results = [];
+    const leadTimes = getLeadTimes();
+
+    for (const connStr of connections) {
+      let dbName = 'unknown';
+      let history = [];
+      let error = null;
+      if (/^jdbc:postgresql:/i.test(connStr)) {
+        // Parse PostgreSQL JDBC
+        const pgConfig = parseJdbcToPgConfig(connStr);
+        dbName = pgConfig.database || 'unknown';
+        const client = new PgClient(pgConfig);
+        try {
+          await client.connect();
+          const res = await client.query('SELECT * FROM flyway_schema_history ORDER BY installed_rank DESC');
+          history = res.rows;
+        } catch (err) {
+          error = err.message;
+        } finally {
+          await client.end();
+        }
+      } else {
+        // MSSQL
+        const match = connStr.match(/databaseName=([^;]+)/);
+        dbName = match ? match[1] : 'unknown2';
+        const config = parseJdbcToMssqlConfig(connStr);
+        try {
+          pool = await sql.connect(config);
+          const res = await pool.request().query('SELECT * FROM flyway_schema_history ORDER BY installed_rank DESC');
+          history = res.recordset;
+        } catch (err) {
+          error = err.message;
         }
       }
-      return { ...row, leadTime };
-    });
-    results.push({ dbName, connStr, history, ...(error ? { error } : {}) });
+      // Calculate lead time for each migration
+      history = (history || []).map(row => {
+        let leadTime = null;
+        if (row.installed_on && row.script) {
+          // Try to extract timestamp from script name (e.g., V010_20250918120543__desc.sql)
+          const match = row.script.match(/_(\d{14})__/);
+          if (match) {
+            const scriptTs = match[1];
+            // Parse as YYYYMMDDHHmmss
+            const scriptDate = new Date(
+              scriptTs.slice(0,4)+'-'+scriptTs.slice(4,6)+'-'+scriptTs.slice(6,8)+'T'+
+              scriptTs.slice(8,10)+':'+scriptTs.slice(10,12)+':'+scriptTs.slice(12,14)+'Z'
+            );
+            const installedDate = new Date(row.installed_on);
+            if (!isNaN(scriptDate) && !isNaN(installedDate)) {
+              leadTime = (installedDate - scriptDate) / (1000 * 60 * 60 * 24); // days
+              // Store in file by unique key (dbName+version+script)
+              const key = `${dbName}|${row.version}|${row.script}`;
+              setLeadTime(key, leadTime);
+            }
+          }
+        }
+        return { ...row, leadTime };
+      });
+      results.push({ dbName, connStr, history, ...(error ? { error } : {}) });
+    }
+    // cache to file for frontend fallback
+    fs.writeFileSync(FLYWAY_HISTORY_CACHE, JSON.stringify(results, null, 2), 'utf8');
+    return results;
+  } catch (err) {
+    console.error('[Flyway API] Error getting migration history:', err);
+    // return safe empty array so callers do not crash
+    return [];
+  } finally {
+    // safe close: ignore the benign race "Cannot close a pool while it is connecting"
+    try {
+      if (pool && typeof pool.close === 'function') {
+        await pool.close();
+      } else if (typeof mssql !== 'undefined' && typeof mssql.close === 'function') {
+        // if code uses global close
+        await mssql.close();
+      }
+    } catch (closeErr) {
+      const msg = String(closeErr && (closeErr.message || closeErr));
+      if (/Cannot close a pool while it is connecting/i.test(msg)) {
+        console.debug('[Flyway API] Skipped closing pool while it was connecting.');
+      } else {
+        console.warn('[Flyway API] Error closing connection pool:', closeErr);
+      }
+    }
   }
+}
+
 function parseJdbcToPgConfig(jdbcUrl) {
   // Example: jdbc:postgresql://localhost:5432/db?user=postgres&password=pass
   const urlMatch = jdbcUrl.match(/^jdbc:postgresql:\/\/([^:/]+)(?::(\d+))?\/([^?]+)\??(.*)$/);
@@ -96,9 +125,6 @@ function parseJdbcToPgConfig(jdbcUrl) {
     user,
     password
   };
-}
-  // Removed verbose Flyway schema history logging
-  return results;
 }
 
 function parseJdbcToMssqlConfig(jdbcUrl) {

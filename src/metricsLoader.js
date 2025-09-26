@@ -37,13 +37,23 @@ export async function loadAllMetrics() {
     result.errors.push('migration-lead-times error');
   }
 
+  let flywayMetricsObj = null;
   try {
-    if (result.flywayRaw && result.leadTimesData && typeof calculateFlywayMetrics === 'function') {
-      result.flywayMetricsObj = calculateFlywayMetrics(result.flywayRaw, result.leadTimesData);
+    if (result.flywayRaw && result.leadTimesData) {
+      flywayMetricsObj = calculateFlywayMetrics(result.flywayRaw, result.leadTimesData);
+      // Defensive clamp in loader as well (in case other code sets lead times)
+      Object.keys(flywayMetricsObj || {}).forEach(k => {
+        if (/leadTime/i.test(k)) {
+          const n = Number(flywayMetricsObj[k]);
+          flywayMetricsObj[k] = Number.isFinite(n) ? Math.max(0, n) : null;
+        }
+      });
     }
   } catch (e) {
     result.errors.push('calculateFlywayMetrics error');
   }
+
+  result.flywayMetricsObj = flywayMetricsObj;
 
   return result;
 }

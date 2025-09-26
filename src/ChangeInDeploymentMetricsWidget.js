@@ -3,8 +3,8 @@ import { calculateFlywayMetrics } from './flywayMetricsUtil';
 import { Card, CardContent, Typography, Box, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
 
-import { calculateROI } from './roiUtil';
 import { loadAllMetrics } from './metricsLoader';
+import { calculateROI } from './roiUtil';
 
 function percentChange(current, previous) {
   if (previous === 0 || previous === null || previous === undefined) return null;
@@ -18,7 +18,6 @@ const metricsLabels = {
 };
 
 const ChangeInDeploymentMetricsWidget = () => {
-
   // safe number helpers to avoid crashes when data is missing/invalid
   const toNumOrNull = (v) => {
     if (v === null || v === undefined) return null;
@@ -45,50 +44,124 @@ const ChangeInDeploymentMetricsWidget = () => {
   const [flywayMetrics, setFlywayMetrics] = useState(null);
   const [userMetrics, setUserMetrics] = useState(null);
   const [roi, setRoi] = useState(null);
-  const [roiExplanation, setRoiExplanation] = useState('');
+
   const [annualValue, setAnnualValue] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // compute deployments per quarter from raw flyway history rows
+  const computeDeploymentsPerQuarter = (migrations = []) => {
+    // normalize rows -> dates for versioned scripts only
+    const dates = (Array.isArray(migrations) ? migrations : [])
+      .map(m => {
+        const version = m.version ?? m.version_number ?? m.version_number_string ?? null;
+        if (!version) return null;
+        const vstr = String(version).trim();
+        if (!vstr || vstr.startsWith('U')) return null; // skip undo/repeatable/no-version
+        const inst = m.installed_on || m.installedOn || m.installed || m.installedOnUtc || m.timestamp;
+        if (!inst) return null;
+        const d = new Date(inst);
+        return Number.isFinite(d.getTime()) ? d.toISOString().slice(0,10) : null;
+      })
+      .filter(Boolean)
+      .sort();
+
+    if (!dates.length) {
+      return { deploymentsPerQuarter: 0, extrapolated: false, availableDays: 0 };
+    }
+
+    const minDate = new Date(dates[0]);
+    const maxDate = new Date(dates[dates.length - 1]);
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const availableDays = Math.max(1, Math.round((maxDate - minDate) / msPerDay) + 1);
+
+    const COUNT_QUARTER_DAYS = 90;
+
+    if (availableDays >= COUNT_QUARTER_DAYS) {
+      // use last 90 days count (sliding window up to maxDate)
+      const windowStart = new Date(maxDate);
+      windowStart.setDate(windowStart.getDate() - (COUNT_QUARTER_DAYS - 1));
+      const windowStartKey = windowStart.toISOString().slice(0,10);
+      const countLast90 = dates.filter(d => d >= windowStartKey).length;
+      return { deploymentsPerQuarter: Math.round(countLast90), extrapolated: false, availableDays };
+    }
+
+    // not a full quarter -> extrapolate from availableDays to 90 days
+    const totalCount = dates.length;
+    const extrapolatedValue = Math.round((totalCount / availableDays) * COUNT_QUARTER_DAYS);
+    return { deploymentsPerQuarter: extrapolatedValue, extrapolated: true, availableDays };
+  };
 
   useEffect(() => {
     let mounted = true;
     async function fetchMetrics() {
       try {
-        const { userData, flywayRaw, leadTimesData, flywayMetricsObj } = await loadAllMetrics();
+        const { userData, flywayMetricsObj } = await loadAllMetrics();
         if (!mounted) return;
         if (userData) setUserMetrics(userData);
         if (flywayMetricsObj) setFlywayMetrics(flywayMetricsObj);
+
+        // Build inputs for ROI util:
+        // Prefer explicit values from user-defined metrics if present.
+        const implCost = Number(userData?.implementationCost ?? userData?.estimatedImplementationCost ?? userData?.implementation_cost ?? NaN);
+        const annualCost = Number(userData?.annualCost ?? userData?.annual_cost ?? userData?.annualCostIncludingImplementation ?? NaN);
+
+        // If explicit valueToClient not provided, try to infer from savingsPerDeployment * deploymentsPerQuarter * 4 (quarter -> year)
+        const savingPerDeployment = Number(userData?.savingPerDeployment ?? userData?.saving_per_deployment ?? NaN);
+        const deploymentsPerQuarter = Number(
+          userData?.deploymentsPerQuarter ??
+          flywayMetricsObj?.deploymentsPerQuarter ??
+          0
+        );
+        const inferredValueToClient = Number.isFinite(savingPerDeployment) && deploymentsPerQuarter > 0
+          ? savingPerDeployment * deploymentsPerQuarter * 4 // annualized
+          : NaN;
+
+        const valueToClient = Number(userData?.valueToClient ?? userData?.value_to_client ?? userData?.annualSavings ?? inferredValueToClient);
+
+        const roiResult = calculateROI({
+          valueToClient,
+          annualCost,
+          implementationCost: implCost
+        });
+
+        if (!mounted) return;
+        setRoi(roiResult);
       } catch (e) {
         console.error('fetchMetrics error', e);
-        if (mounted) setError('Failed to load metrics');
       } finally {
-        if (mounted) setLoading(false); // <- ensure loading is cleared regardless of success/failure
+        if (mounted) setLoading(false);
       }
     }
     fetchMetrics();
     return () => { mounted = false; };
   }, []);
+
   // ensure renderRow and any chart use safe values
   const renderRowSafe = (key) => {
     const f = toNumOrNull(flywayMetrics?.[key]);
     const u = toNumOrNull(userMetrics?.[key]);
+
+    // special handling for deploymentsPerQuarter to show extrapolated indicator
+    let fDisplay = fmt1(f);
+    if (key === 'deploymentsPerQuarter' && flywayMetrics?.deploymentsPerQuarterExtrapolated) {
+      fDisplay = `${fDisplay}*`; // asterisk indicates extrapolated
+    }
+
     const abs = (f !== null && u !== null) ? Math.abs(u - f) : null;
     const pct = (f !== null && u !== null && f !== 0) ? ((u - f) / Math.abs(f)) * 100 : null;
     return (
       <TableRow key={key}>
         <TableCell>{metricsLabels[key] ?? key}</TableCell>
-        <TableCell align="right">{fmt1(f)}</TableCell>
-        <TableCell align="right">{fmt1(u)}</TableCell>
+        <TableCell align="right">{f !== null ? fDisplay : '-'}</TableCell>
+        <TableCell align="right">{u !== null ? fmt1(u) : '-'}</TableCell>
         <TableCell align="right">{abs !== null ? Number(abs).toFixed(0) : '-'}</TableCell>
         <TableCell align="right">{pct !== null ? Number(pct).toFixed(0) + '%' : '-'}</TableCell>
       </TableRow>
     );
   };
-  
-  // If there are charts in this widget, build chart data safely here (example)
-  const deploymentsSeriesFlyway = ensureChartSeries([ flywayMetrics?.deploymentsPerQuarter ], 0);
-  const deploymentsSeriesUser = ensureChartSeries([ userMetrics?.deploymentsPerQuarter ], 0);
 
+  // add a footnote explaining the asterisk for extrapolated deployments
   return (
     <Card sx={{ minWidth: 275, mb: 2 }}>
       <CardContent>
@@ -136,22 +209,20 @@ const ChangeInDeploymentMetricsWidget = () => {
               <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                 Expected Value to Client (ROI)
               </Typography>
-              {roi !== null && (
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  ROI: <b>{(roi * 100).toFixed(1)}%</b>
-                </Typography>
-              )}
-              {annualValue !== null && (
-                <Typography variant="body2" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
-                  Expected Value to Client (Annual):
-                  <span style={{ fontWeight: 700, fontSize: '1.25em', marginLeft: 8 }}>
-                    ${annualValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  </span>
-                </Typography>
-              )}
-              <Button size="small" onClick={() => { window.location.hash = '#/roi-calculation'; }} sx={{ textTransform: 'none', ml: 1 }}>
-                How is this calculated?
-              </Button>
+              <Typography variant="body2">
+                ROI: {roi?.roiPercent != null ? `${roi.roiPercent.toFixed(1)}%` : '-'}
+                <br />
+                Value to Client: {roi?.valueToClient != null ? `$${roi.valueToClient.toFixed(3)}` : '-'}
+                <br />
+                Annual Cost: {roi?.annualCost != null ? `$${roi.annualCost.toFixed(3)}` : '-'}
+                <br />
+                Implementation Cost: {roi?.implementationCost != null ? `$${roi.implementationCost.toFixed(0)}` : '-'}
+              </Typography>
+            </Box>
+            <Box sx={{ mt: 1 }}>
+              {flywayMetrics?.deploymentsPerQuarterExtrapolated ? (
+                <Typography variant="caption">* Deployments per Quarter extrapolated from {flywayMetrics.deploymentsPerQuarterAvailableDays} days of data.</Typography>
+              ) : null}
             </Box>
           </>
         )}

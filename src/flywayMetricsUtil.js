@@ -1,9 +1,9 @@
 // Shared metrics calculation for Flyway Dashboard (frontend)
 
-export function calculateFlywayMetrics(flywayData, leadTimesData) {
+export function calculateFlywayMetrics(history, leadTimesData) {
   // Only use prod data for metrics
-  const prodKeys = Object.keys(flywayData).filter(k => k.toLowerCase().includes('prod'));
-  const prodRows = prodKeys.map(k => flywayData[k]).flat();
+  const prodKeys = Object.keys(history).filter(k => k.toLowerCase().includes('prod'));
+  const prodRows = prodKeys.map(k => history[k]).flat();
 
   // Calculate deployments per quarter
   let deployments = 0, failures = 0;
@@ -51,5 +51,19 @@ export function calculateFlywayMetrics(flywayData, leadTimesData) {
     .filter(x => x !== null);
   const deploymentDurationDays = deploymentDurations.length > 0 ? deploymentDurations.reduce((a, b) => a + b, 0) / deploymentDurations.length : null;
 
-  return { deploymentsPerQuarter, leadTimeDays, scriptFailureRate, deploymentsExtrapolated, deploymentDurationDays };
+  const obj = { deploymentsPerQuarter, leadTimeDays, scriptFailureRate, deploymentsExtrapolated, deploymentDurationDays };
+
+  // ensure lead-time values are numbers and never negative
+  const clampLeadTimes = (o) => {
+    Object.keys(o).forEach(k => {
+      if (/leadTime/i.test(k)) {
+        const n = Number(o[k]);
+        o[k] = Number.isFinite(n) ? Math.max(0, n) : null;
+      }
+    });
+  };
+
+  clampLeadTimes(obj);
+
+  return obj;
 }

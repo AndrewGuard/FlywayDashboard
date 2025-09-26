@@ -136,6 +136,18 @@ const LeadTimeForChangesOverTimeWidget = () => {
     ],
   };
 
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: { position: 'top' },
+      title: { display: false }
+    },
+    scales: {
+      x: { title: { display: true, text: 'Date' } },
+      y: { title: { display: true, text: 'Lead Time (days)' }, beginAtZero: true }
+    }
+  };
+
   return (
     <Card sx={{ minWidth: 275, mb: 2 }}>
       <CardContent>
@@ -149,17 +161,8 @@ const LeadTimeForChangesOverTimeWidget = () => {
             <Box sx={{ height: 300 }}>
               <Line
                 data={chartData}
-                options={{
-                  responsive: true,
-                  plugins: {
-                    legend: { position: 'top' },
-                    title: { display: false }
-                  },
-                  scales: {
-                    x: { title: { display: true, text: 'Date' } },
-                    y: { title: { display: true, text: 'Lead Time (days)' }, beginAtZero: true }
-                  }
-                }}
+                options={chartOptions}
+                redraw={true}            // force destroy/recreate on data/props change
               />
             </Box>
             <Box sx={{ mt: 2 }}>

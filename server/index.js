@@ -1,51 +1,52 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const app = express();
 
 app.use(cors());
 app.use(express.json());
-app.use('/api/jdbc-connections', require('./jdbcConnections'));
-app.use('/server', require('./leadTimeApi'));
-app.use('/server', require('./flywayRoiApi'));
-app.use('/server', require('./flywayInferredMetricsApi'));
 
-// Add /api/flyway/history/all endpoint for UndoMigrationsWidget compatibility
-const { getFlywayHistory } = require('./flywayHistory');
-app.get('/api/flyway/history/all', async (req, res) => {
-	try {
-		const results = await getFlywayHistory();
-		// Return as { dbName: [history, ...], ... }
-		const out = {};
-		for (const db of results) {
-			out[db.dbName] = db.history || [];
-		}
-		res.json(out);
-	} catch (err) {
-		res.status(500).json({ error: err.message });
-	}
-});
+// serve JSON files placed in the server folder at /server/...
+app.use('/server', express.static(path.join(__dirname)));
 
+// register cache routes
+const cacheRoutes = require('./routes/cacheRoutes');
+app.use(cacheRoutes);
 
+// register flyway routes
+const flywayRoutes = require('./routes/flywayRoutes');
+app.use(flywayRoutes);
+
+// register metrics routes (deployments-per-quarter summary)
+const metricsRoutes = require('./routes/metricsRoutes');
+app.use(metricsRoutes);
+
+// register JDBC connections routes under /api/jdbc-connections
+const jdbcConnections = require('./jdbcConnections');
+app.use('/api/jdbc-connections', jdbcConnections);
 
 // User-defined metrics API layer
 const userDefinedMetrics = require('./userDefinedMetrics');
 
 app.get('/api/user-defined-metrics', (req, res) => {
-	try {
-		const metrics = userDefinedMetrics.getUserDefinedMetrics();
-		res.json(metrics);
-	} catch (e) {
-		res.status(500).json({ error: 'Failed to read metrics' });
-	}
+    try {
+        const metrics = userDefinedMetrics.getUserDefinedMetrics();
+        res.json(metrics);
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to read metrics' });
+    }
 });
 
 app.post('/api/user-defined-metrics', (req, res) => {
-	try {
-		const metrics = userDefinedMetrics.setUserDefinedMetrics(req.body);
-		res.json({ success: true, metrics });
-	} catch (e) {
-		res.status(500).json({ error: 'Failed to save metrics' });
-	}
+    try {
+        const metrics = userDefinedMetrics.setUserDefinedMetrics(req.body);
+        res.json({ success: true, metrics });
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to save metrics' });
+    }
 });
 
-app.listen(5000, () => console.log('API running on port 5000'));
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`API running on port ${PORT}`);
+});

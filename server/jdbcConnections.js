@@ -36,9 +36,6 @@ router.post('/', (req, res) => {
   res.json(data);
 });
 
-module.exports = router;
-
-
 // Cache for migration history
 let cachedHistory = null;
 let lastFetched = 0;
@@ -88,3 +85,51 @@ router.get('/history', async (req, res) => {
   }
   res.json(cachedHistory);
 });
+
+// add a small helper to close pools safely and use it where appropriate
+
+async function safeClosePool(pool) {
+  if (!pool) return;
+  try {
+    // pool.connected and pool.connecting are set by mssql ConnectionPool
+    if (pool.connected) {
+      await pool.close();
+      return;
+    }
+    if (pool.connecting) {
+      // wait until connection completes (success or error), then try closing once
+      await new Promise((resolve) => {
+        const onConnect = () => {
+          cleanup();
+          resolve();
+        };
+        const onError = () => {
+          cleanup();
+          resolve();
+        };
+        function cleanup() {
+          pool.removeListener('connect', onConnect);
+          pool.removeListener('error', onError);
+        }
+        pool.on('connect', onConnect);
+        pool.on('error', onError);
+      });
+      // attempt close after connecting settles
+      if (pool.connected) {
+        try { await pool.close(); } catch (_) { /* swallow */ }
+      }
+      return;
+    }
+    // fallback: try close once
+    try { await pool.close(); } catch (_) { /* swallow */ }
+  } catch (e) {
+    // swallow to avoid crashing background refresh tasks
+    console.warn('safeClosePool error', e && e.message || e);
+  }
+}
+
+// attach helper to router so importers can access it
+router.safeClosePool = safeClosePool;
+
+// export the router (do not overwrite with an object)
+module.exports = router;
