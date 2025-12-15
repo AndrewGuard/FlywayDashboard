@@ -15,14 +15,17 @@ import AverageDeploymentTimeWidget from './AverageDeploymentTimeWidget';
 import UserDefinedMetricsPage from './UserDefinedMetricsPage';
 import ChangeInDeploymentMetricsWidget from './ChangeInDeploymentMetricsWidget';
 import RoiCalculationPage from './RoiCalculationPage';
+import LeadTimeOverTimeWidget from './LeadTimeOverTimeWidget';
 
 function App() {
   const [hash, setHash] = React.useState(window.location.hash);
+  
   React.useEffect(() => {
     const onHashChange = () => setHash(window.location.hash);
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
+
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
@@ -43,6 +46,7 @@ function App() {
         ) : (
           <>
             <div id="change-in-deployment-metrics"><ChangeInDeploymentMetricsWidget /></div>
+            <div id="lead-time-over-time"><LeadTimeOverTimeWidget /></div>
             <div id="deployments-over-time"><DeploymentsOverTimeWidget /></div>
             <div id="top-platforms"><TopPlatformsWidgets /></div>
             <div id="deployment-success-rate"><DeploymentSuccessRate /></div>
