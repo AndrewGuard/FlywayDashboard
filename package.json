@@ -2,38 +2,22 @@
   "name": "flyway-dashboard",
   "version": "0.1.0",
   "private": true,
-  "proxy": "http://localhost:5000",
+  "proxy": "http://localhost:3001",
   "dependencies": {
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1",
-    "@mui/icons-material": "^7.3.2",
-    "@mui/material": "^7.3.2",
-    "@testing-library/dom": "^10.4.1",
-    "@testing-library/jest-dom": "^6.8.0",
-    "@testing-library/react": "^16.3.0",
-    "@testing-library/user-event": "^13.5.0",
-    "chart.js": "^4.5.0",
-    "mssql": "^11.0.1",
-    "pg": "^8.16.3",
-    "react": "^19.1.1",
-    "react-chartjs-2": "^5.3.0",
-    "react-dom": "^19.1.1",
-    "react-router-dom": "^7.9.1",
-    "react-scripts": "^5.0.1",
-    "recharts": "^3.1.2",
-    "web-vitals": "^2.1.4"
+    "@emotion/react": "^11.x.x",
+    "@emotion/styled": "^11.x.x",
+    "@mui/material": "^5.x.x",
+    "chart.js": "^4.x.x",
+    "react": "^18.x.x",
+    "react-chartjs-2": "^5.x.x",
+    "react-dom": "^18.x.x",
+    "react-scripts": "5.x.x"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
   },
   "browserslist": {
     "production": [
@@ -46,12 +30,5 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  },
-  "devDependencies": {
-    "@pmmmwh/react-refresh-webpack-plugin": "^0.6.1",
-    "html-webpack-plugin": "^5.6.4",
-    "source-map-loader": "^5.0.0",
-    "webpack": "^5.101.3",
-    "webpack-dev-server": "^5.2.2"
   }
 }

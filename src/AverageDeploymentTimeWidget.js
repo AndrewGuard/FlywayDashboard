@@ -1,97 +1,110 @@
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, Typography, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import { Card, CardContent, Typography, Box } from '@mui/material';
+import { Bar } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js';
 
-function calculateAverageTimes(migrationsByDb) {
-  // Returns [{ dbName, avgTimeSeconds, count }]
-  return Object.entries(migrationsByDb).map(([dbName, migrations]) => {
-    // Only consider successful deployments, exclude undo/undo_sql
-    const filtered = (migrations || []).filter(m => {
-      const t = m.type ? m.type.toLowerCase() : '';
-      return t !== 'undo' && t !== 'undo_sql' && (!m.success || m.success === true);
-    });
-    // Calculate average time (in seconds) for each deployment
-    // Use 'execution_time' or 'installed_on' and 'completed_on' if available
-    let totalTime = 0;
-    let count = 0;
-    filtered.forEach(m => {
-      if (typeof m.execution_time === 'number') {
-        totalTime += m.execution_time;
-        count++;
-      } else if (m.installed_on && m.completed_on) {
-        const start = new Date(m.installed_on).getTime();
-        const end = new Date(m.completed_on).getTime();
-        if (!isNaN(start) && !isNaN(end) && end > start) {
-          totalTime += (end - start) / 1000;
-          count++;
-        }
-      }
-    });
-    const avgTimeSeconds = count > 0 ? totalTime / count : 0;
-    return { dbName, avgTimeSeconds, count };
-  });
-}
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-const AverageDeploymentTimeWidget = () => {
-  const [rows, setRows] = useState([]);
+export default function AverageDeploymentTimeWidget() {
+  const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchMigrations = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/flyway/history/all');
-      if (!res.ok) throw new Error('Failed to fetch migration history');
-      const data = await res.json();
-      setRows(calculateAverageTimes(data));
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    let mounted = true;
+
+    async function fetchData() {
+      try {
+        const res = await fetch('/api/flyway/history/all');
+        if (!res.ok) throw new Error('Failed to fetch migration history');
+        
+        const data = await res.json();
+        
+        if (!mounted) return;
+
+        const migrations = Array.isArray(data) ? data : [];
+        
+        if (!migrations.length) {
+          setError('No migration data available');
+          setLoading(false);
+          return;
+        }
+
+        // Group by database and calculate average execution time
+        const dbTimes = {};
+        migrations.forEach(m => {
+          const db = m.database || m.schema || 'default';
+          const execTime = Number(m.execution_time) || 0;
+          if (!dbTimes[db]) {
+            dbTimes[db] = { total: 0, count: 0 };
+          }
+          dbTimes[db].total += execTime;
+          dbTimes[db].count += 1;
+        });
+
+        const labels = Object.keys(dbTimes);
+        const avgTimes = labels.map(db => 
+          dbTimes[db].count > 0 ? Math.round(dbTimes[db].total / dbTimes[db].count) : 0
+        );
+
+        setChartData({
+          labels,
+          datasets: [{
+            label: 'Average Deployment Time (ms)',
+            data: avgTimes,
+            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+          }]
+        });
+
+        setLoading(false);
+      } catch (err) {
+        console.error('Average deployment time error:', err);
+        if (mounted) {
+          setError(err.message || 'Failed to load data');
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchData();
+    return () => { mounted = false; };
+  }, []);
+
+  const options = {
+    responsive: true,
+    plugins: {
+      legend: { position: 'top' },
+      title: { display: true, text: 'Average Deployment Time per Database' }
+    },
+    scales: {
+      y: { beginAtZero: true, title: { display: true, text: 'Time (ms)' } }
     }
   };
 
-  useEffect(() => {
-    fetchMigrations();
-    const interval = setInterval(fetchMigrations, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
   return (
-    <Card sx={{ minWidth: 275, mb: 2 }}>
+    <Card sx={{ mb: 2 }}>
       <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Average Deployment Time per Database
-        </Typography>
+        <Typography variant="h6" gutterBottom>Average Deployment Time per Database</Typography>
         {loading ? (
           <Typography>Loading...</Typography>
         ) : error ? (
           <Typography color="error">{error}</Typography>
+        ) : chartData ? (
+          <Box sx={{ height: 300 }}><Bar data={chartData} options={options} /></Box>
         ) : (
-          <TableContainer component={Paper}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Database</TableCell>
-                  <TableCell align="right">Avg Time (ms)</TableCell>
-                  <TableCell align="right">Deployments</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {rows.map(row => (
-                  <TableRow key={row.dbName}>
-                    <TableCell>{row.dbName}</TableCell>
-                    <TableCell align="right">{row.avgTimeSeconds.toFixed(2)}</TableCell>
-                    <TableCell align="right">{row.count}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <Typography>No data available</Typography>
         )}
       </CardContent>
     </Card>
   );
-};
-
-export default AverageDeploymentTimeWidget;
+}

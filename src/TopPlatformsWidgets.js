@@ -1,49 +1,92 @@
-import * as React from 'react';
-import { Card, CardContent, Typography, Grid, Box, CircularProgress } from '@mui/material';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import useTopPlatformsFromFlyway from './useTopPlatformsFromFlyway';
+import React, { useEffect, useState } from 'react';
+import { Card, CardContent, Typography, Grid, Box } from '@mui/material';
+import { Pie } from 'react-chartjs-2';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 export default function TopPlatformsWidgets() {
-  const { platforms, loading } = useTopPlatformsFromFlyway();
+  const [chartData, setChartData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function fetchData() {
+      try {
+        const res = await fetch('/api/flyway/history/all');
+        if (!res.ok) throw new Error('Failed to fetch migration history');
+        
+        const data = await res.json();
+        
+        if (!mounted) return;
+
+        const migrations = Array.isArray(data) ? data : [];
+        
+        if (!migrations.length) {
+          setError('No migration data available');
+          setLoading(false);
+          return;
+        }
+
+        // Count by database type/platform
+        const platforms = {};
+        migrations.forEach(m => {
+          const platform = m.database || m.type || 'Unknown';
+          platforms[platform] = (platforms[platform] || 0) + 1;
+        });
+
+        const labels = Object.keys(platforms);
+        const values = Object.values(platforms);
+        
+        const colors = [
+          'rgba(255, 99, 132, 0.8)',
+          'rgba(54, 162, 235, 0.8)',
+          'rgba(255, 206, 86, 0.8)',
+          'rgba(75, 192, 192, 0.8)',
+          'rgba(153, 102, 255, 0.8)'
+        ];
+
+        setChartData({
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: colors.slice(0, labels.length),
+            borderWidth: 1
+          }]
+        });
+
+        setLoading(false);
+      } catch (err) {
+        console.error('Top platforms error:', err);
+        if (mounted) {
+          setError(err.message || 'Failed to load data');
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchData();
+    return () => { mounted = false; };
+  }, []);
 
   return (
-    <Grid container spacing={2} sx={{ mb: 2 }}>
-      {loading ? (
-        <Grid item xs={12}>
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 120 }}>
-            <CircularProgress />
+    <Card sx={{ mb: 2 }}>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>Top Platforms</Typography>
+        {loading ? (
+          <Typography>Loading...</Typography>
+        ) : error ? (
+          <Typography color="error">{error}</Typography>
+        ) : chartData ? (
+          <Box sx={{ height: 300, display: 'flex', justifyContent: 'center' }}>
+            <Pie data={chartData} options={{ maintainAspectRatio: false }} />
           </Box>
-        </Grid>
-      ) : (
-        platforms.map((platform) => (
-          <Grid item xs={12} sm={6} md={2.4} key={platform.platform}>
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle1" fontWeight={700} gutterBottom>
-                  {platform.platform}
-                </Typography>
-                {/* <Typography variant="caption" color="text.secondary" gutterBottom>
-                  {platform.connStr || ''}
-                </Typography> */}
-                <Typography variant="h5" color="primary.main" gutterBottom>
-                  {platform.deployments} Deployments
-                </Typography>
-                <Box sx={{ height: 80 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={platform.history}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="month" fontSize={10} />
-                      <YAxis hide />
-                      <Tooltip />
-                      <Bar dataKey="deployments" fill="#d7263d" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))
-      )}
-    </Grid>
+        ) : (
+          <Typography>No data available</Typography>
+        )}
+      </CardContent>
+    </Card>
   );
 }

@@ -31,15 +31,17 @@ export default function LeadTimeOverTimeWidget() {
         
         if (!mounted) return;
 
-        if (!data?.dataPoints?.length) {
+        const dataPoints = Array.isArray(data?.dataPoints) ? data.dataPoints : [];
+        
+        if (!dataPoints.length) {
           setError('No lead time history data available');
           setLoading(false);
           return;
         }
 
-        const labels = data.dataPoints.map(p => p.date);
-        const flywayData = data.dataPoints.map(p => p.flywayLeadTime);
-        const nonFlywayData = data.dataPoints.map(p => p.nonFlywayLeadTime);
+        const labels = dataPoints.map(p => p.date);
+        const flywayData = dataPoints.map(p => p.flywayLeadTime || 0);
+        const nonFlywayData = dataPoints.map(p => p.nonFlywayLeadTime || 0);
 
         setChartData({
           labels,

@@ -1,54 +1,79 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const app = express();
-const leadTimeHistoryRoutes = require('./routes/leadTimeHistoryRoutes');
 
 app.use(cors());
 app.use(express.json());
-app.use('/api/jdbc-connections', require('./jdbcConnections'));
-app.use('/server', require('./leadTimeApi'));
-app.use('/server', require('./flywayRoiApi'));
-app.use('/server', require('./flywayInferredMetricsApi'));
+
+// Initialize database
+const { db, dbHelpers } = require('./db/database');
+console.log('Database initialized');
+
+// Import routes
+const userMetricsRoutes = require('./routes/userMetricsRoutes');
+const leadTimeHistoryRoutes = require('./routes/leadTimeHistoryRoutes');
+const leadTimesRoutes = require('./routes/leadTimesRoutes');
+const deploymentsRoutes = require('./routes/deploymentsRoutes');
+
+// Register routes
+app.use(userMetricsRoutes);
 app.use(leadTimeHistoryRoutes);
+app.use(leadTimesRoutes);
+app.use(deploymentsRoutes);
 
+// JDBC Connections endpoint
+app.get('/api/jdbc-connections', (req, res) => {
+  try {
+    const connections = dbHelpers.getJdbcConnections ? dbHelpers.getJdbcConnections() : [];
+    res.json(Array.isArray(connections) ? connections : []);
+  } catch (e) {
+    console.error('Get JDBC connections error:', e);
+    res.json([]);
+  }
+});
 
-// Add /api/flyway/history/all endpoint for UndoMigrationsWidget compatibility
-const { getFlywayHistory } = require('./flywayHistory');
+app.get('/api/jdbc-connections/history', async (req, res) => {
+  try {
+    // Return flyway history from database
+    const flywayHistory = require('./flywayHistory');
+    const history = await flywayHistory.getFlywayHistory();
+    res.json(Array.isArray(history) ? history : []);
+  } catch (e) {
+    console.error('Get JDBC connections history error:', e);
+    res.json([]);
+  }
+});
+
+// Flyway history endpoints
+app.get('/api/flyway-history', async (req, res) => {
+  try {
+    const flywayHistory = require('./flywayHistory');
+    const history = await flywayHistory.getFlywayHistory();
+    res.json(Array.isArray(history) ? history : []);
+  } catch (e) {
+    console.error('Flyway history error:', e);
+    res.json([]);
+  }
+});
+
 app.get('/api/flyway/history/all', async (req, res) => {
-	try {
-		const results = await getFlywayHistory();
-		// Return as { dbName: [history, ...], ... }
-		const out = {};
-		for (const db of results) {
-			out[db.dbName] = db.history || [];
-		}
-		res.json(out);
-	} catch (err) {
-		res.status(500).json({ error: err.message });
-	}
+  try {
+    const flywayHistory = require('./flywayHistory');
+    const history = await flywayHistory.getFlywayHistory();
+    res.json(Array.isArray(history) ? history : []);
+  } catch (e) {
+    console.error('Flyway history all error:', e);
+    res.json([]);
+  }
 });
 
-
-
-// User-defined metrics API layer
-const userDefinedMetrics = require('./userDefinedMetrics');
-
-app.get('/api/user-defined-metrics', (req, res) => {
-	try {
-		const metrics = userDefinedMetrics.getUserDefinedMetrics();
-		res.json(metrics);
-	} catch (e) {
-		res.status(500).json({ error: 'Failed to read metrics' });
-	}
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.post('/api/user-defined-metrics', (req, res) => {
-	try {
-		const metrics = userDefinedMetrics.setUserDefinedMetrics(req.body);
-		res.json({ success: true, metrics });
-	} catch (e) {
-		res.status(500).json({ error: 'Failed to save metrics' });
-	}
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
-
-app.listen(5000, () => console.log('API running on port 5000'));

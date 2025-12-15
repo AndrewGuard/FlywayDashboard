@@ -1,99 +1,84 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, Button, IconButton, Collapse } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-
-function getDbNameFromConnStr(connStr) {
-  if (!connStr) return 'Unknown DB';
-  const match = connStr.match(/databaseName=([^;]+)/);
-  return match ? match[1] : connStr;
-}
-
+import { Card, CardContent, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip } from '@mui/material';
 
 export default function MigrationHistory() {
+  const [migrations, setMigrations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [history, setHistory] = useState([]);
-  const [refreshing, setRefreshing] = useState(false);
-  const [expanded, setExpanded] = useState(false);
-
-  const fetchHistory = () => {
-    setLoading(true);
-    fetch('/api/jdbc-connections/history')
-      .then(res => res.json())
-      .then(data => {
-        setHistory(Array.isArray(data) ? data : []);
-        setLoading(false);
-        setRefreshing(false);
-      })
-      .catch(() => {
-        setHistory([]);
-        setLoading(false);
-        setRefreshing(false);
-      });
-  };
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchHistory();
-    // eslint-disable-next-line
+    let mounted = true;
+
+    async function fetchData() {
+      try {
+        const res = await fetch('/api/flyway/history/all');
+        if (!res.ok) throw new Error('Failed to fetch migration history');
+
+        const data = await res.json();
+
+        if (!mounted) return;
+
+        const migrationList = Array.isArray(data) ? data : [];
+        setMigrations(migrationList);
+        setLoading(false);
+      } catch (err) {
+        console.error('Migration history error:', err);
+        if (mounted) {
+          setError(err.message || 'Failed to load data');
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchData();
+    return () => { mounted = false; };
   }, []);
 
-  if (loading) return <CircularProgress sx={{ mt: 4 }} />;
-
   return (
-    <Box sx={{ mt: 6 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <IconButton onClick={() => setExpanded(e => !e)} size="small" sx={{ mr: 1 }}>
-          {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-        </IconButton>
-        <Typography variant="h5" gutterBottom sx={{ flexGrow: 1 }}>
-          Flyway Migration History
-        </Typography>
-        <Button variant="contained" onClick={() => { setRefreshing(true); fetchHistory(); }} disabled={refreshing} size="small">
-          {refreshing ? 'Refreshing...' : 'Refresh'}
-        </Button>
-      </Box>
-      <Collapse in={expanded} timeout="auto" unmountOnExit>
-        {history.map((db, i) => (
-          <Box key={db.dbName || db.connStr || i} sx={{ mb: 4 }}>
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              {db.dbName
-                || (db.connStr && getDbNameFromConnStr(db.connStr))
-                || (db.connectionString && getDbNameFromConnStr(db.connectionString))
-                || 'Unknown DB'}
-            </Typography>
-            {db.error ? (
-              <Typography color="error">Error: {db.error}</Typography>
-            ) : (
-              <TableContainer component={Paper}>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Version</TableCell>
-                      <TableCell>Description</TableCell>
-                      <TableCell>Type</TableCell>
-                      <TableCell>Installed On</TableCell>
-                      <TableCell>Lead Time (days)</TableCell>
-                      <TableCell>State</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {(Array.isArray(db.history) ? db.history : []).map(row => (
-                      <TableRow key={row.installed_rank}>
-                        <TableCell>{row.version}</TableCell>
-                        <TableCell>{row.description}</TableCell>
-                        <TableCell>{row.type}</TableCell>
-                        <TableCell>{row.installed_on}</TableCell>
-                        <TableCell>{row.leadTime !== null && row.leadTime !== undefined ? row.leadTime.toFixed(2) : '-'}</TableCell>
-                        <TableCell>{row.success === true || row.success === 1 ? 'Success' : 'Failed'}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            )}
-          </Box>
-        ))}
-      </Collapse>
-    </Box>
+    <Card sx={{ mb: 2 }}>
+      <CardContent>
+        <Typography variant="h6" gutterBottom>Migration History</Typography>
+        {loading ? (
+          <Typography>Loading...</Typography>
+        ) : error ? (
+          <Typography color="error">{error}</Typography>
+        ) : migrations.length > 0 ? (
+          <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+            <Table stickyHeader size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Version</TableCell>
+                  <TableCell>Description</TableCell>
+                  <TableCell>Type</TableCell>
+                  <TableCell>Installed On</TableCell>
+                  <TableCell>Execution Time</TableCell>
+                  <TableCell>Status</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {migrations.slice(0, 50).map((m, i) => (
+                  <TableRow key={i}>
+                    <TableCell>{m.version || '-'}</TableCell>
+                    <TableCell>{m.description || m.script || '-'}</TableCell>
+                    <TableCell>{m.type || '-'}</TableCell>
+                    <TableCell>{m.installed_on ? new Date(m.installed_on).toLocaleString() : '-'}</TableCell>
+                    <TableCell>{m.execution_time ? `${m.execution_time}ms` : '-'}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={m.success === true || m.success === 't' ? 'Success' : 'Failed'}
+                        color={m.success === true || m.success === 't' ? 'success' : 'error'}
+                        size="small"
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        ) : (
+          <Typography color="text.secondary">No migrations found</Typography>
+        )}
+      </CardContent>
+    </Card>
   );
 }

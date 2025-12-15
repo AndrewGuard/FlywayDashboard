@@ -1,63 +1,47 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
 const router = express.Router();
+const { dbHelpers } = require('../db/database');
 
-const LEAD_TIME_HISTORY_FILE = path.join(__dirname, '..', 'lead-time-history.json');
-
-function initializeFile() {
-  if (!fs.existsSync(LEAD_TIME_HISTORY_FILE)) {
-    fs.writeFileSync(LEAD_TIME_HISTORY_FILE, JSON.stringify({ dataPoints: [] }, null, 2));
-  }
-}
-
+// GET lead time history
 router.get('/api/metrics/lead-time-history', (req, res) => {
-  initializeFile();
   try {
-    const raw = fs.readFileSync(LEAD_TIME_HISTORY_FILE, 'utf8');
-    res.json(JSON.parse(raw));
+    const data = dbHelpers.getLeadTimeHistory();
+    res.json(data);
   } catch (e) {
-    res.status(500).json({ message: 'Failed to read lead time history' });
+    console.error('Get lead time history error:', e);
+    res.status(500).json({ message: 'Failed to get lead time history' });
   }
 });
 
-router.get('/api/metrics/lead-time-history/refresh', async (req, res) => {
-  initializeFile();
+// Refresh lead time history
+router.get('/api/metrics/lead-time-history/refresh', (req, res) => {
   try {
     let flywayLeadTime = 0;
     let nonFlywayLeadTime = 0;
 
     // Get user-defined metrics for non-Flyway lead time
     try {
-      const userMetricsFile = path.join(__dirname, '..', 'user-defined-metrics.json');
-      if (fs.existsSync(userMetricsFile)) {
-        const userData = JSON.parse(fs.readFileSync(userMetricsFile, 'utf8'));
-        nonFlywayLeadTime = Number(userData?.leadTimeDays) || 0;
-      }
+      const userData = dbHelpers.getUserMetrics();
+      nonFlywayLeadTime = Number(userData?.leadTimeDays) || 0;
     } catch (e) {
       console.warn('Failed to get user metrics:', e);
     }
 
     // Get Flyway lead times
     try {
-      const leadTimesFile = path.join(__dirname, '..', 'lead-times.json');
-      if (fs.existsSync(leadTimesFile)) {
-        const leadTimesData = JSON.parse(fs.readFileSync(leadTimesFile, 'utf8'));
-        if (leadTimesData?.leadTimes?.length) {
-          const validTimes = leadTimesData.leadTimes
-            .map(lt => Number(lt.leadTimeDays))
-            .filter(n => Number.isFinite(n) && n >= 0);
-          if (validTimes.length) {
-            flywayLeadTime = validTimes.reduce((sum, t) => sum + t, 0) / validTimes.length;
-          }
+      const leadTimesData = dbHelpers.getLeadTimes();
+      if (leadTimesData?.leadTimes?.length) {
+        const validTimes = leadTimesData.leadTimes
+          .map(lt => Number(lt.leadTimeDays))
+          .filter(n => Number.isFinite(n) && n >= 0);
+        if (validTimes.length) {
+          flywayLeadTime = validTimes.reduce((sum, t) => sum + t, 0) / validTimes.length;
         }
       }
     } catch (e) {
       console.warn('Failed to get Flyway lead times:', e);
     }
 
-    const raw = fs.readFileSync(LEAD_TIME_HISTORY_FILE, 'utf8');
-    const data = JSON.parse(raw);
     const today = new Date().toISOString().slice(0, 10);
     const newPoint = {
       date: today,
@@ -66,15 +50,10 @@ router.get('/api/metrics/lead-time-history/refresh', async (req, res) => {
       timestamp: new Date().toISOString()
     };
 
-    const idx = data.dataPoints.findIndex(p => p.date === today);
-    if (idx >= 0) data.dataPoints[idx] = newPoint;
-    else data.dataPoints.push(newPoint);
-    data.dataPoints.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-    fs.writeFileSync(LEAD_TIME_HISTORY_FILE, JSON.stringify(data, null, 2));
+    const data = dbHelpers.upsertLeadTimeHistory(newPoint);
     res.json(data);
   } catch (e) {
-    console.error('Refresh lead-time-history error:', e);
+    console.error('Refresh lead time history error:', e);
     res.status(500).json({ message: 'Failed to refresh lead time history' });
   }
 });

@@ -1,83 +1,75 @@
 const fs = require('fs');
 const path = require('path');
 const sql = require('mssql');
-const { Client: PgClient } = require('pg');
+const { Pool } = require('pg');
+const { dbHelpers } = require('./db/database');
 
 const configPath = path.join(__dirname, 'jdbc-connections.json');
 
-const { setLeadTime, getLeadTimes } = require('./leadTimeStore');
+// PostgreSQL connection for Flyway schema history
+const pool = new Pool({
+  host: 'localhost',
+  port: 5432,
+  database: 'pagila_test',
+  user: 'postgres',
+  password: 'password'
+});
+
+// Test connection on startup
+pool.query('SELECT 1')
+  .then(() => console.log('PostgreSQL connected successfully'))
+  .catch(e => console.error('PostgreSQL connection failed:', e.message));
 
 async function getFlywayHistory() {
-  const data = JSON.parse(fs.readFileSync(configPath));
-  let connections = [];
-  if (Array.isArray(data)) {
-    connections = data;
-  } else {
-    const prod = Array.isArray(data.prod) ? data.prod : [];
-    const nonProd = Array.isArray(data.nonProd) ? data.nonProd : [];
-    connections = [...prod, ...nonProd];
+  try {
+    const result = await pool.query(`
+      SELECT 
+        installed_rank,
+        version,
+        description,
+        type,
+        script,
+        checksum,
+        installed_by,
+        installed_on,
+        execution_time,
+        success
+      FROM flyway_schema_history
+      ORDER BY installed_rank DESC
+    `);
+    return result.rows;
+  } catch (e) {
+    console.error('Error fetching flyway history:', e.message);
+    return [];
   }
-  const results = [];
-  const leadTimes = getLeadTimes();
+}
 
-  for (const connStr of connections) {
-    let dbName = 'unknown';
-    let history = [];
-    let error = null;
-    if (/^jdbc:postgresql:/i.test(connStr)) {
-      // Parse PostgreSQL JDBC
-      const pgConfig = parseJdbcToPgConfig(connStr);
-      dbName = pgConfig.database || 'unknown';
-      const client = new PgClient(pgConfig);
-      try {
-        await client.connect();
-        const res = await client.query('SELECT * FROM flyway_schema_history ORDER BY installed_rank DESC');
-        history = res.rows;
-      } catch (err) {
-        error = err.message;
-      } finally {
-        await client.end();
-      }
-    } else {
-      // MSSQL
-      const match = connStr.match(/databaseName=([^;]+)/);
-      dbName = match ? match[1] : 'unknown2';
-      const config = parseJdbcToMssqlConfig(connStr);
-      try {
-        await sql.connect(config);
-        const res = await sql.query('SELECT * FROM flyway_schema_history ORDER BY installed_rank DESC');
-        history = res.recordset;
-      } catch (err) {
-        error = err.message;
-      }
-      await sql.close();
+async function getFlywayHistoryWithLeadTimes() {
+  try {
+    const history = await getFlywayHistory();
+    const leadTimesData = dbHelpers.getLeadTimes();
+    const leadTimesMap = new Map();
+    
+    if (leadTimesData?.leadTimes) {
+      leadTimesData.leadTimes.forEach(lt => {
+        leadTimesMap.set(lt.script, lt);
+      });
     }
-    // Calculate lead time for each migration
-    history = (history || []).map(row => {
-      let leadTime = null;
-      if (row.installed_on && row.script) {
-        // Try to extract timestamp from script name (e.g., V010_20250918120543__desc.sql)
-        const match = row.script.match(/_(\d{14})__/);
-        if (match) {
-          const scriptTs = match[1];
-          // Parse as YYYYMMDDHHmmss
-          const scriptDate = new Date(
-            scriptTs.slice(0,4)+'-'+scriptTs.slice(4,6)+'-'+scriptTs.slice(6,8)+'T'+
-            scriptTs.slice(8,10)+':'+scriptTs.slice(10,12)+':'+scriptTs.slice(12,14)+'Z'
-          );
-          const installedDate = new Date(row.installed_on);
-          if (!isNaN(scriptDate) && !isNaN(installedDate)) {
-            leadTime = (installedDate - scriptDate) / (1000 * 60 * 60 * 24); // days
-            // Store in file by unique key (dbName+version+script)
-            const key = `${dbName}|${row.version}|${row.script}`;
-            setLeadTime(key, leadTime);
-          }
-        }
-      }
-      return { ...row, leadTime };
+
+    return history.map(m => {
+      const leadTime = leadTimesMap.get(m.script);
+      return {
+        ...m,
+        leadTimeDays: leadTime?.leadTimeDays || null,
+        scriptDate: leadTime?.scriptDate || null
+      };
     });
-    results.push({ dbName, connStr, history, ...(error ? { error } : {}) });
+  } catch (e) {
+    console.error('Error fetching flyway history with lead times:', e);
+    return [];
   }
+}
+
 function parseJdbcToPgConfig(jdbcUrl) {
   // Example: jdbc:postgresql://localhost:5432/db?user=postgres&password=pass
   const urlMatch = jdbcUrl.match(/^jdbc:postgresql:\/\/([^:/]+)(?::(\d+))?\/([^?]+)\??(.*)$/);
@@ -96,9 +88,6 @@ function parseJdbcToPgConfig(jdbcUrl) {
     user,
     password
   };
-}
-  // Removed verbose Flyway schema history logging
-  return results;
 }
 
 function parseJdbcToMssqlConfig(jdbcUrl) {
@@ -125,4 +114,10 @@ function parseJdbcToMssqlConfig(jdbcUrl) {
   };
 }
 
-module.exports = { getFlywayHistory };
+module.exports = { 
+  getFlywayHistory, 
+  getFlywayHistoryWithLeadTimes,
+  parseJdbcToPgConfig,
+  parseJdbcToMssqlConfig,
+  pool 
+};
