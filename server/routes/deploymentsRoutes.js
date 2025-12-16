@@ -35,8 +35,11 @@ router.get('/api/metrics/deployments-per-quarter', async (req, res) => {
 
     const validMigrations = history
       .filter(m => {
-        const version = m.version ?? m.version_number ?? '';
-        return version && String(version).startsWith('V');
+        // Check script field (which has V prefix) or version field
+        const script = m.script ?? '';
+        const type = m.type ?? '';
+        // Include SQL type migrations (exclude UNDO and BASELINE)
+        return type === 'SQL' && type !== 'UNDO_SQL' && type !== 'BASELINE';
       })
       .map(m => ({
         ...m,
@@ -88,8 +91,11 @@ router.get('/api/metrics/deployments-per-quarter/refresh', async (req, res) => {
 
     const validMigrations = history
       .filter(m => {
-        const version = m.version ?? m.version_number ?? '';
-        return version && String(version).startsWith('V');
+        // Check script field (which has V prefix) or version field
+        const script = m.script ?? '';
+        const type = m.type ?? '';
+        // Include SQL type migrations (exclude UNDO and BASELINE)
+        return type === 'SQL' && type !== 'UNDO_SQL' && type !== 'BASELINE';
       })
       .map(m => ({
         ...m,

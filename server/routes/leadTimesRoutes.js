@@ -59,7 +59,12 @@ router.get('/api/metrics/lead-times/refresh', async (req, res) => {
 
     history.forEach(m => {
       const version = m.version ?? m.version_number ?? '';
-      if (!version || String(version).startsWith('U')) return;
+      const script = m.script ?? '';
+      const type = m.type ?? '';
+      
+      // Skip UNDO migrations, baselines, and empty versions
+      if (type === 'UNDO_SQL' || type === 'BASELINE' || String(script).startsWith('U')) return;
+      if (!version && !script) return;
 
       const scriptDate = parseScriptDate(version);
       if (!scriptDate) return;
