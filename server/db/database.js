@@ -55,6 +55,8 @@ db.exec(`
     deploy_date TEXT,
     lead_time_days REAL DEFAULT 0,
     original_lead_time REAL DEFAULT 0,
+    database TEXT,
+    environment TEXT,
     timestamp TEXT DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -206,7 +208,9 @@ const dbHelpers = {
         scriptDate: r.script_date,
         deployDate: r.deploy_date,
         leadTimeDays: r.lead_time_days,
-        originalLeadTime: r.original_lead_time
+        originalLeadTime: r.original_lead_time,
+        database: r.database,
+        environment: r.environment
       }))
     };
   },
@@ -214,8 +218,8 @@ const dbHelpers = {
   clearAndInsertLeadTimes(leadTimes) {
     db.prepare('DELETE FROM lead_times').run();
     const stmt = db.prepare(`
-      INSERT INTO lead_times (script, version, script_date, deploy_date, lead_time_days, original_lead_time, timestamp)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO lead_times (script, version, script_date, deploy_date, lead_time_days, original_lead_time, database, environment, timestamp)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const insertMany = db.transaction((items) => {
       for (const lt of items) {
@@ -226,6 +230,8 @@ const dbHelpers = {
           lt.deployDate,
           lt.leadTimeDays ?? 0,
           lt.originalLeadTime ?? 0,
+          lt.database ?? null,
+          lt.environment ?? null,
           new Date().toISOString()
         );
       }

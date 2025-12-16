@@ -75,10 +75,35 @@ export default function ChangeInDeploymentMetricsWidget() {
     return () => { mounted = false; };
   }, []);
 
-  const MetricCard = ({ title, flywayValue, nonFlywayValue, unit, lowerIsBetter = false }) => {
+  const MetricCard = ({ title, flywayValue, nonFlywayValue, unit, lowerIsBetter = false, isLeadTime = false }) => {
     const diff = flywayValue - nonFlywayValue;
     const improved = lowerIsBetter ? diff < 0 : diff > 0;
     const color = improved ? 'success.main' : diff === 0 ? 'text.secondary' : 'error.main';
+
+    // Format values for display - show more precision for lead time
+    const formatValue = (val) => {
+      if (!isLeadTime) return val;
+      
+      // If less than 1 day, show in hours
+      if (val < 1) {
+        const hours = (val * 24).toFixed(1);
+        return `${hours} hours`;
+      }
+      // Otherwise show days with 2 decimal places
+      return `${val.toFixed(2)} days`;
+    };
+
+    const formatDiff = (val) => {
+      if (!isLeadTime) return `${Math.round(val * 10) / 10}${unit}`;
+      
+      // If less than 1 day, show in hours
+      if (Math.abs(val) < 1) {
+        const hours = (val * 24).toFixed(1);
+        return `${val > 0 ? '+' : ''}${hours} hours`;
+      }
+      // Otherwise show days with 2 decimal places
+      return `${val > 0 ? '+' : ''}${val.toFixed(2)} days`;
+    };
 
     return (
       <Card variant="outlined" sx={{ height: '100%' }}>
@@ -87,15 +112,15 @@ export default function ChangeInDeploymentMetricsWidget() {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
             <Box>
               <Typography variant="caption" color="text.secondary">Flyway</Typography>
-              <Typography variant="h6">{flywayValue}{unit}</Typography>
+              <Typography variant="h6">{isLeadTime ? formatValue(flywayValue) : `${flywayValue}${unit}`}</Typography>
             </Box>
             <Box sx={{ textAlign: 'right' }}>
               <Typography variant="caption" color="text.secondary">Non-Flyway</Typography>
-              <Typography variant="h6">{nonFlywayValue}{unit}</Typography>
+              <Typography variant="h6">{isLeadTime ? formatValue(nonFlywayValue) : `${nonFlywayValue}${unit}`}</Typography>
             </Box>
           </Box>
           <Typography variant="body2" sx={{ color }}>
-            {diff > 0 ? '+' : ''}{Math.round(diff * 10) / 10}{unit} {improved ? '✓' : diff === 0 ? '—' : '✗'}
+            {isLeadTime ? formatDiff(diff) : `${diff > 0 ? '+' : ''}${Math.round(diff * 10) / 10}${unit}`} {improved ? '✓' : diff === 0 ? '—' : '✗'}
           </Typography>
         </CardContent>
       </Card>
@@ -128,11 +153,12 @@ export default function ChangeInDeploymentMetricsWidget() {
             </Grid>
             <Grid item xs={12} md={4}>
               <MetricCard
-                title="Lead Time (days)"
+                title="Lead Time for Changes"
                 flywayValue={metrics.flywayLeadTime}
                 nonFlywayValue={metrics.nonFlywayLeadTime}
                 unit=" days"
                 lowerIsBetter={true}
+                isLeadTime={true}
               />
             </Grid>
             <Grid item xs={12} md={4}>

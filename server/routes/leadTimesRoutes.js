@@ -2,26 +2,28 @@ const express = require('express');
 const router = express.Router();
 const { dbHelpers } = require('../db/database');
 
-// Helper to parse script date from version
-function parseScriptDate(version) {
-  if (!version) return null;
+// Helper to parse script datetime from script name
+// Expects format like V012_20250929152836__bar.sql (YYYYMMDDHHMMSS)
+// The timestamp represents UTC time (matching the database installed_on field)
+function parseScriptDateTime(scriptName) {
+  if (!scriptName) return null;
   
-  // Try to extract date from version like V20231215... or V2023.12.15...
-  const patterns = [
-    /^V?(\d{4})(\d{2})(\d{2})/,      // V20231215
-    /^V?(\d{4})\.(\d{2})\.(\d{2})/,  // V2023.12.15
-    /^V?(\d{4})-(\d{2})-(\d{2})/,    // V2023-12-15
-    /^V?(\d{4})_(\d{2})_(\d{2})/     // V2023_12_15
-  ];
-  
-  for (const pattern of patterns) {
-    const match = version.match(pattern);
-    if (match) {
-      const [, year, month, day] = match;
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      if (!isNaN(date.getTime())) {
-        return date;
-      }
+  // Pattern to match V###_YYYYMMDDHHMMSS__description.sql
+  const timestampMatch = scriptName.match(/V\d+_(\d{14})__/);
+  if (timestampMatch) {
+    const timestamp = timestampMatch[1];
+    const year = parseInt(timestamp.substring(0, 4));
+    const month = parseInt(timestamp.substring(4, 6)) - 1; // 0-indexed
+    const day = parseInt(timestamp.substring(6, 8));
+    const hour = parseInt(timestamp.substring(8, 10));
+    const minute = parseInt(timestamp.substring(10, 12));
+    const second = parseInt(timestamp.substring(12, 14));
+    
+    // Use Date.UTC to create a date in UTC, matching the database timezone
+    const date = new Date(Date.UTC(year, month, day, hour, minute, second));
+    
+    if (!isNaN(date.getTime())) {
+      return date;
     }
   }
   
@@ -42,13 +44,13 @@ router.get('/api/metrics/lead-times', (req, res) => {
 // Refresh lead times from flyway history
 router.get('/api/metrics/lead-times/refresh', async (req, res) => {
   try {
-    let history = [];
+    let prodHistory = [];
 
-    // Get flyway history
+    // Get PRODUCTION flyway history only
     try {
       const flywayHistory = require('../flywayHistory');
-      if (flywayHistory?.getFlywayHistory) {
-        history = await flywayHistory.getFlywayHistory() ?? [];
+      if (flywayHistory?.getFlywayHistoryProd) {
+        prodHistory = await flywayHistory.getFlywayHistoryProd() ?? [];
       }
     } catch (e) {
       console.warn('Failed to get flyway history:', e);
@@ -57,34 +59,50 @@ router.get('/api/metrics/lead-times/refresh', async (req, res) => {
     const leadTimes = [];
     const msPerDay = 24 * 60 * 60 * 1000;
 
-    history.forEach(m => {
-      const version = m.version ?? m.version_number ?? '';
+    prodHistory.forEach(m => {
       const script = m.script ?? '';
       const type = m.type ?? '';
+      const version = m.version ?? m.version_number ?? '';
       
-      // Skip UNDO migrations, baselines, and empty versions
+      // Skip UNDO migrations, baselines, and empty scripts
       if (type === 'UNDO_SQL' || type === 'BASELINE' || String(script).startsWith('U')) return;
-      if (!version && !script) return;
+      if (!script) return;
 
-      const scriptDate = parseScriptDate(version);
-      if (!scriptDate) return;
+      // Parse the datetime stamp from the script name (e.g., V012_20250929152836__bar.sql)
+      const scriptDateTime = parseScriptDateTime(script);
+      if (!scriptDateTime) {
+        console.warn(`Could not parse script datetime from: ${script}`);
+        return;
+      }
 
+      // Get the deployment date from installed_on
       const deployDate = new Date(m.installed_on || m.installedOn || m.installed || m.installedOnUtc);
-      if (isNaN(deployDate.getTime())) return;
+      if (isNaN(deployDate.getTime())) {
+        console.warn(`Invalid deploy date for script: ${script}`);
+        return;
+      }
 
-      const rawLeadTime = (deployDate - scriptDate) / msPerDay;
+      // Calculate lead time as the delta between script creation and deployment
+      const rawLeadTime = (deployDate - scriptDateTime) / msPerDay;
+      
+      // If script was created AFTER deployment (negative), set to 0
       const leadTimeDays = Math.max(0, rawLeadTime);
 
       leadTimes.push({
-        script: m.script,
+        script: script,
         version: version,
-        scriptDate: scriptDate.toISOString(),
+        scriptDate: scriptDateTime.toISOString(),
         deployDate: deployDate.toISOString(),
-        leadTimeDays,
-        originalLeadTime: rawLeadTime
+        leadTimeDays: parseFloat(leadTimeDays.toFixed(2)),
+        originalLeadTime: parseFloat(rawLeadTime.toFixed(2)),
+        database: m.database,
+        environment: m.environment
       });
     });
 
+    console.log(`Calculated lead times for ${leadTimes.length} production migrations`);
+    
+    // Clear existing data and insert fresh calculations
     const data = dbHelpers.clearAndInsertLeadTimes(leadTimes);
     res.json(data);
   } catch (e) {
