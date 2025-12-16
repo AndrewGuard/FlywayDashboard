@@ -1,8 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Typography, Paper, Button, TextField, Grid } from '@mui/material';
 
-// ROI calculation logic (copied from roiUtil.js)
-function calculateROI(userMetrics) {
+interface UserMetrics {
+  dbaCount?: number;
+  dbaTimeSavedPercent?: number;
+  dbaSalary?: number;
+  developerCount?: number;
+  developerTimeSavedPercent?: number;
+  developerSalary?: number;
+  flywayLicensingCost?: number;
+  estimatedImplementationHours?: number;
+}
+
+interface ROIResult {
+  roi: number | null;
+  annualValue?: number;
+  annualCost?: number;
+  implementationCost?: number;
+  roiExplanation: string;
+}
+
+// ROI calculation logic
+function calculateROI(userMetrics: UserMetrics | null): ROIResult {
   if (!userMetrics) return { roi: null, roiExplanation: 'Missing metrics' };
   const dbaCount = Number(userMetrics.dbaCount) || 0;
   const dbaTimeSavedPercent = Number(userMetrics.dbaTimeSavedPercent) || 0;
@@ -25,10 +44,10 @@ function calculateROI(userMetrics) {
   return { roi, annualValue, annualCost, implementationCost, roiExplanation: explanation };
 }
 
-export default function RoiCalculationPage() {
-  const [inputs, setInputs] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+const RoiCalculationPage: React.FC = () => {
+  const [inputs, setInputs] = useState<UserMetrics | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchInputs() {
@@ -137,4 +156,6 @@ export default function RoiCalculationPage() {
       </Paper>
     </Box>
   );
-}
+};
+
+export default RoiCalculationPage;

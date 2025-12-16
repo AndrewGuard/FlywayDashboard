@@ -5,8 +5,20 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
+interface ChartDataset {
+  label?: string;
+  data: number[];
+  backgroundColor: string[];
+  borderWidth?: number;
+}
+
+interface ChartData {
+  labels: string[];
+  datasets: ChartDataset[];
+}
+
 const TopPlatformsWidgets: React.FC = () => {
-  const [chartData, setChartData] = useState<any>(null);
+  const [chartData, setChartData] = useState<ChartData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,7 +50,7 @@ const TopPlatformsWidgets: React.FC = () => {
         });
 
         const labels = Object.keys(platforms);
-        const values = Object.values(platforms);
+        const values = Object.values(platforms) as number[];
         
         const colors = [
           'rgba(255, 99, 132, 0.8)',

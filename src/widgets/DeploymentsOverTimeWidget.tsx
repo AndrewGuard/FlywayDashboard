@@ -14,8 +14,22 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
+interface LineChartDataset {
+  label: string;
+  data: number[];
+  borderColor: string;
+  backgroundColor: string;
+  fill?: boolean;
+  tension: number;
+}
+
+interface LineChartData {
+  labels: string[];
+  datasets: LineChartDataset[];
+}
+
 const DeploymentsOverTimeWidget: React.FC = () => {
-  const [chartData, setChartData] = useState<any>(null);
+  const [chartData, setChartData] = useState<LineChartData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 

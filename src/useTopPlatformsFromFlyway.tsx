@@ -66,8 +66,8 @@ export default function useTopPlatformsFromFlyway(): UseTopPlatformsReturn {
               });
             });
             // Sort months and fill missing months for mini chart
-            Object.values(byPlatform).forEach((p: any) => {
-              p.history.sort((a: any, b: any) => a.month.localeCompare(b.month));
+            Object.values(byPlatform).forEach((p: Platform) => {
+              p.history.sort((a: HistoryItem, b: HistoryItem) => a.month.localeCompare(b.month));
               // Only keep last 5 months
               if (p.history.length > 5) p.history = p.history.slice(-5);
             });

@@ -13,8 +13,21 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
+interface BarChartDataset {
+  label: string;
+  data: number[];
+  backgroundColor: string;
+  borderColor?: string;
+  borderWidth?: number;
+}
+
+interface BarChartData {
+  labels: string[];
+  datasets: BarChartDataset[];
+}
+
 const AverageDeploymentTimeWidget: React.FC = () => {
-  const [chartData, setChartData] = useState<any>(null);
+  const [chartData, setChartData] = useState<BarChartData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 

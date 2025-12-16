@@ -1,6 +1,29 @@
 // Shared metrics calculation for Flyway Dashboard (frontend)
 
-export function calculateFlywayMetrics(flywayData: any, leadTimesData: any): any {
+interface MigrationRow {
+  type?: string;
+  success?: boolean | number;
+  installed_on?: string;
+  completed_on?: string;
+}
+
+interface FlywayData {
+  [key: string]: MigrationRow[];
+}
+
+interface LeadTimesData {
+  [key: string]: number;
+}
+
+interface MetricsResult {
+  deploymentsPerQuarter: number;
+  leadTimeDays: number | null;
+  scriptFailureRate: number | null;
+  deploymentsExtrapolated: boolean;
+  deploymentDurationDays: number | null;
+}
+
+export function calculateFlywayMetrics(flywayData: FlywayData, leadTimesData: LeadTimesData): MetricsResult {
   // Only use prod data for metrics
   const prodKeys = Object.keys(flywayData).filter(k => k.toLowerCase().includes('prod'));
   const prodRows = prodKeys.map(k => flywayData[k]).flat();

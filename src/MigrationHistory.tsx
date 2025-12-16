@@ -1,10 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip } from '@mui/material';
 
-export default function MigrationHistory() {
-  const [migrations, setMigrations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+interface Migration {
+  version?: string;
+  description?: string;
+  type?: string;
+  script?: string;
+  checksum?: number;
+  installed_by?: string;
+  installed_on?: string;
+  execution_time?: number;
+  success?: boolean | number | string;
+  database?: string;
+}
+
+const MigrationHistory: React.FC = () => {
+  const [migrations, setMigrations] = useState<Migration[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -81,4 +94,6 @@ export default function MigrationHistory() {
       </CardContent>
     </Card>
   );
-}
+};
+
+export default MigrationHistory;
