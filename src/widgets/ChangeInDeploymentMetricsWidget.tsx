@@ -25,6 +25,9 @@ interface ROI {
   annual: number;
   quarterly: number;
   paybackMonths: number;
+  leadTimeSavings: number;
+  failureSavings: number;
+  frequencySavings: number;
 }
 
 export default function ChangeInDeploymentMetricsWidget() {
@@ -107,25 +110,30 @@ export default function ChangeInDeploymentMetricsWidget() {
     
     const savingsPerDeployment = Number(userData?.savingsPerDeployment) || 1000;
     const implementationCost = Number(userData?.implementationCost) || 9751;
+    const costOfDelayPerDay = Number(userData?.costOfDelayPerDay) || 250;
     
     const nonFlywayDeployments = Number(userData?.deploymentsPerQuarter) || 10;
     const nonFlywayLeadTime = Number(userData?.leadTimeDays) || 20;
     const nonFlywayFailureRate = Number(userData?.scriptFailureRate) || 5;
 
-    // Time savings from reduced lead time
+    // Lead time savings (DORA-aligned)
     const leadTimeReduction = Math.max(0, nonFlywayLeadTime - leadTimeDays);
-    const timeSavingsPerQuarter = leadTimeReduction * deploymentsPerQuarter;
+    const leadTimeSavingsPerDeployment = leadTimeReduction * costOfDelayPerDay;
+    const totalLeadTimeSavingsPerQuarter = leadTimeSavingsPerDeployment * deploymentsPerQuarter;
     
     // Cost savings from reduced failures
     const failureRateReduction = Math.max(0, nonFlywayFailureRate - scriptFailureRate) / 100;
     const failureSavingsPerQuarter = failureRateReduction * deploymentsPerQuarter * savingsPerDeployment;
     
-    // Deployment efficiency savings
+    // Deployment frequency increase (DORA elite: 1+ per day)
     const deploymentIncrease = Math.max(0, deploymentsPerQuarter - nonFlywayDeployments);
-    const efficiencySavings = deploymentIncrease * (savingsPerDeployment * 0.5);
+    const frequencySavings = deploymentIncrease * (savingsPerDeployment * 0.3);
 
     // Total quarterly savings
-    const totalQuarterlySavings = failureSavingsPerQuarter + efficiencySavings + (timeSavingsPerQuarter * 100);
+    const totalQuarterlySavings = 
+      totalLeadTimeSavingsPerQuarter + 
+      failureSavingsPerQuarter + 
+      frequencySavings;
     
     // Annual ROI
     const annualSavings = totalQuarterlySavings * 4;
@@ -136,7 +144,10 @@ export default function ChangeInDeploymentMetricsWidget() {
       percentage: Math.round(roiPercentage),
       annual: Math.round(annualSavings),
       quarterly: Math.round(totalQuarterlySavings),
-      paybackMonths: annualSavings > 0 ? Math.ceil((implementationCost / annualSavings) * 12) : 0
+      paybackMonths: annualSavings > 0 ? Math.ceil((implementationCost / annualSavings) * 12) : 0,
+      leadTimeSavings: Math.round(totalLeadTimeSavingsPerQuarter),
+      failureSavings: Math.round(failureSavingsPerQuarter),
+      frequencySavings: Math.round(frequencySavings)
     });
   }
 
