@@ -1,20 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, Typography, Grid, Box, CircularProgress } from '@mui/material';
+import { Card, CardContent, Typography, Grid, Box, CircularProgress, Divider, Link } from '@mui/material';
 
-interface Metrics {
-  flywayDeployments?: number;
-  nonFlywayDeployments?: number;
-  flywayLeadTime?: number;
-  nonFlywayLeadTime?: number;
-  flywayFailureRate?: number;
-  nonFlywayFailureRate?: number;
-  extrapolated?: boolean;
-}
-
-const ChangeInDeploymentMetricsWidget: React.FC = () => {
-  const [metrics, setMetrics] = useState<Metrics | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+export default function ChangeInDeploymentMetricsWidget() {
+  const [metrics, setMetrics] = useState(null);
+  const [roi, setRoi] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -71,6 +62,9 @@ const ChangeInDeploymentMetricsWidget: React.FC = () => {
           extrapolated: flywayData?.extrapolated || false
         });
 
+        // Calculate ROI
+        calculateROI(userData, flywayData.deploymentsPerQuarter, flywayLeadTime, flywayFailureRate);
+
         setLoading(false);
       } catch (err) {
         console.error('Change in deployment metrics error:', err);
@@ -81,39 +75,54 @@ const ChangeInDeploymentMetricsWidget: React.FC = () => {
       }
     }
 
+    function calculateROI(userData, flywayDeployments, flywayLeadTime, flywayFailureRate) {
+      const deploymentsPerQuarter = flywayDeployments || 0;
+      const leadTimeDays = flywayLeadTime || 0;
+      const scriptFailureRate = flywayFailureRate || 0;
+      
+      const savingsPerDeployment = Number(userData?.savingsPerDeployment) || 1000;
+      const implementationCost = Number(userData?.implementationCost) || 9751;
+      
+      const nonFlywayDeployments = Number(userData?.deploymentsPerQuarter) || 10;
+      const nonFlywayLeadTime = Number(userData?.leadTimeDays) || 20;
+      const nonFlywayFailureRate = Number(userData?.scriptFailureRate) || 5;
+
+      // Time savings from reduced lead time
+      const leadTimeReduction = Math.max(0, nonFlywayLeadTime - leadTimeDays);
+      const timeSavingsPerQuarter = leadTimeReduction * deploymentsPerQuarter;
+      
+      // Cost savings from reduced failures
+      const failureRateReduction = Math.max(0, nonFlywayFailureRate - scriptFailureRate) / 100;
+      const failureSavingsPerQuarter = failureRateReduction * deploymentsPerQuarter * savingsPerDeployment;
+      
+      // Deployment efficiency savings
+      const deploymentIncrease = Math.max(0, deploymentsPerQuarter - nonFlywayDeployments);
+      const efficiencySavings = deploymentIncrease * (savingsPerDeployment * 0.5);
+
+      // Total quarterly savings
+      const totalQuarterlySavings = failureSavingsPerQuarter + efficiencySavings + (timeSavingsPerQuarter * 100);
+      
+      // Annual ROI
+      const annualSavings = totalQuarterlySavings * 4;
+      const netBenefit = annualSavings - implementationCost;
+      const roiPercentage = implementationCost > 0 ? (netBenefit / implementationCost) * 100 : 0;
+
+      setRoi({
+        percentage: Math.round(roiPercentage),
+        annual: Math.round(annualSavings),
+        quarterly: Math.round(totalQuarterlySavings),
+        paybackMonths: annualSavings > 0 ? Math.ceil((implementationCost / annualSavings) * 12) : 0
+      });
+    }
+
     fetchMetrics();
     return () => { mounted = false; };
   }, []);
 
-  const MetricCard = ({ title, flywayValue, nonFlywayValue, unit, lowerIsBetter = false, isLeadTime = false }) => {
+  const MetricCard = ({ title, flywayValue, nonFlywayValue, unit, lowerIsBetter = false }) => {
     const diff = flywayValue - nonFlywayValue;
     const improved = lowerIsBetter ? diff < 0 : diff > 0;
     const color = improved ? 'success.main' : diff === 0 ? 'text.secondary' : 'error.main';
-
-    // Format values for display - show more precision for lead time
-    const formatValue = (val) => {
-      if (!isLeadTime) return val;
-      
-      // If less than 1 day, show in hours
-      if (val < 1) {
-        const hours = (val * 24).toFixed(1);
-        return `${hours} hours`;
-      }
-      // Otherwise show days with 2 decimal places
-      return `${val.toFixed(2)} days`;
-    };
-
-    const formatDiff = (val) => {
-      if (!isLeadTime) return `${Math.round(val * 10) / 10}${unit}`;
-      
-      // If less than 1 day, show in hours
-      if (Math.abs(val) < 1) {
-        const hours = (val * 24).toFixed(1);
-        return `${val > 0 ? '+' : ''}${hours} hours`;
-      }
-      // Otherwise show days with 2 decimal places
-      return `${val > 0 ? '+' : ''}${val.toFixed(2)} days`;
-    };
 
     return (
       <Card variant="outlined" sx={{ height: '100%' }}>
@@ -122,15 +131,15 @@ const ChangeInDeploymentMetricsWidget: React.FC = () => {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
             <Box>
               <Typography variant="caption" color="text.secondary">Flyway</Typography>
-              <Typography variant="h6">{isLeadTime ? formatValue(flywayValue) : `${flywayValue}${unit}`}</Typography>
+              <Typography variant="h6">{flywayValue}{unit}</Typography>
             </Box>
             <Box sx={{ textAlign: 'right' }}>
               <Typography variant="caption" color="text.secondary">Non-Flyway</Typography>
-              <Typography variant="h6">{isLeadTime ? formatValue(nonFlywayValue) : `${nonFlywayValue}${unit}`}</Typography>
+              <Typography variant="h6">{nonFlywayValue}{unit}</Typography>
             </Box>
           </Box>
           <Typography variant="body2" sx={{ color }}>
-            {isLeadTime ? formatDiff(diff) : `${diff > 0 ? '+' : ''}${Math.round(diff * 10) / 10}${unit}`} {improved ? '✓' : diff === 0 ? '—' : '✗'}
+            {diff > 0 ? '+' : ''}{Math.round(diff * 10) / 10}{unit} {improved ? '✓' : diff === 0 ? '—' : '✗'}
           </Typography>
         </CardContent>
       </Card>
@@ -151,42 +160,66 @@ const ChangeInDeploymentMetricsWidget: React.FC = () => {
         ) : error ? (
           <Typography color="error">{error}</Typography>
         ) : metrics ? (
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} md={4}>
-              <MetricCard
-                title="Deployments per Quarter"
-                flywayValue={metrics.flywayDeployments}
-                nonFlywayValue={metrics.nonFlywayDeployments}
-                unit=""
-                lowerIsBetter={false}
-              />
+          <>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12} md={4}>
+                <MetricCard
+                  title="Deployments per Quarter"
+                  flywayValue={metrics.flywayDeployments}
+                  nonFlywayValue={metrics.nonFlywayDeployments}
+                  unit=""
+                  lowerIsBetter={false}
+                />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <MetricCard
+                  title="Lead Time (days)"
+                  flywayValue={metrics.flywayLeadTime}
+                  nonFlywayValue={metrics.nonFlywayLeadTime}
+                  unit=" days"
+                  lowerIsBetter={true}
+                />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <MetricCard
+                  title="Script Failure Rate"
+                  flywayValue={metrics.flywayFailureRate}
+                  nonFlywayValue={metrics.nonFlywayFailureRate}
+                  unit="%"
+                  lowerIsBetter={true}
+                />
+              </Grid>
             </Grid>
-            <Grid item xs={12} md={4}>
-              <MetricCard
-                title="Lead Time for Changes"
-                flywayValue={metrics.flywayLeadTime}
-                nonFlywayValue={metrics.nonFlywayLeadTime}
-                unit=" days"
-                lowerIsBetter={true}
-                isLeadTime={true}
-              />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <MetricCard
-                title="Script Failure Rate"
-                flywayValue={metrics.flywayFailureRate}
-                nonFlywayValue={metrics.nonFlywayFailureRate}
-                unit="%"
-                lowerIsBetter={true}
-              />
-            </Grid>
-          </Grid>
+
+            {roi && (
+              <>
+                <Divider sx={{ my: 3 }} />
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h4" color="primary" gutterBottom>
+                    {roi.percentage}% ROI
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary" gutterBottom>
+                    Annual savings: ${roi.annual.toLocaleString()} | Payback period: {roi.paybackMonths} months
+                  </Typography>
+                  <Link 
+                    href="#/roi-calculation" 
+                    underline="hover"
+                    sx={{ 
+                      fontSize: '0.875rem',
+                      cursor: 'pointer',
+                      '&:hover': { color: 'primary.dark' }
+                    }}
+                  >
+                    How is this calculated?
+                  </Link>
+                </Box>
+              </>
+            )}
+          </>
         ) : (
           <Typography>No data available</Typography>
         )}
       </CardContent>
     </Card>
   );
-};
-
-export default ChangeInDeploymentMetricsWidget;
+}
