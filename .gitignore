@@ -21,3 +21,9 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# SQLite database files
+server/db/*.db
+server/db/*.db-journal
+server/db/*.db-shm
+server/db/*.db-wal
