@@ -1,11 +1,11 @@
 {
 	"prod": [
-		"jdbc:sqlserver://localhost:1433;instanceName=sqlexpress;authentication=sqlPassword;databaseName=northwind_prod;encrypt=true;trustServerCertificate=true;user=Andrew;password=foo",
+		"jdbc:sqlserver://localhost:1433;databaseName=northwind_prod;encrypt=true;trustServerCertificate=true;user=Andrew;password=foo",
 		"jdbc:postgresql://localhost:5432/pagila_prod?user=postgres&password=password"
 	],
 	"nonProd": [
-		"jdbc:sqlserver://localhost:1433;instanceName=sqlexpress;authentication=sqlPassword;databaseName=northwind_test;encrypt=true;trustServerCertificate=true;user=Andrew;password=foo",
-		"jdbc:sqlserver://localhost:1433;instanceName=sqlexpress;authentication=sqlPassword;databaseName=northwind_qa;encrypt=true;trustServerCertificate=true;user=Andrew;password=foo",
+		"jdbc:sqlserver://localhost:1433;databaseName=northwind_test;encrypt=true;trustServerCertificate=true;user=Andrew;password=foo",
+		"jdbc:sqlserver://localhost:1433;databaseName=northwind_qa;encrypt=true;trustServerCertificate=true;user=Andrew;password=foo",
 		"jdbc:postgresql://localhost:5432/pagila_test?user=postgres&password=password"
 	]
 }

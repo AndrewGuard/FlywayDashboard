@@ -1,87 +1,15 @@
 const fs = require('fs');
 const path = require('path');
 const sql = require('mssql');
-const { Client: PgClient } = require('pg');
+const { Pool } = require('pg');
+const { dbHelpers } = require('./db/database');
 
 const configPath = path.join(__dirname, 'jdbc-connections.json');
 
-const { setLeadTime, getLeadTimes } = require('./leadTimeStore');
-
-async function getFlywayHistory() {
-  const data = JSON.parse(fs.readFileSync(configPath));
-  let connections = [];
-  if (Array.isArray(data)) {
-    connections = data;
-  } else {
-    const prod = Array.isArray(data.prod) ? data.prod : [];
-    const nonProd = Array.isArray(data.nonProd) ? data.nonProd : [];
-    connections = [...prod, ...nonProd];
-  }
-  const results = [];
-  const leadTimes = getLeadTimes();
-
-  for (const connStr of connections) {
-    let dbName = 'unknown';
-    let history = [];
-    let error = null;
-    if (/^jdbc:postgresql:/i.test(connStr)) {
-      // Parse PostgreSQL JDBC
-      const pgConfig = parseJdbcToPgConfig(connStr);
-      dbName = pgConfig.database || 'unknown';
-      const client = new PgClient(pgConfig);
-      try {
-        await client.connect();
-        const res = await client.query('SELECT * FROM flyway_schema_history ORDER BY installed_rank DESC');
-        history = res.rows;
-      } catch (err) {
-        error = err.message;
-      } finally {
-        await client.end();
-      }
-    } else {
-      // MSSQL
-      const match = connStr.match(/databaseName=([^;]+)/);
-      dbName = match ? match[1] : 'unknown2';
-      const config = parseJdbcToMssqlConfig(connStr);
-      try {
-        await sql.connect(config);
-        const res = await sql.query('SELECT * FROM flyway_schema_history ORDER BY installed_rank DESC');
-        history = res.recordset;
-      } catch (err) {
-        error = err.message;
-      }
-      await sql.close();
-    }
-    // Calculate lead time for each migration
-    history = (history || []).map(row => {
-      let leadTime = null;
-      if (row.installed_on && row.script) {
-        // Try to extract timestamp from script name (e.g., V010_20250918120543__desc.sql)
-        const match = row.script.match(/_(\d{14})__/);
-        if (match) {
-          const scriptTs = match[1];
-          // Parse as YYYYMMDDHHmmss
-          const scriptDate = new Date(
-            scriptTs.slice(0,4)+'-'+scriptTs.slice(4,6)+'-'+scriptTs.slice(6,8)+'T'+
-            scriptTs.slice(8,10)+':'+scriptTs.slice(10,12)+':'+scriptTs.slice(12,14)+'Z'
-          );
-          const installedDate = new Date(row.installed_on);
-          if (!isNaN(scriptDate) && !isNaN(installedDate)) {
-            leadTime = (installedDate - scriptDate) / (1000 * 60 * 60 * 24); // days
-            // Store in file by unique key (dbName+version+script)
-            const key = `${dbName}|${row.version}|${row.script}`;
-            setLeadTime(key, leadTime);
-          }
-        }
-      }
-      return { ...row, leadTime };
-    });
-    results.push({ dbName, connStr, history, ...(error ? { error } : {}) });
-  }
+// Parse JDBC URL to PostgreSQL config
 function parseJdbcToPgConfig(jdbcUrl) {
-  // Example: jdbc:postgresql://localhost:5432/db?user=postgres&password=pass
   const urlMatch = jdbcUrl.match(/^jdbc:postgresql:\/\/([^:/]+)(?::(\d+))?\/([^?]+)\??(.*)$/);
-  if (!urlMatch) return {};
+  if (!urlMatch) return null;
   const [, host, port, database, query] = urlMatch;
   let user, password;
   if (query) {
@@ -97,32 +25,255 @@ function parseJdbcToPgConfig(jdbcUrl) {
     password
   };
 }
-  // Removed verbose Flyway schema history logging
-  return results;
-}
 
+// Parse JDBC URL to SQL Server config
 function parseJdbcToMssqlConfig(jdbcUrl) {
-  // Supports SQL authentication via user and password in the JDBC string
-  const serverMatch = jdbcUrl.match(/jdbc:sqlserver:\/\/(.*?):(\d+);/);
+  const serverMatch = jdbcUrl.match(/jdbc:sqlserver:\/\/([^:;]+)(?::(\d+))?/);
+  const instanceMatch = jdbcUrl.match(/instanceName=([^;]+)/);
   const dbMatch = jdbcUrl.match(/databaseName=([^;]+)/);
   const userMatch = jdbcUrl.match(/user=([^;]+)/);
   const passwordMatch = jdbcUrl.match(/password=([^;]+)/);
-  const user = userMatch ? userMatch[1] : process.env.DBUSER;
-  const password = passwordMatch ? passwordMatch[1] : process.env.DBPWD;
-  if (!user || !password) {
-    console.error('[Flyway] SQL authentication requires user and password in the JDBC string or DBUSER/DBPWD env vars.');
+  
+  let server = serverMatch ? serverMatch[1] : 'localhost';
+  let port = serverMatch && serverMatch[2] ? parseInt(serverMatch[2]) : 1433;
+  
+  // Note: Named instances can be unreliable in Node.js mssql library
+  // Using port-based connection instead for better reliability
+  // If instance name is specified but port is 1433, prefer port-based connection
+  if (instanceMatch && !serverMatch[2]) {
+    console.log(`Note: Using port ${port} instead of named instance ${instanceMatch[1]} for better connection reliability`);
   }
+  
   return {
-    server: serverMatch ? serverMatch[1].replace('\\', '\\') : 'localhost',
-    port: serverMatch ? parseInt(serverMatch[2]) : 1433,
+    server,
+    port,
     database: dbMatch ? dbMatch[1] : undefined,
-    user: user || '',
-    password: password || '',
+    user: userMatch ? userMatch[1] : '',
+    password: passwordMatch ? passwordMatch[1] : '',
     options: {
       trustServerCertificate: true,
-      encrypt: true
+      encrypt: true,
+      enableArithAbort: true,
+      connectTimeout: 5000,        // 5 second connection timeout
+      requestTimeout: 10000         // 10 second query timeout
+    },
+    pool: {
+      max: 10,
+      min: 0,
+      idleTimeoutMillis: 30000
     }
   };
 }
 
-module.exports = { getFlywayHistory };
+// Load connections from JSON file
+function loadConnections() {
+  try {
+    if (fs.existsSync(configPath)) {
+      const data = fs.readFileSync(configPath, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (e) {
+    console.error('Error loading jdbc-connections.json:', e.message);
+  }
+  return { prod: [], nonProd: [] };
+}
+
+// Get Flyway history from a single PostgreSQL database
+async function getPostgresHistory(config, dbName, env) {
+  const pool = new Pool(config);
+  try {
+    const result = await pool.query(`
+      SELECT 
+        installed_rank,
+        version,
+        description,
+        type,
+        script,
+        checksum,
+        installed_by,
+        installed_on,
+        execution_time,
+        success
+      FROM flyway_schema_history
+      ORDER BY installed_rank DESC
+    `);
+    return result.rows.map(row => ({
+      ...row,
+      database: dbName,
+      environment: env,
+      dbType: 'PostgreSQL'
+    }));
+  } catch (e) {
+    console.error(`Error fetching PostgreSQL history from ${dbName}:`, e.message);
+    return [];
+  } finally {
+    await pool.end();
+  }
+}
+
+// Get Flyway history from a single SQL Server database
+async function getMssqlHistory(config, dbName, env) {
+  let pool = null;
+  try {
+    console.log(`Attempting to connect to SQL Server: ${config.server}\\${config.database}`);
+    pool = await sql.connect(config);
+    console.log(`✓ Connected to ${config.server}\\${config.database}`);
+    
+    const result = await pool.request().query(`
+      SELECT 
+        installed_rank,
+        version,
+        description,
+        type,
+        script,
+        checksum,
+        installed_by,
+        installed_on,
+        execution_time,
+        success
+      FROM flyway_schema_history
+      ORDER BY installed_rank DESC
+    `);
+    return result.recordset.map(row => ({
+      ...row,
+      database: dbName,
+      environment: env,
+      dbType: 'SQL Server'
+    }));
+  } catch (e) {
+    if (e.message.includes('Failed to connect')) {
+      console.error(`✗ Connection failed: ${config.server}\\${config.database} - ${e.message}`);
+      console.error(`  Ensure SQL Server instance is running and accessible`);
+    } else {
+      console.error(`Error fetching SQL Server history from ${dbName}:`, e.message);
+    }
+    return [];
+  } finally {
+    if (pool) {
+      try {
+        await pool.close();
+      } catch (e) {
+        // Ignore close errors
+      }
+    }
+  }
+}
+
+// Get history from a single JDBC connection
+async function getHistoryFromJdbc(jdbcUrl, env) {
+  if (jdbcUrl.startsWith('jdbc:postgresql://')) {
+    const config = parseJdbcToPgConfig(jdbcUrl);
+    if (config) {
+      return await getPostgresHistory(config, config.database, env);
+    }
+  } else if (jdbcUrl.startsWith('jdbc:sqlserver://')) {
+    const config = parseJdbcToMssqlConfig(jdbcUrl);
+    if (config) {
+      return await getMssqlHistory(config, config.database, env);
+    }
+  }
+  return [];
+}
+
+// Get Flyway history from all configured connections
+async function getFlywayHistory() {
+  const connections = loadConnections();
+  const allHistory = [];
+
+  // Process production connections
+  for (const jdbcUrl of (connections.prod || [])) {
+    const history = await getHistoryFromJdbc(jdbcUrl, 'prod');
+    allHistory.push(...history);
+  }
+
+  // Process non-production connections
+  for (const jdbcUrl of (connections.nonProd || [])) {
+    const history = await getHistoryFromJdbc(jdbcUrl, 'nonProd');
+    allHistory.push(...history);
+  }
+
+  // Sort by installed_on descending
+  allHistory.sort((a, b) => new Date(b.installed_on) - new Date(a.installed_on));
+
+  return allHistory;
+}
+
+// Get Flyway history with lead times
+async function getFlywayHistoryWithLeadTimes() {
+  try {
+    const history = await getFlywayHistory();
+    const leadTimesData = dbHelpers.getLeadTimes();
+    const leadTimesMap = new Map();
+    
+    if (leadTimesData?.leadTimes) {
+      leadTimesData.leadTimes.forEach(lt => {
+        leadTimesMap.set(lt.script, lt);
+      });
+    }
+
+    return history.map(m => {
+      const leadTime = leadTimesMap.get(m.script);
+      return {
+        ...m,
+        leadTimeDays: leadTime?.leadTimeDays || null,
+        scriptDate: leadTime?.scriptDate || null
+      };
+    });
+  } catch (e) {
+    console.error('Error fetching flyway history with lead times:', e);
+    return [];
+  }
+}
+
+// Get history for production only
+async function getFlywayHistoryProd() {
+  const connections = loadConnections();
+  const prodHistory = [];
+
+  for (const jdbcUrl of (connections.prod || [])) {
+    const history = await getHistoryFromJdbc(jdbcUrl, 'prod');
+    prodHistory.push(...history);
+  }
+
+  prodHistory.sort((a, b) => new Date(b.installed_on) - new Date(a.installed_on));
+  return prodHistory;
+}
+
+// Test all connections on startup
+async function testConnections() {
+  const connections = loadConnections();
+  console.log('Testing database connections...');
+  
+  for (const jdbcUrl of [...(connections.prod || []), ...(connections.nonProd || [])]) {
+    try {
+      if (jdbcUrl.startsWith('jdbc:postgresql://')) {
+        const config = parseJdbcToPgConfig(jdbcUrl);
+        const pool = new Pool(config);
+        await pool.query('SELECT 1');
+        await pool.end();
+        console.log(`✓ PostgreSQL connected: ${config.database}`);
+      } else if (jdbcUrl.startsWith('jdbc:sqlserver://')) {
+        const config = parseJdbcToMssqlConfig(jdbcUrl);
+        const pool = await sql.connect(config);
+        await pool.request().query('SELECT 1');
+        await pool.close();
+        console.log(`✓ SQL Server connected: ${config.database}`);
+      }
+    } catch (e) {
+      console.error(`✗ Connection failed: ${jdbcUrl.substring(0, 50)}... - ${e.message}`);
+    }
+  }
+}
+
+// Test connections on module load (commented out - causing crashes)
+// testConnections();
+
+module.exports = { 
+  getFlywayHistory, 
+  getFlywayHistoryWithLeadTimes,
+  getFlywayHistoryProd,
+  parseJdbcToPgConfig,
+  parseJdbcToMssqlConfig,
+  loadConnections,
+  testConnections
+};

@@ -14,101 +14,104 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-function groupDeploymentsByDateAndDb(migrations) {
-  // { dbName: { date: count } }
-  const result = {};
-  migrations.forEach(({ dbName, installed_on }) => {
-    if (!dbName || !installed_on) return;
-    const date = new Date(installed_on).toISOString().slice(0, 10); // YYYY-MM-DD
-    if (!result[dbName]) result[dbName] = {};
-    if (!result[dbName][date]) result[dbName][date] = 0;
-    result[dbName][date]++;
-  });
-  return result;
-}
-
-const DeploymentsOverTimeWidget = () => {
+export default function DeploymentsOverTimeWidget() {
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchMigrations = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/flyway/history/all');
-      if (!res.ok) throw new Error('Failed to fetch migration history');
-      const data = await res.json();
-      // Flatten and annotate with dbName
-      const allMigrations = Object.entries(data)
-        .flatMap(([dbName, arr]) => (arr || []).map(m => ({ ...m, dbName })));
-      // Only count successful deployments (exclude UNDO, UNDO_SQL, failed)
-      const filtered = allMigrations.filter(m => {
-        const t = m.type ? m.type.toLowerCase() : '';
-        return t !== 'undo' && t !== 'undo_sql' && (!m.success || m.success === true);
-      });
-      const grouped = groupDeploymentsByDateAndDb(filtered);
-      // Get all unique dates
-      const allDates = Array.from(new Set(
-        Object.values(grouped).flatMap(db => Object.keys(db))
-      )).sort();
-      // Prepare datasets for each db
-      const datasets = Object.entries(grouped).map(([dbName, dateCounts], idx) => ({
-        label: dbName,
-        data: allDates.map(date => dateCounts[date] || 0),
-        borderColor: `hsl(${(idx * 60) % 360}, 70%, 50%)`,
-        backgroundColor: `hsl(${(idx * 60) % 360}, 70%, 80%)`,
-        tension: 0.2,
-        fill: false
-      }));
-      setChartData({
-        labels: allDates,
-        datasets
-      });
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    let mounted = true;
+
+    async function fetchData() {
+      try {
+        const res = await fetch('/api/flyway/history/all');
+        if (!res.ok) throw new Error('Failed to fetch migration history');
+        
+        const data = await res.json();
+        
+        if (!mounted) return;
+
+        const migrations = Array.isArray(data) ? data : [];
+        
+        if (!migrations.length) {
+          setError('No migration data available');
+          setLoading(false);
+          return;
+        }
+
+        // Group migrations by date and database
+        const byDateAndDb = {};
+        migrations.forEach(m => {
+          const dateStr = m.installed_on || m.installedOn;
+          if (!dateStr) return;
+          const date = new Date(dateStr).toISOString().slice(0, 10);
+          const db = m.database || m.schema || 'default';
+          
+          if (!byDateAndDb[date]) byDateAndDb[date] = {};
+          if (!byDateAndDb[date][db]) byDateAndDb[date][db] = 0;
+          byDateAndDb[date][db]++;
+        });
+
+        const dates = Object.keys(byDateAndDb).sort();
+        const databases = [...new Set(migrations.map(m => m.database || m.schema || 'default'))];
+        
+        const colors = [
+          'rgb(75, 192, 192)',
+          'rgb(255, 99, 132)',
+          'rgb(54, 162, 235)',
+          'rgb(255, 206, 86)',
+          'rgb(153, 102, 255)'
+        ];
+
+        const datasets = databases.map((db, i) => ({
+          label: db,
+          data: dates.map(d => byDateAndDb[d]?.[db] || 0),
+          borderColor: colors[i % colors.length],
+          backgroundColor: colors[i % colors.length].replace('rgb', 'rgba').replace(')', ', 0.5)'),
+          tension: 0.1
+        }));
+
+        setChartData({ labels: dates, datasets });
+        setLoading(false);
+      } catch (err) {
+        console.error('Deployments over time error:', err);
+        if (mounted) {
+          setError(err.message || 'Failed to load data');
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchData();
+    return () => { mounted = false; };
+  }, []);
+
+  const options = {
+    responsive: true,
+    plugins: {
+      legend: { position: 'top' },
+      title: { display: true, text: 'Deployments Over Time by Database' }
+    },
+    scales: {
+      y: { beginAtZero: true, title: { display: true, text: 'Deployments' } },
+      x: { title: { display: true, text: 'Date' } }
     }
   };
 
-  useEffect(() => {
-    fetchMigrations();
-    const interval = setInterval(fetchMigrations, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
   return (
-    <Card sx={{ minWidth: 275, mb: 2 }}>
+    <Card sx={{ mb: 2 }}>
       <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Deployments Over Time by Database
-        </Typography>
+        <Typography variant="h6" gutterBottom>Deployments Over Time by Database</Typography>
         {loading ? (
           <Typography>Loading...</Typography>
         ) : error ? (
           <Typography color="error">{error}</Typography>
         ) : chartData ? (
-          <Box sx={{ height: 300 }}>
-            <Line
-              data={chartData}
-              options={{
-                responsive: true,
-                plugins: {
-                  legend: { position: 'top' },
-                  title: { display: false }
-                },
-                scales: {
-                  x: { title: { display: true, text: 'Date' } },
-                  y: { title: { display: true, text: 'Deployments' }, beginAtZero: true }
-                }
-              }}
-            />
-          </Box>
-        ) : null}
+          <Box sx={{ height: 300 }}><Line data={chartData} options={options} /></Box>
+        ) : (
+          <Typography>No data available</Typography>
+        )}
       </CardContent>
     </Card>
   );
-};
-
-export default DeploymentsOverTimeWidget;
+}

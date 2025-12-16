@@ -1,78 +1,69 @@
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, Typography, LinearProgress, Box } from '@mui/material';
+import { Card, CardContent, Typography, Box, List, ListItem, ListItemText } from '@mui/material';
 
-function calculateUndoStats(migrations) {
-  if (!Array.isArray(migrations) || migrations.length === 0) {
-    return { total: 0, undoCount: 0, percent: 0 };
-  }
-  const undoCount = migrations.filter(m => {
-    if (!m.type) return false;
-    const t = m.type.toLowerCase();
-    return t === 'undo' || t === 'undo_sql';
-  }).length;
-  const percent = ((undoCount / migrations.length) * 100).toFixed(1);
-  return { total: migrations.length, undoCount, percent };
-}
-
-const UndoMigrationsWidget = () => {
-  const [stats, setStats] = useState({ total: 0, undoCount: 0, percent: 0 });
+export default function UndoMigrationsWidget() {
+  const [undoMigrations, setUndoMigrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchMigrations = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/flyway/history/all');
-      if (!res.ok) throw new Error('Failed to fetch migration history');
-      const data = await res.json();
-      // Flatten all migrations from all DBs
-      const allMigrations = Object.values(data)
-        .flat()
-        .filter(Boolean);
-      setStats(calculateUndoStats(allMigrations));
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchMigrations();
-    const interval = setInterval(fetchMigrations, 60000); // refresh every 60s
-    return () => clearInterval(interval);
+    let mounted = true;
+
+    async function fetchData() {
+      try {
+        const res = await fetch('/api/flyway/history/all');
+        if (!res.ok) throw new Error('Failed to fetch migration history');
+        
+        const data = await res.json();
+        
+        if (!mounted) return;
+
+        const migrations = Array.isArray(data) ? data : [];
+        
+        // Filter for undo migrations (version starts with U)
+        const undos = migrations.filter(m => {
+          const version = m.version || '';
+          return version.startsWith('U') || m.type === 'UNDO';
+        });
+
+        setUndoMigrations(undos);
+        setLoading(false);
+      } catch (err) {
+        console.error('Undo migrations error:', err);
+        if (mounted) {
+          setError(err.message || 'Failed to load data');
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchData();
+    return () => { mounted = false; };
   }, []);
 
   return (
-    <Card sx={{ minWidth: 275, mb: 2 }}>
+    <Card sx={{ mb: 2 }}>
       <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Undo Migrations
-        </Typography>
+        <Typography variant="h6" gutterBottom>Undo Migrations</Typography>
         {loading ? (
-          <LinearProgress />
+          <Typography>Loading...</Typography>
         ) : error ? (
           <Typography color="error">{error}</Typography>
+        ) : undoMigrations.length > 0 ? (
+          <List dense>
+            {undoMigrations.slice(0, 10).map((m, i) => (
+              <ListItem key={i}>
+                <ListItemText
+                  primary={m.description || m.script || `Undo ${m.version}`}
+                  secondary={`Version: ${m.version} | ${new Date(m.installed_on).toLocaleDateString()}`}
+                />
+              </ListItem>
+            ))}
+          </List>
         ) : (
-          <Box>
-            <Typography variant="h4" color="primary.main">
-              {stats.undoCount} / {stats.total}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {stats.percent}% of all migrations are UNDO
-            </Typography>
-            <LinearProgress
-              variant="determinate"
-              value={Number(stats.percent)}
-              sx={{ mt: 1, height: 8, borderRadius: 4 }}
-              color={stats.percent > 0 ? 'warning' : 'success'}
-            />
-          </Box>
+          <Typography color="text.secondary">No undo migrations found</Typography>
         )}
       </CardContent>
     </Card>
   );
-};
-
-export default UndoMigrationsWidget;
+}
