@@ -6,7 +6,6 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import BarChartIcon from '@mui/icons-material/BarChart';
-import SettingsIcon from '@mui/icons-material/Settings';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import UndoIcon from '@mui/icons-material/Undo';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
@@ -29,8 +28,7 @@ const navItems: NavItem[] = [
   { text: 'Undo Migrations', icon: <UndoIcon />, section: 'undo-migrations' },
   { text: 'Avg Deployment Time', icon: <BarChartIcon />, section: 'avg-deployment-time' },
   { text: 'Metrics Chart', icon: <BarChartIcon />, section: 'metrics-chart' },
-  { text: 'Migration History', icon: <TableChartIcon />, section: 'migration-history' },
-  { text: 'Deployment Metrics Configuration', icon: <SettingsIcon />, section: 'user-defined-metrics' },
+  { text: 'Migration History', icon: <TableChartIcon />, section: 'migration-history' }
 ];
 
 const Sidebar: React.FC = () => {

@@ -12,7 +12,6 @@ import DeploymentSuccessRate from './widgets/DeploymentSuccessRate';
 import UndoMigrationsWidget from './widgets/UndoMigrationsWidget';
 import DeploymentsOverTimeWidget from './widgets/DeploymentsOverTimeWidget';
 import AverageDeploymentTimeWidget from './widgets/AverageDeploymentTimeWidget';
-import UserDefinedMetricsPage from './UserDefinedMetricsPage';
 import ChangeInDeploymentMetricsWidget from './widgets/ChangeInDeploymentMetricsWidget';
 import RoiCalculationPage from './RoiCalculationPage';
 import LeadTimeOverTimeWidget from './widgets/LeadTimeOverTimeWidget';
@@ -39,9 +38,7 @@ const App: React.FC = () => {
       <Sidebar />
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <Toolbar />
-        {hash === '#/user-defined-metrics' ? (
-          <div id="user-defined-metrics"><UserDefinedMetricsPage /></div>
-        ) : hash === '#/roi-calculation' ? (
+        {hash === '#/roi-calculation' ? (
           <RoiCalculationPage />
         ) : (
           <>
