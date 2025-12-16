@@ -6,12 +6,14 @@
   "dependencies": {
     "@emotion/react": "^11.x.x",
     "@emotion/styled": "^11.x.x",
+    "@mui/icons-material": "^5.18.0",
     "@mui/material": "^5.x.x",
     "chart.js": "^4.x.x",
     "react": "^18.x.x",
     "react-chartjs-2": "^5.x.x",
     "react-dom": "^18.x.x",
-    "react-scripts": "5.x.x"
+    "react-scripts": "5.x.x",
+    "web-vitals": "^5.1.0"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -30,5 +32,14 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.0.2",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3"
   }
 }
