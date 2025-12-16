@@ -265,6 +265,33 @@ async function testConnections() {
   }
 }
 
+// Generate mock Flyway history from lead times data
+function getMockFlywayHistory() {
+  try {
+    const leadTimes = dbHelpers.getLeadTimes();
+    if (!leadTimes?.leadTimes) return [];
+    
+    return leadTimes.leadTimes.map((lt, index) => ({
+      installed_rank: index + 1,
+      version: lt.version || `${index + 1}.0`,
+      description: lt.script?.replace(/\.sql$/, '').replace(/^V\d+_\d+__/, '').replace(/_/g, ' ') || `Migration ${index + 1}`,
+      type: 'SQL',
+      script: lt.script || `V${index + 1}__migration.sql`,
+      checksum: null,
+      installed_by: 'flyway',
+      installed_on: lt.deployDate || new Date().toISOString(),
+      installedOn: lt.deployDate || new Date().toISOString(),
+      execution_time: Math.floor(Math.random() * 5000) + 100,
+      success: true,
+      database: lt.database || 'demo_db',
+      environment: lt.environment || 'prod'
+    }));
+  } catch (e) {
+    console.error('Error generating mock history:', e);
+    return [];
+  }
+}
+
 // Test connections on module load (commented out - causing crashes)
 // testConnections();
 
@@ -272,6 +299,7 @@ module.exports = {
   getFlywayHistory, 
   getFlywayHistoryWithLeadTimes,
   getFlywayHistoryProd,
+  getMockFlywayHistory,
   parseJdbcToPgConfig,
   parseJdbcToMssqlConfig,
   loadConnections,
