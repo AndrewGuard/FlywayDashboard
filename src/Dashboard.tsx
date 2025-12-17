@@ -33,25 +33,29 @@ const Dashboard: React.FC = () => {
           <LeadTimeOverTimeWidget />
         </Grid>
 
-        {/* Average Deployment Time & Metrics Chart - Side by side */}
-        <Grid item xs={12} md={6}>
-          <AverageDeploymentTimeWidget />
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <MetricsChart />
-        </Grid>
-
         {/* Deployments Over Time - Full width */}
         <Grid item xs={12}>
           <DeploymentsOverTimeWidget />
         </Grid>
 
-        {/* Undo Migrations & Top Platforms - Side by side */}
-        <Grid item xs={12} lg={8}>
-          <UndoMigrationsWidget />
+        {/* Average Deployment Time - Full width */}
+        <Grid item xs={12}>
+          <AverageDeploymentTimeWidget />
         </Grid>
-        <Grid item xs={12} lg={4}>
+
+        {/* Metrics Chart - Full width */}
+        <Grid item xs={12}>
+          <MetricsChart />
+        </Grid>
+
+        {/* Top Platforms - Full width */}
+        <Grid item xs={12}>
           <TopPlatformsWidgets />
+        </Grid>
+
+        {/* Undo Migrations - Full width */}
+        <Grid item xs={12}>
+          <UndoMigrationsWidget />
         </Grid>
       </Grid>
     </Box>

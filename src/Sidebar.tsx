@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import Drawer from '@mui/material/Drawer';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
@@ -32,20 +33,21 @@ const navItems: NavItem[] = [
 ];
 
 const Sidebar: React.FC = () => {
+  const navigate = useNavigate();
+
   const handleNavClick = (section: string) => {
-    if (section === 'user-defined-metrics') {
-      window.location.hash = '#/user-defined-metrics';
-    } else if (section === 'roi-calculation') {
-      window.location.hash = '#/roi-calculation';
+    if (section === 'migration-history') {
+      navigate('/migrations');
     } else {
-      window.location.hash = '';
+      // All other sections go to home and scroll
+      navigate('/');
       // Wait for route to render, then scroll to section
       setTimeout(() => {
         const el = document.getElementById(section);
         if (el) {
           el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-      }, 50);
+      }, 100);
     }
   };
   return (
