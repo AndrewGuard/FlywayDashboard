@@ -2,78 +2,24 @@
   "name": "flyway-dashboard",
   "version": "0.1.0",
   "private": true,
-  "main": "public/electron.js",
-  "homepage": "./",
   "proxy": "http://localhost:3001",
   "dependencies": {
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.0",
+    "@emotion/react": "^11.x.x",
+    "@emotion/styled": "^11.x.x",
     "@mui/icons-material": "^5.18.0",
-    "@mui/material": "^5.18.0",
-    "@mui/x-charts": "^7.24.0",
-    "@testing-library/jest-dom": "^5.17.0",
-    "@testing-library/react": "^13.4.0",
-    "@testing-library/user-event": "^13.5.0",
-    "@types/jest": "^27.5.2",
-    "@types/node": "^16.18.108",
-    "@types/react": "^18.3.18",
-    "@types/react-dom": "^18.3.5",
-    "axios": "^1.7.9",
-    "chart.js": "^4.5.1",
-    "react": "^18.3.1",
-    "react-chartjs-2": "^5.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^7.1.1",
-    "react-scripts": "5.0.1",
-    "recharts": "^2.15.0",
-    "typescript": "^4.9.5",
-    "web-vitals": "^2.1.4"
-  },
-  "devDependencies": {
-    "concurrently": "^9.1.2",
-    "cross-env": "^7.0.3",
-    "electron": "^33.2.1",
-    "electron-builder": "^25.1.8",
-    "wait-on": "^8.0.1"
+    "@mui/material": "^5.x.x",
+    "chart.js": "^4.x.x",
+    "react": "^18.x.x",
+    "react-chartjs-2": "^5.x.x",
+    "react-dom": "^18.x.x",
+    "react-scripts": "5.x.x",
+    "web-vitals": "^5.1.0"
   },
   "scripts": {
-    "server": "cd server && node index.js",
-    "dev": "concurrently \"npm run server\" \"npm start\"",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "electron:dev": "concurrently \"cross-env BROWSER=none npm start\" \"wait-on http://localhost:3000 && electron .\"",
-    "electron:build": "npm run build && electron-builder",
-    "postinstall": "electron-builder install-app-deps"
-  },
-  "build": {
-    "appId": "com.redgate.flyway-dashboard",
-    "productName": "Flyway Dashboard",
-    "files": [
-      "build/**/*",
-      "server/**/*",
-      "public/electron.js",
-      "node_modules/**/*"
-    ],
-    "directories": {
-      "buildResources": "public"
-    },
-    "win": {
-      "target": "nsis"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
-    }
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+    "eject": "react-scripts eject"
   },
   "browserslist": {
     "production": [
@@ -86,5 +32,10 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
+    "@types/jest": "^30.0.0"
   }
 }
