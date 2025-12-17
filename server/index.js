@@ -10,6 +10,20 @@ app.use(express.json());
 const { db, dbHelpers } = require('./db/database');
 console.log('Database initialized');
 
+// Auto-seed database if empty
+const { execSync } = require('child_process');
+try {
+  const count = db.prepare('SELECT COUNT(*) as count FROM lead_time_history').get();
+  if (count.count === 0) {
+    console.log('Database is empty, seeding with demo data...');
+    execSync('node refresh-all-demo-data.js', { stdio: 'inherit', cwd: __dirname });
+  } else {
+    console.log(`Database has ${count.count} lead time records`);
+  }
+} catch (e) {
+  console.log('Could not check/seed database:', e.message);
+}
+
 // Import routes
 const userMetricsRoutes = require('./routes/userMetricsRoutes');
 const leadTimeHistoryRoutes = require('./routes/leadTimeHistoryRoutes');
