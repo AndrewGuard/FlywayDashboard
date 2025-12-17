@@ -20,6 +20,10 @@ interface UserMetrics {
   savingsPerDeployment: number;
   implementationCost: number;
   costOfDelayPerDay: number;
+  dbaHoursPerDeployment: number;
+  developerHoursPerDeployment: number;
+  dbaAnnualSalary: number;
+  developerAnnualSalary: number;
 }
 
 interface ROIBreakdown {
@@ -29,6 +33,7 @@ interface ROIBreakdown {
   failureSavingsPerQuarter: number;
   deploymentIncrease: number;
   efficiencySavings: number;
+  laborSavingsPerQuarter: number;
   totalQuarterlySavings: number;
   annualSavings: number;
   netBenefit: number;
@@ -43,7 +48,11 @@ const RoiCalculationPage: React.FC = () => {
     scriptFailureRate: 15,
     savingsPerDeployment: 5000,
     implementationCost: 50000,
-    costOfDelayPerDay: 350
+    costOfDelayPerDay: 350,
+    dbaHoursPerDeployment: 8,
+    developerHoursPerDeployment: 4,
+    dbaAnnualSalary: 175000,
+    developerAnnualSalary: 155000
   });
 
   const [flywayMetrics, setFlywayMetrics] = useState({
@@ -76,7 +85,11 @@ const RoiCalculationPage: React.FC = () => {
             scriptFailureRate: Number(data.scriptFailureRate) || 15,
             savingsPerDeployment: Number(data.savingsPerDeployment) || 5000,
             implementationCost: Number(data.implementationCost) || 50000,
-            costOfDelayPerDay: Number(data.costOfDelayPerDay) || 350
+            costOfDelayPerDay: Number(data.costOfDelayPerDay) || 350,
+            dbaHoursPerDeployment: Number(data.dbaHoursPerDeployment) || 8,
+            developerHoursPerDeployment: Number(data.developerHoursPerDeployment) || 4,
+            dbaAnnualSalary: Number(data.dbaAnnualSalary) || 175000,
+            developerAnnualSalary: Number(data.developerAnnualSalary) || 155000
           });
         }
       }
@@ -148,8 +161,15 @@ const RoiCalculationPage: React.FC = () => {
     const deploymentIncrease = Math.max(0, flywayDep - nonFlywayDep);
     const efficiencySavings = deploymentIncrease * (savingsPerDep * 0.3);
 
+    // DBA and developer time savings (80% time reduction with automation)
+    const dbaHourlyRate = userMetrics.dbaAnnualSalary / 2080;
+    const devHourlyRate = userMetrics.developerAnnualSalary / 2080;
+    const dbaTimeSavingsPerDeployment = userMetrics.dbaHoursPerDeployment * 0.8 * dbaHourlyRate;
+    const devTimeSavingsPerDeployment = userMetrics.developerHoursPerDeployment * 0.8 * devHourlyRate;
+    const laborSavingsPerQuarter = (dbaTimeSavingsPerDeployment + devTimeSavingsPerDeployment) * flywayDep;
+
     // Total quarterly savings
-    const totalQuarterlySavings = timeSavingsPerQuarter + failureSavingsPerQuarter + efficiencySavings;
+    const totalQuarterlySavings = timeSavingsPerQuarter + failureSavingsPerQuarter + efficiencySavings + laborSavingsPerQuarter;
 
     // Annual ROI
     const annualSavings = totalQuarterlySavings * 4;
@@ -164,6 +184,7 @@ const RoiCalculationPage: React.FC = () => {
       failureSavingsPerQuarter,
       deploymentIncrease,
       efficiencySavings,
+      laborSavingsPerQuarter,
       totalQuarterlySavings,
       annualSavings,
       netBenefit,
@@ -314,6 +335,46 @@ const RoiCalculationPage: React.FC = () => {
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
+                    label="DBA Hours per Deployment (Pre-Flyway)"
+                    type="number"
+                    value={userMetrics.dbaHoursPerDeployment}
+                    onChange={(e) => setUserMetrics({ ...userMetrics, dbaHoursPerDeployment: Number(e.target.value) })}
+                    helperText="Manual deployment time: planning, review, execution, validation (typically 6-12 hours)"
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Developer Hours per Deployment (Pre-Flyway)"
+                    type="number"
+                    value={userMetrics.developerHoursPerDeployment}
+                    onChange={(e) => setUserMetrics({ ...userMetrics, developerHoursPerDeployment: Number(e.target.value) })}
+                    helperText="Script writing, testing, coordination time (typically 3-6 hours)"
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="DBA Annual Salary ($)"
+                    type="number"
+                    value={userMetrics.dbaAnnualSalary}
+                    onChange={(e) => setUserMetrics({ ...userMetrics, dbaAnnualSalary: Number(e.target.value) })}
+                    helperText="Fully-loaded cost including benefits (US avg: $150K-200K for mid-level)"
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Developer Annual Salary ($)"
+                    type="number"
+                    value={userMetrics.developerAnnualSalary}
+                    onChange={(e) => setUserMetrics({ ...userMetrics, developerAnnualSalary: Number(e.target.value) })}
+                    helperText="Fully-loaded cost including benefits (US avg: $130K-180K for mid-level)"
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
                     label="Implementation Cost ($)"
                     type="number"
                     value={userMetrics.implementationCost}
@@ -400,6 +461,9 @@ const RoiCalculationPage: React.FC = () => {
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       <strong>Deployment efficiency:</strong> +{roi.deploymentIncrease} deployments → ${roi.efficiencySavings.toLocaleString()}/quarter
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      <strong>DBA & developer labor savings:</strong> 80% time reduction → ${roi.laborSavingsPerQuarter.toLocaleString()}/quarter
                     </Typography>
                     <Typography variant="body2" fontWeight="bold" sx={{ mt: 1 }}>
                       Total quarterly savings: ${roi.totalQuarterlySavings.toLocaleString()}
