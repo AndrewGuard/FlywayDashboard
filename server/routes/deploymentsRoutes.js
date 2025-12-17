@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+
+const DEMO_MODE = process.env.DEMO_MODE === 'true';
 const { dbHelpers } = require('../db/database');
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -23,9 +25,15 @@ router.get('/api/metrics/deployments-per-quarter', async (req, res) => {
 
     try {
       const flywayHistory = require('../flywayHistory');
-      // Use mock data for demo purposes (matches the /api/flyway/history/all endpoint)
-      if (flywayHistory?.getMockFlywayHistory) {
+      if (DEMO_MODE) {
+        // Demo mode: use mock data
         history = flywayHistory.getMockFlywayHistory() ?? [];
+      } else {
+        // Production mode: use real JDBC connections
+        history = await flywayHistory.getFlywayHistory();
+        if (!history || history.length === 0) {
+          history = [];
+        }
       }
     } catch (e) {
       console.warn('Failed to get flyway history:', e);

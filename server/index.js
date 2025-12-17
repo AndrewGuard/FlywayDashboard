@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -73,18 +74,23 @@ app.get('/api/flyway-history', async (req, res) => {
 
 app.get('/api/flyway/history/all', async (req, res) => {
   try {
-    // Clear cache to get fresh mock data
     delete require.cache[require.resolve('./flywayHistory')];
     const flywayHistory = require('./flywayHistory');
     
-    // Use mock data for demo purposes (shows all platforms)
-    // To use real JDBC connections instead, uncomment the lines below:
-    // let history = await flywayHistory.getFlywayHistory();
-    // if (!history || history.length === 0) {
-    //   history = flywayHistory.getMockFlywayHistory();
-    // }
+    let history;
+    if (DEMO_MODE) {
+      // Demo mode: use mock data to show all platforms
+      history = flywayHistory.getMockFlywayHistory();
+    } else {
+      // Production mode: use real JDBC connections
+      history = await flywayHistory.getFlywayHistory();
+      // Fallback to empty array if no connections configured
+      if (!history || history.length === 0) {
+        console.warn('No Flyway history found from JDBC connections');
+        history = [];
+      }
+    }
     
-    const history = flywayHistory.getMockFlywayHistory();
     res.json(Array.isArray(history) ? history : []);
   } catch (e) {
     console.error('Flyway history all error:', e);
