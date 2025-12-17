@@ -1,10 +1,12 @@
 import React from 'react';
 import { Box, Typography, Grid } from '@mui/material';
 import ChangeInDeploymentMetricsWidget from './widgets/ChangeInDeploymentMetricsWidget';
-import LeadTimeComparisonWidget from './widgets/LeadTimeComparisonWidget';
+import AverageDeploymentTimeWidget from './widgets/AverageDeploymentTimeWidget';
+import DeploymentsOverTimeWidget from './widgets/DeploymentsOverTimeWidget';
 import LeadTimeOverTimeWidget from './widgets/LeadTimeOverTimeWidget';
 import TopPlatformsWidgets from './widgets/TopPlatformsWidgets';
 import UndoMigrationsWidget from './widgets/UndoMigrationsWidget';
+import MetricsChart from './MetricsChart';
 
 const Dashboard: React.FC = () => {
   return (
@@ -21,19 +23,9 @@ const Dashboard: React.FC = () => {
 
       {/* Dashboard Grid */}
       <Grid container spacing={3}>
-        {/* Lead Time Comparison - Full width for prominence */}
+        {/* Change in Deployment Metrics - Full width for prominence */}
         <Grid item xs={12}>
-          <LeadTimeComparisonWidget />
-        </Grid>
-
-        {/* Change in Deployment Metrics - Prominent secondary position */}
-        <Grid item xs={12} lg={8}>
           <ChangeInDeploymentMetricsWidget />
-        </Grid>
-
-        {/* Top Platforms - Side column */}
-        <Grid item xs={12} lg={4}>
-          <TopPlatformsWidgets />
         </Grid>
 
         {/* Lead Time Over Time - Full width chart */}
@@ -41,9 +33,25 @@ const Dashboard: React.FC = () => {
           <LeadTimeOverTimeWidget />
         </Grid>
 
-        {/* Undo Migrations - Full width */}
+        {/* Average Deployment Time & Metrics Chart - Side by side */}
+        <Grid item xs={12} md={6}>
+          <AverageDeploymentTimeWidget />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <MetricsChart />
+        </Grid>
+
+        {/* Deployments Over Time - Full width */}
         <Grid item xs={12}>
+          <DeploymentsOverTimeWidget />
+        </Grid>
+
+        {/* Undo Migrations & Top Platforms - Side by side */}
+        <Grid item xs={12} lg={8}>
           <UndoMigrationsWidget />
+        </Grid>
+        <Grid item xs={12} lg={4}>
+          <TopPlatformsWidgets />
         </Grid>
       </Grid>
     </Box>

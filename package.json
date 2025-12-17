@@ -4,6 +4,7 @@
   "private": true,
   "main": "public/electron.js",
   "homepage": "./",
+  "proxy": "http://localhost:3001",
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
@@ -36,6 +37,8 @@
     "wait-on": "^8.0.1"
   },
   "scripts": {
+    "server": "cd server && node index.js",
+    "dev": "concurrently \"npm run server\" \"npm start\"",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
