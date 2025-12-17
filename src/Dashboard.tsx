@@ -60,15 +60,16 @@ const Dashboard: React.FC = () => {
           <TopDatabasesWidget />
         </Grid>
 
+        {/* Undo Migrations - Full width */}
+        <Grid item xs={12}>
+          <UndoMigrationsWidget />
+        </Grid>
+
         {/* Migration History - Full width */}
         <Grid item xs={12}>
           <MigrationHistoryWidget />
         </Grid>
 
-        {/* Undo Migrations - Full width */}
-        <Grid item xs={12}>
-          <UndoMigrationsWidget />
-        </Grid>
       </Grid>
     </Box>
   );
