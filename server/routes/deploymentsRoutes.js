@@ -23,8 +23,9 @@ router.get('/api/metrics/deployments-per-quarter', async (req, res) => {
 
     try {
       const flywayHistory = require('../flywayHistory');
-      if (flywayHistory?.getFlywayHistory) {
-        history = await flywayHistory.getFlywayHistory() ?? [];
+      // Use mock data for demo purposes (matches the /api/flyway/history/all endpoint)
+      if (flywayHistory?.getMockFlywayHistory) {
+        history = flywayHistory.getMockFlywayHistory() ?? [];
       }
     } catch (e) {
       console.warn('Failed to get flyway history:', e);
