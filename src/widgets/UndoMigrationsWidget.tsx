@@ -17,6 +17,7 @@ const UndoMigrationsWidget: React.FC = () => {
 
   useEffect(() => {
     let mounted = true;
+    let pollInterval: NodeJS.Timeout;
 
     async function fetchData() {
       try {
@@ -29,10 +30,11 @@ const UndoMigrationsWidget: React.FC = () => {
 
         const migrations = Array.isArray(data) ? data : [];
         
-        // Filter for undo migrations (version starts with U)
+        // Filter for undo migrations (type is UNDO_SQL or version starts with U)
         const undos = migrations.filter(m => {
           const version = m.version || '';
-          return version.startsWith('U') || m.type === 'UNDO';
+          const type = m.type || '';
+          return type === 'UNDO_SQL' || version.startsWith('U') || m.type === 'UNDO';
         });
 
         setUndoMigrations(undos);
@@ -46,8 +48,20 @@ const UndoMigrationsWidget: React.FC = () => {
       }
     }
 
+    // Initial fetch
     fetchData();
-    return () => { mounted = false; };
+
+    // Poll every 30 seconds for new migrations
+    pollInterval = setInterval(() => {
+      if (mounted) {
+        fetchData();
+      }
+    }, 30000);
+
+    return () => {
+      mounted = false;
+      clearInterval(pollInterval);
+    };
   }, []);
 
   return (

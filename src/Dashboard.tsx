@@ -7,6 +7,7 @@ import LeadTimeOverTimeWidget from './widgets/LeadTimeOverTimeWidget';
 import TopPlatformsWidget from './widgets/TopPlatformsWidget';
 import TopDatabasesWidget from './widgets/TopDatabasesWidget';
 import UndoMigrationsWidget from './widgets/UndoMigrationsWidget';
+import MigrationHistoryWidget from './widgets/MigrationHistoryWidget';
 import MetricsChart from './MetricsChart';
 
 const Dashboard: React.FC = () => {
@@ -57,6 +58,11 @@ const Dashboard: React.FC = () => {
         {/* Top Databases - Full width */}
         <Grid item xs={12}>
           <TopDatabasesWidget />
+        </Grid>
+
+        {/* Migration History - Full width */}
+        <Grid item xs={12}>
+          <MigrationHistoryWidget />
         </Grid>
 
         {/* Undo Migrations - Full width */}

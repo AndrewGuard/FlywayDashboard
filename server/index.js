@@ -11,18 +11,26 @@ app.use(express.json());
 const { db, dbHelpers } = require('./db/database');
 console.log('Database initialized');
 
-// Auto-seed database if empty
-const { execSync } = require('child_process');
-try {
-  const count = db.prepare('SELECT COUNT(*) as count FROM lead_time_history').get();
-  if (count.count === 0) {
-    console.log('Database is empty, seeding with demo data...');
-    execSync('node refresh-all-demo-data.js', { stdio: 'inherit', cwd: __dirname });
-  } else {
-    console.log(`Database has ${count.count} lead time records`);
+// Set DEMO_MODE=true environment variable to use mock data and auto-seed
+// For production deployments, leave DEMO_MODE unset or set to false
+const DEMO_MODE = process.env.DEMO_MODE === 'true';
+
+if (DEMO_MODE) {
+  console.log('🎭 Running in DEMO MODE - using mock data and auto-seeding');
+  const { execSync } = require('child_process');
+  try {
+    const count = db.prepare('SELECT COUNT(*) as count FROM lead_time_history').get();
+    if (count.count === 0) {
+      console.log('Database is empty, seeding with demo data...');
+      execSync('node refresh-all-demo-data.js', { stdio: 'inherit', cwd: __dirname });
+    } else {
+      console.log(`Database has ${count.count} lead time records`);
+    }
+  } catch (e) {
+    console.log('Could not check/seed database:', e.message);
   }
-} catch (e) {
-  console.log('Could not check/seed database:', e.message);
+} else {
+  console.log('🚀 Running in PRODUCTION MODE - using real JDBC connections');
 }
 
 // Import routes
