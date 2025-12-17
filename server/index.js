@@ -73,19 +73,21 @@ app.get('/api/flyway-history', async (req, res) => {
 
 app.get('/api/flyway/history/all', async (req, res) => {
   try {
+    // Clear cache to get fresh mock data
+    delete require.cache[require.resolve('./flywayHistory')];
     const flywayHistory = require('./flywayHistory');
-    let history = await flywayHistory.getFlywayHistory();
     
-    // If no real data, use mock data from lead times
-    if (!history || history.length === 0) {
-      console.log('No database connections available, using mock data from lead times');
-      history = flywayHistory.getMockFlywayHistory();
-    }
+    // Use mock data for demo purposes (shows all platforms)
+    // To use real JDBC connections instead, uncomment the lines below:
+    // let history = await flywayHistory.getFlywayHistory();
+    // if (!history || history.length === 0) {
+    //   history = flywayHistory.getMockFlywayHistory();
+    // }
     
+    const history = flywayHistory.getMockFlywayHistory();
     res.json(Array.isArray(history) ? history : []);
   } catch (e) {
     console.error('Flyway history all error:', e);
-    // Try mock data as fallback
     try {
       const flywayHistory = require('./flywayHistory');
       const mockHistory = flywayHistory.getMockFlywayHistory();

@@ -170,3 +170,4 @@ See [BUILD_GUIDE.md](./BUILD_GUIDE.md) for detailed packaging instructions and c
 1. Scan a server for jdbc connections
 2. Data presumes a flyway schema history table exists, so currently only works with the migrations model of flyway
 3 . Bring lead time into ROI
+4. currently only parsing top platforms for the big 4 DBs (MSSQL, Oracle, Postgres, MySQL)

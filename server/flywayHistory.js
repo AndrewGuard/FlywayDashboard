@@ -284,7 +284,8 @@ function getMockFlywayHistory() {
       execution_time: Math.floor(Math.random() * 5000) + 100,
       success: true,
       database: lt.database || 'demo_db',
-      environment: lt.environment || 'prod'
+      environment: lt.environment || 'prod',
+      dbType: lt.dbType || 'Other'
     }));
   } catch (e) {
     console.error('Error generating mock history:', e);

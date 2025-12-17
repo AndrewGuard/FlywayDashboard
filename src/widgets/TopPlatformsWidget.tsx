@@ -42,41 +42,46 @@ const TopPlatformsWidget: React.FC = () => {
           return;
         }
 
-        // Parse JDBC connection strings to determine platform
+        // Determine platform from dbType field or other indicators
         const platformTypes = {};
         
         migrations.forEach(m => {
-          const desc = (m.description || '').toLowerCase();
-          const db = (m.database || '').toLowerCase();
-          const type = (m.type || '').toLowerCase();
-          const jdbcUrl = (m.jdbc_url || m.jdbcUrl || '').toLowerCase();
-          const combined = `${desc} ${db} ${type} ${jdbcUrl}`;
-          
           let platform = 'Other';
           
-          // Parse JDBC URL first (most reliable)
-          if (jdbcUrl.includes('jdbc:sqlserver') || jdbcUrl.includes('jdbc:jtds:sqlserver')) {
-            platform = 'Microsoft SQL Server';
-          } else if (jdbcUrl.includes('jdbc:postgresql')) {
-            platform = 'PostgreSQL';
-          } else if (jdbcUrl.includes('jdbc:oracle')) {
-            platform = 'Oracle';
-          } else if (jdbcUrl.includes('jdbc:mysql') || jdbcUrl.includes('jdbc:mariadb')) {
-            platform = 'MySQL';
-          } else if (jdbcUrl.includes('jdbc:mongodb') || jdbcUrl.includes('mongodb://')) {
-            platform = 'MongoDB';
+          // Check dbType field first (set by server)
+          const dbType = m.dbType || m.db_type || '';
+          if (dbType) {
+            if (dbType.toLowerCase().includes('sql server') || dbType.toLowerCase().includes('sqlserver')) {
+              platform = 'Microsoft SQL Server';
+            } else if (dbType.toLowerCase().includes('postgres')) {
+              platform = 'PostgreSQL';
+            } else if (dbType.toLowerCase().includes('oracle')) {
+              platform = 'Oracle';
+            } else if (dbType.toLowerCase().includes('mysql') || dbType.toLowerCase().includes('mariadb')) {
+              platform = 'MySQL';
+            } else if (dbType.toLowerCase().includes('mongodb')) {
+              platform = 'MongoDB';
+            }
           }
-          // Fallback to text search in other fields
-          else if (combined.includes('sql server') || combined.includes('sqlserver') || combined.includes('mssql')) {
-            platform = 'Microsoft SQL Server';
-          } else if (combined.includes('postgres') || combined.includes('postgresql')) {
-            platform = 'PostgreSQL';
-          } else if (combined.includes('oracle')) {
-            platform = 'Oracle';
-          } else if (combined.includes('mysql') || combined.includes('mariadb')) {
-            platform = 'MySQL';
-          } else if (combined.includes('mongodb') || combined.includes('mongo')) {
-            platform = 'MongoDB';
+          
+          // Fallback: check database name, description, type fields
+          if (platform === 'Other') {
+            const desc = (m.description || '').toLowerCase();
+            const db = (m.database || '').toLowerCase();
+            const type = (m.type || '').toLowerCase();
+            const combined = `${desc} ${db} ${type}`;
+            
+            if (combined.includes('sql server') || combined.includes('sqlserver') || combined.includes('mssql')) {
+              platform = 'Microsoft SQL Server';
+            } else if (combined.includes('postgres') || combined.includes('postgresql')) {
+              platform = 'PostgreSQL';
+            } else if (combined.includes('oracle')) {
+              platform = 'Oracle';
+            } else if (combined.includes('mysql') || combined.includes('mariadb')) {
+              platform = 'MySQL';
+            } else if (combined.includes('mongodb') || combined.includes('mongo')) {
+              platform = 'MongoDB';
+            }
           }
           
           platformTypes[platform] = (platformTypes[platform] || 0) + 1;
