@@ -240,7 +240,7 @@ export default function ChangeInDeploymentMetricsWidget() {
                     Annual savings: ${roi.annual.toLocaleString()} | Payback period: {roi.paybackMonths} months
                   </Typography>
                   <Link 
-                    href="#/roi-calculation" 
+                    href="/roi" 
                     underline="hover"
                     sx={{ 
                       fontSize: '0.875rem',
