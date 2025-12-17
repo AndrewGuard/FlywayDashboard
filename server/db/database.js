@@ -12,19 +12,17 @@ db.exec(`
   -- User-defined metrics
   CREATE TABLE IF NOT EXISTS user_defined_metrics (
     id INTEGER PRIMARY KEY CHECK (id = 1),
-    deployments_per_quarter REAL DEFAULT 10,
-    lead_time_days REAL DEFAULT 20,
-    script_failure_rate REAL DEFAULT 5,
-    savings_per_deployment REAL DEFAULT 1000,
-    implementation_cost REAL DEFAULT 9751,
-    dba_count INTEGER DEFAULT 0,
-    dba_time_saved REAL DEFAULT 0,
-    dba_salary REAL DEFAULT 0,
-    developer_count INTEGER DEFAULT 0,
-    developer_time_saved REAL DEFAULT 0,
-    developer_salary REAL DEFAULT 0,
-    flyway_licensing_cost REAL DEFAULT 0,
-    flyway_implementation_time REAL DEFAULT 0,
+    business_size TEXT DEFAULT 'medium',
+    deployments_per_quarter REAL DEFAULT 12,
+    lead_time_days REAL DEFAULT 30,
+    script_failure_rate REAL DEFAULT 15,
+    savings_per_deployment REAL DEFAULT 5000,
+    implementation_cost REAL DEFAULT 50000,
+    cost_of_delay_per_day REAL DEFAULT 350,
+    dba_hours_per_deployment REAL DEFAULT 8,
+    developer_hours_per_deployment REAL DEFAULT 4,
+    dba_annual_salary REAL DEFAULT 175000,
+    developer_annual_salary REAL DEFAULT 155000,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -83,19 +81,17 @@ const dbHelpers = {
     const row = db.prepare('SELECT * FROM user_defined_metrics WHERE id = 1').get();
     if (!row) return null;
     return {
+      businessSize: row.business_size,
       deploymentsPerQuarter: row.deployments_per_quarter,
       leadTimeDays: row.lead_time_days,
       scriptFailureRate: row.script_failure_rate,
       savingsPerDeployment: row.savings_per_deployment,
       implementationCost: row.implementation_cost,
-      dbaCount: row.dba_count,
-      dbaTimeSaved: row.dba_time_saved,
-      dbaSalary: row.dba_salary,
-      developerCount: row.developer_count,
-      developerTimeSaved: row.developer_time_saved,
-      developerSalary: row.developer_salary,
-      flywayLicensingCost: row.flyway_licensing_cost,
-      flywayImplementationTime: row.flyway_implementation_time,
+      costOfDelayPerDay: row.cost_of_delay_per_day,
+      dbaHoursPerDeployment: row.dba_hours_per_deployment,
+      developerHoursPerDeployment: row.developer_hours_per_deployment,
+      dbaAnnualSalary: row.dba_annual_salary,
+      developerAnnualSalary: row.developer_annual_salary,
       updatedAt: row.updated_at
     };
   },
@@ -103,36 +99,32 @@ const dbHelpers = {
   updateUserMetrics(metrics) {
     const stmt = db.prepare(`
       UPDATE user_defined_metrics SET
+        business_size = ?,
         deployments_per_quarter = ?,
         lead_time_days = ?,
         script_failure_rate = ?,
         savings_per_deployment = ?,
         implementation_cost = ?,
-        dba_count = ?,
-        dba_time_saved = ?,
-        dba_salary = ?,
-        developer_count = ?,
-        developer_time_saved = ?,
-        developer_salary = ?,
-        flyway_licensing_cost = ?,
-        flyway_implementation_time = ?,
+        cost_of_delay_per_day = ?,
+        dba_hours_per_deployment = ?,
+        developer_hours_per_deployment = ?,
+        dba_annual_salary = ?,
+        developer_annual_salary = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = 1
     `);
     stmt.run(
-      metrics.deploymentsPerQuarter ?? 10,
-      metrics.leadTimeDays ?? 20,
-      metrics.scriptFailureRate ?? 5,
-      metrics.savingsPerDeployment ?? 1000,
-      metrics.implementationCost ?? 9751,
-      metrics.dbaCount ?? 0,
-      metrics.dbaTimeSaved ?? 0,
-      metrics.dbaSalary ?? 0,
-      metrics.developerCount ?? 0,
-      metrics.developerTimeSaved ?? 0,
-      metrics.developerSalary ?? 0,
-      metrics.flywayLicensingCost ?? 0,
-      metrics.flywayImplementationTime ?? 0
+      metrics.businessSize ?? 'medium',
+      metrics.deploymentsPerQuarter ?? 12,
+      metrics.leadTimeDays ?? 30,
+      metrics.scriptFailureRate ?? 15,
+      metrics.savingsPerDeployment ?? 5000,
+      metrics.implementationCost ?? 50000,
+      metrics.costOfDelayPerDay ?? 350,
+      metrics.dbaHoursPerDeployment ?? 8,
+      metrics.developerHoursPerDeployment ?? 4,
+      metrics.dbaAnnualSalary ?? 175000,
+      metrics.developerAnnualSalary ?? 155000
     );
     return this.getUserMetrics();
   },

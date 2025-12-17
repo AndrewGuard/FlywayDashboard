@@ -10,7 +10,11 @@ import {
   Paper,
   Divider,
   Alert,
-  Link
+  Link,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 
 interface UserMetrics {
@@ -42,6 +46,7 @@ interface ROIBreakdown {
 }
 
 const RoiCalculationPage: React.FC = () => {
+  const [businessSize, setBusinessSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [userMetrics, setUserMetrics] = useState<UserMetrics>({
     deploymentsPerQuarter: 12,
     leadTimeDays: 30,
@@ -64,6 +69,53 @@ const RoiCalculationPage: React.FC = () => {
   const [roi, setRoi] = useState<ROIBreakdown | null>(null);
   const [saved, setSaved] = useState(false);
 
+  const getBusinessSizeDefaults = (size: 'small' | 'medium' | 'large'): UserMetrics => {
+    const defaults = {
+      small: {
+        deploymentsPerQuarter: 8,
+        leadTimeDays: 45,
+        scriptFailureRate: 20,
+        savingsPerDeployment: 2000,
+        implementationCost: 25000,
+        costOfDelayPerDay: 200,
+        dbaHoursPerDeployment: 6,
+        developerHoursPerDeployment: 3,
+        dbaAnnualSalary: 120000,
+        developerAnnualSalary: 110000
+      },
+      medium: {
+        deploymentsPerQuarter: 12,
+        leadTimeDays: 30,
+        scriptFailureRate: 15,
+        savingsPerDeployment: 5000,
+        implementationCost: 50000,
+        costOfDelayPerDay: 350,
+        dbaHoursPerDeployment: 8,
+        developerHoursPerDeployment: 4,
+        dbaAnnualSalary: 175000,
+        developerAnnualSalary: 155000
+      },
+      large: {
+        deploymentsPerQuarter: 16,
+        leadTimeDays: 20,
+        scriptFailureRate: 12,
+        savingsPerDeployment: 10000,
+        implementationCost: 100000,
+        costOfDelayPerDay: 800,
+        dbaHoursPerDeployment: 12,
+        developerHoursPerDeployment: 6,
+        dbaAnnualSalary: 220000,
+        developerAnnualSalary: 190000
+      }
+    };
+    return defaults[size];
+  };
+
+  const handleBusinessSizeChange = (size: 'small' | 'medium' | 'large') => {
+    setBusinessSize(size);
+    setUserMetrics(getBusinessSizeDefaults(size));
+  };
+
   useEffect(() => {
     loadUserMetrics();
     loadFlywayMetrics();
@@ -79,6 +131,11 @@ const RoiCalculationPage: React.FC = () => {
       if (res.ok) {
         const data = await res.json();
         if (data && Object.keys(data).length > 0) {
+          // Always load business size if it exists
+          if (data.businessSize) {
+            setBusinessSize(data.businessSize);
+          }
+          // Load all user metrics from saved data
           setUserMetrics({
             deploymentsPerQuarter: Number(data.deploymentsPerQuarter) || 12,
             leadTimeDays: Number(data.leadTimeDays) || 30,
@@ -198,7 +255,7 @@ const RoiCalculationPage: React.FC = () => {
       const res = await fetch('/api/user-defined-metrics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userMetrics)
+        body: JSON.stringify({ ...userMetrics, businessSize })
       });
 
       if (res.ok) {
@@ -209,7 +266,6 @@ const RoiCalculationPage: React.FC = () => {
       }
     } catch (e) {
       console.error('Save error:', e);
-      alert('Failed to save configuration');
     }
   }
 
@@ -279,6 +335,21 @@ const RoiCalculationPage: React.FC = () => {
               </Typography>
 
               <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <FormControl fullWidth>
+                    <InputLabel>Business Size</InputLabel>
+                    <Select
+                      value={businessSize}
+                      label="Business Size"
+                      onChange={(e) => handleBusinessSizeChange(e.target.value as 'small' | 'medium' | 'large')}
+                    >
+                      <MenuItem value="small">Small (&lt;50 employees, &lt;20 developers)</MenuItem>
+                      <MenuItem value="medium">Medium (50-500 employees, 20-200 developers)</MenuItem>
+                      <MenuItem value="large">Large (500+ employees, 200+ developers)</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1, pl: 1.75 }}>Selecting a business size will update all fields with industry-standard defaults</Typography>
+                </Grid>
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
