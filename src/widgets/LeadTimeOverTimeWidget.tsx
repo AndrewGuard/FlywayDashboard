@@ -1,34 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, Typography, Box } from '@mui/material';
-import { Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-} from 'chart.js';
+import { LineChart } from '@mui/x-charts/LineChart';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
-
-interface LineChartDataset {
-  label: string;
-  data: number[];
-  borderColor: string;
-  backgroundColor: string;
-  tension: number;
-}
-
-interface LineChartData {
-  labels: string[];
-  datasets: LineChartDataset[];
+interface DataPoint {
+  date: string;
+  flywayLeadTime: number | null;
+  nonFlywayLeadTime: number | null;
 }
 
 const LeadTimeOverTimeWidget: React.FC = () => {
-  const [chartData, setChartData] = useState<LineChartData | null>(null);
+  const [dataPoints, setDataPoints] = useState<DataPoint[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,40 +25,17 @@ const LeadTimeOverTimeWidget: React.FC = () => {
         
         if (!mounted) return;
 
-        const dataPoints = Array.isArray(data?.dataPoints) ? data.dataPoints : [];
+        const points = Array.isArray(data?.dataPoints) ? data.dataPoints : [];
         
-        if (!dataPoints.length) {
+        if (!points.length) {
           setError('No lead time history data available');
           setLoading(false);
           return;
         }
 
-        const labels = dataPoints.map(p => p.date);
-        const flywayData = dataPoints.map(p => p.flywayLeadTime || 0);
-        const nonFlywayData = dataPoints.map(p => p.nonFlywayLeadTime || 0);
-
-        setChartData({
-          labels,
-          datasets: [
-            {
-              label: 'Flyway Lead Time (days)',
-              data: flywayData,
-              borderColor: 'rgb(75, 192, 192)',
-              backgroundColor: 'rgba(75, 192, 192, 0.5)',
-              tension: 0.1
-            },
-            {
-              label: 'Non-Flyway Lead Time (days)',
-              data: nonFlywayData,
-              borderColor: 'rgb(255, 99, 132)',
-              backgroundColor: 'rgba(255, 99, 132, 0.5)',
-              tension: 0.1
-            }
-          ]
-        });
-
+        setDataPoints(points);
         setLoading(false);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Lead time history error:', err);
         if (mounted) {
           setError(err.message || 'Failed to load lead time history');
@@ -90,22 +48,43 @@ const LeadTimeOverTimeWidget: React.FC = () => {
     return () => { mounted = false; };
   }, []);
 
-  const options = {
-    responsive: true,
-    plugins: {
-      legend: { position: 'top' as const },
-      title: { display: true, text: 'Lead Time for Changes Over Time' },
-      tooltip: {
-        callbacks: {
-          label: (context) => `${context.dataset.label}: ${context.parsed.y} days`
-        }
-      }
-    },
-    scales: {
-      y: { beginAtZero: true, title: { display: true, text: 'Lead Time (days)' } },
-      x: { title: { display: true, text: 'Date' } }
-    }
-  };
+  if (loading) {
+    return (
+      <Card sx={{ mb: 2 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>Lead Time for Changes Over Time</Typography>
+          <Typography>Loading lead time history...</Typography>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card sx={{ mb: 2 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>Lead Time for Changes Over Time</Typography>
+          <Typography color="error">{error}</Typography>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!dataPoints.length) {
+    return (
+      <Card sx={{ mb: 2 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>Lead Time for Changes Over Time</Typography>
+          <Typography>No data available</Typography>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Prepare data for MUI X-Charts
+  const xAxisData = dataPoints.map(p => new Date(p.date));
+  const flywayData = dataPoints.map(p => p.flywayLeadTime ?? null);
+  const nonFlywayData = dataPoints.map(p => p.nonFlywayLeadTime ?? null);
 
   return (
     <Card sx={{ mb: 2 }}>
@@ -114,15 +93,37 @@ const LeadTimeOverTimeWidget: React.FC = () => {
         <Typography variant="body2" color="text.secondary" gutterBottom>
           Comparing Flyway vs Non-Flyway lead times over time
         </Typography>
-        {loading ? (
-          <Typography>Loading lead time history...</Typography>
-        ) : error ? (
-          <Typography color="error">{error}</Typography>
-        ) : chartData ? (
-          <Box sx={{ height: 300 }}><Line data={chartData} options={options} /></Box>
-        ) : (
-          <Typography>No data available</Typography>
-        )}
+        <Box sx={{ height: 400, mt: 2 }}>
+          <LineChart
+            xAxis={[{ 
+              data: xAxisData, 
+              scaleType: 'time',
+              label: 'Date'
+            }]}
+            yAxis={[{ 
+              label: 'Lead Time (days)',
+              min: 0
+            }]}
+            series={[
+              {
+                data: flywayData,
+                label: 'Flyway',
+                color: '#4caf50',
+                showMark: true,
+                curve: 'linear'
+              },
+              {
+                data: nonFlywayData,
+                label: 'Non-Flyway',
+                color: '#f44336',
+                showMark: true,
+                curve: 'linear'
+              }
+            ]}
+            height={350}
+            margin={{ top: 20, right: 20, bottom: 60, left: 60 }}
+          />
+        </Box>
       </CardContent>
     </Card>
   );
