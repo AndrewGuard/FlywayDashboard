@@ -38,6 +38,8 @@ const Sidebar: React.FC = () => {
   const handleNavClick = (section: string) => {
     if (section === 'migration-history') {
       navigate('/migrations');
+    } else if (section === 'roi-calculation') {
+      navigate('/roi');
     } else {
       // All other sections go to home and scroll
       navigate('/');
