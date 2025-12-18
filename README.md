@@ -58,7 +58,25 @@ This will:
 
 ### Running the Application
 
-#### Quick Start (Recommended)
+#### Development Mode (Recommended)
+
+Start both server and frontend with auto-restart:
+
+```bash
+npm run dev
+```
+
+This single command:
+- ✅ Starts backend server on `http://localhost:3001` (with **auto-restart** via nodemon)
+- ✅ Starts frontend React app on `http://localhost:3000` (with hot reload)
+- ✅ Color-coded console output for easy debugging
+- ✅ Auto-restarts server when you edit code, JDBC configs, or `.env` files
+
+**Your browser will automatically open to:** `http://localhost:3000`
+
+#### Alternative Start Methods
+
+**Quick Start Scripts:**
 
 **Windows:**
 ```powershell
@@ -71,20 +89,24 @@ chmod +x start.sh
 ./start.sh
 ```
 
-#### Manual Start
+**Manual Start (Two Terminals):**
 
-1. **Terminal 1 - Start the server:**
+1. **Terminal 1 - Server with auto-restart:**
    ```bash
    cd server
-   node index.js
+   npm run dev
    ```
 
-2. **Terminal 2 - Start the frontend:**
+2. **Terminal 2 - Frontend:**
    ```bash
    npm start
    ```
 
-3. **Open your browser to:** `http://localhost:3000`
+**Production-like (No auto-restart):**
+```bash
+cd server
+npm start
+```
 
 ### Configuration (Optional)
 
@@ -92,6 +114,13 @@ chmod +x start.sh
 
 By default, the dashboard uses demo data. To connect to your Flyway databases:
 
+**Option 1: Using the UI (Recommended)**
+1. Navigate to **Project Configuration** in the sidebar
+2. Add your JDBC connection strings
+3. Test connections
+4. Click "Save" and then "Restart Server"
+
+**Option 2: Manual Edit**
 1. Edit `server/jdbc-connections.json`:
    ```json
    {
@@ -104,11 +133,13 @@ By default, the dashboard uses demo data. To connect to your Flyway databases:
    }
    ```
 
-2. Restart the server
+2. Server automatically restarts (if using `npm run dev`)
+
+**Security Note:** See [SECURITY.md](./SECURITY.md) for credential management best practices.
 
 #### Customize Metrics
 
-Go to **Deployment Metrics Configuration** in the dashboard to enter your organization's metrics for ROI calculations
+Go to **DORA ROI Calculation** in the dashboard to enter your organization's metrics for ROI calculations
 
 ---
 
@@ -149,10 +180,13 @@ Package the app as a standalone executable for distribution to non-technical use
 The installer bundles everything needed - users simply:
 - Download one .exe file
 - Double-click to install
-- Launch from Start Menu
-- No Node.js, npm, or technical knowledge required!
-
-See [BUILD_GUIDE.md](./BUILD_GUIDE.md) for detailed packaging instructions and customization options.
+- LaunTART.md](./START.md)** - Quick start guide with nodemon setup
+- **[SETUP.md](./SETUP.md)** - Comprehensive setup guide
+- **[SECURITY.md](./SECURITY.md)** - Credential management best practices
+- **[BUILD_GUIDE.md](./BUILD_GUIDE.md)** - Build desktop installers
+- **[ELECTRON_SETUP.md](./ELECTRON_SETUP.md)** - Electron configuration details
+- **[PACKAGING.md](./PACKAGING.md)** - Packaging options overview
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Production deployment guidetructions and customization options.
 
 ---
 

@@ -11,8 +11,9 @@ import TimelineIcon from '@mui/icons-material/Timeline';
 import UndoIcon from '@mui/icons-material/Undo';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import TableChartIcon from '@mui/icons-material/TableChart';
+import SettingsIcon from '@mui/icons-material/Settings';
 import logo from './logo.svg';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Divider } from '@mui/material';
 
 interface NavItem {
   text: string;
@@ -32,11 +33,17 @@ const navItems: NavItem[] = [
   { text: 'Migration History', icon: <TableChartIcon />, section: 'migration-history' }
 ];
 
+const configItems: NavItem[] = [
+  { text: 'Project Configuration', icon: <SettingsIcon />, section: 'configuration' }
+];
+
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
 
   const handleNavClick = (section: string) => {
-    if (section === 'migration-history') {
+    if (section === 'configuration') {
+      navigate('/configuration');
+    } else if (section === 'migration-history') {
       navigate('/migrations');
     } else if (section === 'roi-calculation') {
       navigate('/roi');
@@ -65,6 +72,17 @@ const Sidebar: React.FC = () => {
       </Box>
       <List>
         {navItems.map((item) => (
+          <ListItem button key={item.text} onClick={() => handleNavClick(item.section)} sx={{ '&:hover': { backgroundColor: '#4a4e69' } }}>
+            <ListItemIcon sx={{ color: '#fff' }}>{item.icon}</ListItemIcon>
+            <ListItemText primary={item.text} />
+          </ListItem>
+        ))}
+      </List>
+      
+      <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.2)', my: 2 }} />
+      
+      <List>
+        {configItems.map((item) => (
           <ListItem button key={item.text} onClick={() => handleNavClick(item.section)} sx={{ '&:hover': { backgroundColor: '#4a4e69' } }}>
             <ListItemIcon sx={{ color: '#fff' }}>{item.icon}</ListItemIcon>
             <ListItemText primary={item.text} />

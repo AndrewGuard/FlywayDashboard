@@ -8,6 +8,7 @@ import Sidebar from './Sidebar';
 import Dashboard from './Dashboard';
 import MigrationHistory from './MigrationHistory';
 import RoiCalculationPage from './RoiCalculationPage';
+import ProjectConfiguration from './ProjectConfiguration';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/migrations" element={<MigrationHistory />} />
               <Route path="/roi" element={<RoiCalculationPage />} />
+              <Route path="/configuration" element={<ProjectConfiguration />} />
             </Routes>
           </Box>
         </Box>

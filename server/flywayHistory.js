@@ -3,6 +3,7 @@ const path = require('path');
 const sql = require('mssql');
 const { Pool } = require('pg');
 const { dbHelpers } = require('./db/database');
+const { decryptJdbcData, isEncrypted } = require('./utils/encryption');
 
 const configPath = path.join(__dirname, 'jdbc-connections.json');
 
@@ -65,12 +66,18 @@ function parseJdbcToMssqlConfig(jdbcUrl) {
   };
 }
 
-// Load connections from JSON file
+// Load connections from JSON file (with auto-decrypt)
 function loadConnections() {
   try {
     if (fs.existsSync(configPath)) {
       const data = fs.readFileSync(configPath, 'utf8');
-      return JSON.parse(data);
+      
+      // Check if encrypted
+      if (isEncrypted(data)) {
+        return decryptJdbcData(data);
+      } else {
+        return JSON.parse(data);
+      }
     }
   } catch (e) {
     console.error('Error loading jdbc-connections.json:', e.message);

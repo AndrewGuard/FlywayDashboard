@@ -1,4 +1,10 @@
-require('dotenv').config();
+// Initialize encryption FIRST (creates .env if needed)
+const { initializeEncryption } = require('./utils/encryption');
+const envCreated = initializeEncryption();
+
+// Load environment variables AFTER initialization
+require('dotenv').config({ override: envCreated });
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -38,12 +44,14 @@ const userMetricsRoutes = require('./routes/userMetricsRoutes');
 const leadTimeHistoryRoutes = require('./routes/leadTimeHistoryRoutes');
 const leadTimesRoutes = require('./routes/leadTimesRoutes');
 const deploymentsRoutes = require('./routes/deploymentsRoutes');
+const jdbcConfigRoutes = require('./routes/jdbcConfigRoutes');
 
 // Register routes
 app.use(userMetricsRoutes);
 app.use(leadTimeHistoryRoutes);
 app.use(leadTimesRoutes);
 app.use(deploymentsRoutes);
+app.use(jdbcConfigRoutes);
 
 // JDBC Connections endpoint
 app.get('/api/jdbc-connections', (req, res) => {
@@ -117,7 +125,28 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Restart server endpoint
+app.post('/api/server/restart', (req, res) => {
+  res.json({ success: true, message: 'Server restarting...' });
+  console.log('Server restart requested via API');
+  
+  // Give response time to send, then exit
+  setTimeout(() => {
+    console.log('Restarting server...');
+    process.exit(0);
+  }, 500);
+});
+
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, closing server gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });
