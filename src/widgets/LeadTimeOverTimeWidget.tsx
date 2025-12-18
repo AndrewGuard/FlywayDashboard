@@ -52,7 +52,7 @@ const LeadTimeOverTimeWidget: React.FC = () => {
     return (
       <Card sx={{ mb: 2 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom>Lead Time for Changes Over Time</Typography>
+          <Typography variant="h6" gutterBottom>Lead Time for Changes</Typography>
           <Typography>Loading lead time history...</Typography>
         </CardContent>
       </Card>
@@ -63,7 +63,7 @@ const LeadTimeOverTimeWidget: React.FC = () => {
     return (
       <Card sx={{ mb: 2 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom>Lead Time for Changes Over Time</Typography>
+          <Typography variant="h6" gutterBottom>Lead Time for Changes</Typography>
           <Typography color="error">{error}</Typography>
         </CardContent>
       </Card>
@@ -74,7 +74,7 @@ const LeadTimeOverTimeWidget: React.FC = () => {
     return (
       <Card sx={{ mb: 2 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom>Lead Time for Changes Over Time</Typography>
+          <Typography variant="h6" gutterBottom>Lead Time for Changes</Typography>
           <Typography>No data available</Typography>
         </CardContent>
       </Card>
@@ -89,7 +89,7 @@ const LeadTimeOverTimeWidget: React.FC = () => {
   return (
     <Card sx={{ mb: 2 }}>
       <CardContent>
-        <Typography variant="h6" gutterBottom>Lead Time for Changes Over Time</Typography>
+        <Typography variant="h6" gutterBottom>Lead Time for Changes</Typography>
         <Typography variant="body2" color="text.secondary" gutterBottom>
           Comparing Flyway vs Non-Flyway lead times over time
         </Typography>

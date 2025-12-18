@@ -299,22 +299,69 @@ const RoiCalculationPage: React.FC = () => {
             <strong>Time to Restore Service:</strong> How quickly you recover from failures
           </Typography>
         </Box>
-        <Typography variant="body2" color="text.secondary" paragraph>
-          Our defaults reflect typical mid-sized US organizations (50-200 developers) using manual database deployment processes:
-        </Typography>
-        <Typography variant="body2" color="text.secondary" component="div" sx={{ lineHeight: 1.8 }}>
-          • <strong>12 deployments/quarter:</strong> Weekly cadence representing DORA "Low" performer baseline (<Link href="https://dora.dev/research/2023/dora-report/" target="_blank" rel="noopener">2023 State of DevOps Report</Link>)
-          <br/>
-          • <strong>30-day lead time:</strong> Monthly release cycles typical of waterfall/manual processes (<Link href="https://cloud.google.com/architecture/devops/devops-measurement-metrics" target="_blank" rel="noopener">Google Cloud DevOps</Link>)
-          <br/>
-          • <strong>15% failure rate:</strong> Industry average for manual deployments (<Link href="https://www.gartner.com/en/documents/3983997" target="_blank" rel="noopener">Gartner 2022</Link>)
-          <br/>
-          • <strong>$350/day cost of delay:</strong> Calculated from $130K avg US developer salary × 2.5 overhead multiplier ÷ 365 days × 1.5 team impact
-          <br/>
-          • <strong>$5,000 per deployment savings:</strong> Based on downtime costs (~$5,600/hour per <Link href="https://www.atlassian.com/incident-management/kpis/cost-of-downtime" target="_blank" rel="noopener">Atlassian</Link>), remediation effort, and customer impact
-          <br/>
-          • <strong>$50,000 implementation cost:</strong> Mid-market typical: licenses ($10-15K) + consulting/training ($20-25K) + internal setup ($15-20K)
-        </Typography>
+        
+        {businessSize === 'small' && (
+          <>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Our defaults reflect typical small US organizations (&lt;50 employees, &lt;20 developers) using manual database deployment processes:
+            </Typography>
+            <Typography variant="body2" color="text.secondary" component="div" sx={{ lineHeight: 1.8 }}>
+              • <strong>8 deployments/quarter:</strong> Monthly to bi-weekly cadence for smaller teams with simpler systems (<Link href="https://dora.dev/research/2023/dora-report/" target="_blank" rel="noopener">2023 State of DevOps Report</Link>)
+              <br/>
+              • <strong>20-day lead time:</strong> Simpler systems with fewer stakeholders enable faster manual deployments (<Link href="https://cloud.google.com/architecture/devops/devops-measurement-metrics" target="_blank" rel="noopener">Google Cloud DevOps</Link>)
+              <br/>
+              • <strong>10% failure rate:</strong> Lower complexity and fewer integration points reduce failures (<Link href="https://dora.dev/research/2023/dora-report/" target="_blank" rel="noopener">DORA Research</Link>)
+              <br/>
+              • <strong>$200/day cost of delay:</strong> Smaller team impact, calculated from lower salary base and team size
+              <br/>
+              • <strong>$2,000 per deployment savings:</strong> Lower downtime costs due to smaller customer base and simpler systems (<Link href="https://www.atlassian.com/incident-management/kpis/cost-of-downtime" target="_blank" rel="noopener">Atlassian</Link>)
+              <br/>
+              • <strong>$25,000 implementation cost:</strong> Smaller scope: basic license + minimal training + quick setup
+            </Typography>
+          </>
+        )}
+        
+        {businessSize === 'medium' && (
+          <>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Our defaults reflect typical mid-sized US organizations (50-500 employees, 20-200 developers) using manual database deployment processes:
+            </Typography>
+            <Typography variant="body2" color="text.secondary" component="div" sx={{ lineHeight: 1.8 }}>
+              • <strong>12 deployments/quarter:</strong> Weekly cadence representing DORA "Low" performer baseline (<Link href="https://dora.dev/research/2023/dora-report/" target="_blank" rel="noopener">2023 State of DevOps Report</Link>)
+              <br/>
+              • <strong>35-day lead time:</strong> Multi-team coordination and approval processes typical of growing organizations
+              <br/>
+              • <strong>18% failure rate:</strong> Moderate complexity with multiple environments and integration points (<Link href="https://dora.dev/research/2023/dora-report/" target="_blank" rel="noopener">DORA Research</Link>)
+              <br/>
+              • <strong>$500/day cost of delay:</strong> Calculated from mid-level salaries with moderate team impact and overhead
+              <br/>
+              • <strong>$5,000 per deployment savings:</strong> Based on downtime costs (~$5,600/hour per <Link href="https://www.atlassian.com/incident-management/kpis/cost-of-downtime" target="_blank" rel="noopener">Atlassian</Link>), remediation effort, and customer impact
+              <br/>
+              • <strong>$50,000 implementation cost:</strong> Mid-market typical: licenses ($10-15K) + consulting/training ($20-25K) + internal setup ($15-20K)
+            </Typography>
+          </>
+        )}
+        
+        {businessSize === 'large' && (
+          <>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Our defaults reflect typical large US organizations (500+ employees, 200+ developers) using manual database deployment processes:
+            </Typography>
+            <Typography variant="body2" color="text.secondary" component="div" sx={{ lineHeight: 1.8 }}>
+              • <strong>20 deployments/quarter:</strong> Higher deployment frequency but with significant manual overhead across many teams (<Link href="https://dora.dev/research/2023/dora-report/" target="_blank" rel="noopener">2023 State of DevOps Report</Link>)
+              <br/>
+              • <strong>60-day lead time:</strong> Enterprise complexity: extensive approvals, compliance reviews, and multi-team coordination (<Link href="https://cloud.google.com/architecture/devops/devops-measurement-metrics" target="_blank" rel="noopener">Google Cloud DevOps</Link>)
+              <br/>
+              • <strong>25% failure rate:</strong> High complexity with numerous systems, environments, dependencies, and integration points (<Link href="https://dora.dev/research/2023/dora-report/" target="_blank" rel="noopener">DORA Research</Link>)
+              <br/>
+              • <strong>$1,500/day cost of delay:</strong> Enterprise-level salaries with significant team impact and organizational overhead
+              <br/>
+              • <strong>$12,000 per deployment savings:</strong> Higher downtime costs due to large customer base, SLAs, and complex remediation (<Link href="https://www.atlassian.com/incident-management/kpis/cost-of-downtime" target="_blank" rel="noopener">Atlassian</Link>)
+              <br/>
+              • <strong>$100,000 implementation cost:</strong> Enterprise scope: licenses + extensive training + enterprise integration + compliance setup
+            </Typography>
+          </>
+        )}
       </Paper>
 
       {saved && (
