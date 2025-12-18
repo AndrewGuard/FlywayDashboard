@@ -73,37 +73,37 @@ const RoiCalculationPage: React.FC = () => {
     const defaults = {
       small: {
         deploymentsPerQuarter: 8,
-        leadTimeDays: 45,
-        scriptFailureRate: 20,
+        leadTimeDays: 20,          // Small: simpler, easier to manage manually
+        scriptFailureRate: 10,     // Fewer systems = fewer failure points
         savingsPerDeployment: 2000,
         implementationCost: 25000,
         costOfDelayPerDay: 200,
-        dbaHoursPerDeployment: 6,
-        developerHoursPerDeployment: 3,
+        dbaHoursPerDeployment: 4,
+        developerHoursPerDeployment: 2,
         dbaAnnualSalary: 120000,
         developerAnnualSalary: 110000
       },
       medium: {
         deploymentsPerQuarter: 12,
-        leadTimeDays: 30,
-        scriptFailureRate: 15,
+        leadTimeDays: 35,          // Medium: more complexity, coordination overhead
+        scriptFailureRate: 18,     // More systems = more failure points
         savingsPerDeployment: 5000,
         implementationCost: 50000,
-        costOfDelayPerDay: 350,
+        costOfDelayPerDay: 500,
         dbaHoursPerDeployment: 8,
-        developerHoursPerDeployment: 4,
+        developerHoursPerDeployment: 5,
         dbaAnnualSalary: 175000,
         developerAnnualSalary: 155000
       },
       large: {
-        deploymentsPerQuarter: 16,
-        leadTimeDays: 20,
-        scriptFailureRate: 12,
-        savingsPerDeployment: 10000,
+        deploymentsPerQuarter: 20,
+        leadTimeDays: 60,          // Large: high complexity, many stakeholders, slow manual processes
+        scriptFailureRate: 25,     // Many systems, environments, teams = highest failure rate
+        savingsPerDeployment: 12000,
         implementationCost: 100000,
-        costOfDelayPerDay: 800,
-        dbaHoursPerDeployment: 12,
-        developerHoursPerDeployment: 6,
+        costOfDelayPerDay: 1500,   // High cost of delay for enterprise
+        dbaHoursPerDeployment: 16,
+        developerHoursPerDeployment: 10,
         dbaAnnualSalary: 220000,
         developerAnnualSalary: 190000
       }
