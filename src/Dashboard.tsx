@@ -14,7 +14,7 @@ const Dashboard: React.FC = () => {
   return (
     <Box>
       {/* Page Header */}
-      <Box sx={{ mb: 4 }}>
+      <Box id="overview" sx={{ mb: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
           Flyway Dashboard
         </Typography>
@@ -26,42 +26,42 @@ const Dashboard: React.FC = () => {
       {/* Dashboard Grid */}
       <Grid container spacing={3}>
         {/* Change in Deployment Metrics - Full width for prominence */}
-        <Grid item xs={12}>
+        <Grid item xs={12} id="metrics-overview">
           <ChangeInDeploymentMetricsWidget />
         </Grid>
 
         {/* Lead Time Over Time - Full width chart */}
-        <Grid item xs={12}>
+        <Grid item xs={12} id="lead-time-trend">
           <LeadTimeOverTimeWidget />
         </Grid>
 
         {/* Average Deployment Time - Full width */}
-        <Grid item xs={12}>
+        <Grid item xs={12} id="avg-deployment-time">
           <AverageDeploymentTimeWidget />
         </Grid>
 
         {/* Metrics Chart - Full width */}
-        <Grid item xs={12}>
+        <Grid item xs={12} id="change-failure-rate">
           <MetricsChart />
         </Grid>
 
         {/* Deployments Over Time - Full width */}
-        <Grid item xs={12}>
+        <Grid item xs={12} id="deployment-frequency">
           <DeploymentsOverTimeWidget />
         </Grid>
 
         {/* Top Platforms - Full width */}
-        <Grid item xs={12}>
+        <Grid item xs={12} id="top-platforms">
           <TopPlatformsWidget />
         </Grid>
 
         {/* Top Databases - Full width */}
-        <Grid item xs={12}>
+        <Grid item xs={12} id="top-databases">
           <TopDatabasesWidget />
         </Grid>
 
         {/* Undo Migrations - Full width */}
-        <Grid item xs={12}>
+        <Grid item xs={12} id="undo-migrations">
           <UndoMigrationsWidget />
         </Grid>
 

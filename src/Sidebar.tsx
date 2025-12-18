@@ -22,14 +22,13 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { text: 'Change in Deployment Metrics', icon: <BarChartIcon />, section: 'change-in-deployment-metrics' },
+  { text: 'Overview', icon: <DashboardIcon />, section: 'overview' },
   { text: 'DORA ROI Calculation', icon: <QueryStatsIcon />, section: 'roi-calculation' },
-  { text: 'Deployments Over Time', icon: <TimelineIcon />, section: 'deployments-over-time' },
-  { text: 'Top Platforms', icon: <DashboardIcon />, section: 'top-platforms' },
-  { text: 'Deployment Success Rate', icon: <QueryStatsIcon />, section: 'deployment-success-rate' },
-  { text: 'Undo Migrations', icon: <UndoIcon />, section: 'undo-migrations' },
-  { text: 'Avg Deployment Time', icon: <BarChartIcon />, section: 'avg-deployment-time' },
-  { text: 'Metrics Chart', icon: <BarChartIcon />, section: 'metrics-chart' },
+  { text: 'Metrics Overview', icon: <BarChartIcon />, section: 'metrics-overview' },
+  { text: 'Lead Time Trend', icon: <TimelineIcon />, section: 'lead-time-trend' },
+  { text: 'Deployment Frequency', icon: <UndoIcon />, section: 'deployment-frequency' },
+  { text: 'Change Failure Rate', icon: <BarChartIcon />, section: 'change-failure-rate' },
+  { text: 'Top Platforms', icon: <TableChartIcon />, section: 'top-platforms' },
   { text: 'Migration History', icon: <TableChartIcon />, section: 'migration-history' }
 ];
 
@@ -48,7 +47,7 @@ const Sidebar: React.FC = () => {
     } else if (section === 'roi-calculation') {
       navigate('/roi');
     } else {
-      // All other sections go to home and scroll
+      // All other sections go to dashboard and scroll
       navigate('/');
       // Wait for route to render, then scroll to section
       setTimeout(() => {
