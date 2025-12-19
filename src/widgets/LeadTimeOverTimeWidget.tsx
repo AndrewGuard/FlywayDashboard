@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, Typography, Box } from '@mui/material';
+import React, { useEffect, useState, useRef } from 'react';
+import { Card, CardContent, Typography, Box, IconButton, Tooltip } from '@mui/material';
 import { LineChart } from '@mui/x-charts/LineChart';
+import DownloadIcon from '@mui/icons-material/Download';
+import { exportAsImage } from '../utils/exportUtils';
 
 interface DataPoint {
   date: string;
@@ -9,9 +11,23 @@ interface DataPoint {
 }
 
 const LeadTimeOverTimeWidget: React.FC = () => {
+  const cardRef = useRef<HTMLDivElement>(null);
   const [dataPoints, setDataPoints] = useState<DataPoint[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    if (!cardRef.current) return;
+    setExporting(true);
+    try {
+      await exportAsImage(cardRef.current, 'lead-time-for-changes');
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -87,9 +103,16 @@ const LeadTimeOverTimeWidget: React.FC = () => {
   const nonFlywayData = dataPoints.map(p => p.nonFlywayLeadTime ?? null);
 
   return (
-    <Card sx={{ mb: 2 }}>
+    <Card ref={cardRef} sx={{ mb: 2 }}>
       <CardContent>
-        <Typography variant="h6" gutterBottom>Lead Time for Changes</Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Typography variant="h6">Lead Time for Changes</Typography>
+          <Tooltip title="Download as image">
+            <IconButton onClick={handleExport} disabled={exporting} size="small">
+              <DownloadIcon />
+            </IconButton>
+          </Tooltip>
+        </Box>
         <Typography variant="body2" color="text.secondary" gutterBottom>
           Comparing Flyway vs Non-Flyway lead times over time
         </Typography>

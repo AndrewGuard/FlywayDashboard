@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -7,8 +7,12 @@ import {
   Box, 
   CircularProgress, 
   Divider, 
-  Link
+  Link,
+  IconButton,
+  Tooltip
 } from '@mui/material';
+import DownloadIcon from '@mui/icons-material/Download';
+import { exportAsImage } from '../utils/exportUtils';
 
 interface Metrics {
   flywayDeployments: number;
@@ -31,10 +35,24 @@ interface ROI {
 }
 
 export default function ChangeInDeploymentMetricsWidget() {
+  const cardRef = useRef<HTMLDivElement>(null);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [roi, setRoi] = useState<ROI | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    if (!cardRef.current) return;
+    setExporting(true);
+    try {
+      await exportAsImage(cardRef.current, 'deployment-metrics-overview');
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     fetchMetrics();
@@ -185,9 +203,16 @@ export default function ChangeInDeploymentMetricsWidget() {
   };
 
   return (
-    <Card sx={{ mb: 2 }}>
+    <Card ref={cardRef} sx={{ mb: 2 }}>
       <CardContent>
-        <Typography variant="h6" gutterBottom>Change in Deployment Metrics (Prod Only)</Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Typography variant="h6">Change in Deployment Metrics (Prod Only)</Typography>
+          <Tooltip title="Download as image">
+            <IconButton onClick={handleExport} disabled={exporting} size="small">
+              <DownloadIcon />
+            </IconButton>
+          </Tooltip>
+        </Box>
         <Typography variant="body2" color="text.secondary" gutterBottom>
           All metrics below are calculated using production environments only.
           {metrics?.extrapolated && ' If less than a full quarter of data is available, Deployments per Quarter is extrapolated from the available data.'}

@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, Typography, Box } from '@mui/material';
+import React, { useEffect, useState, useRef } from 'react';
+import { Card, CardContent, Typography, Box, IconButton, Tooltip as MuiTooltip } from '@mui/material';
 import { Line } from 'react-chartjs-2';
+import DownloadIcon from '@mui/icons-material/Download';
+import { exportAsImage } from './utils/exportUtils';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -33,9 +35,23 @@ interface LineChartData {
 }
 
 const MetricsChart: React.FC = () => {
+  const cardRef = useRef<HTMLDivElement>(null);
   const [chartData, setChartData] = useState<LineChartData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    if (!cardRef.current) return;
+    setExporting(true);
+    try {
+      await exportAsImage(cardRef.current, 'migrations-per-month');
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -107,9 +123,16 @@ const MetricsChart: React.FC = () => {
   };
 
   return (
-    <Card sx={{ mb: 2 }}>
+    <Card ref={cardRef} sx={{ mb: 2 }}>
       <CardContent>
-        <Typography variant="h6" gutterBottom>Migration Activity</Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Typography variant="h6">Migration Activity</Typography>
+          <MuiTooltip title="Download as image">
+            <IconButton onClick={handleExport} disabled={exporting} size="small">
+              <DownloadIcon />
+            </IconButton>
+          </MuiTooltip>
+        </Box>
         {loading ? (
           <Typography>Loading...</Typography>
         ) : error ? (

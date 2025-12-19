@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, Typography, Box } from '@mui/material';
+import React, { useEffect, useState, useRef } from 'react';
+import { Card, CardContent, Typography, Box, IconButton, Tooltip as MuiTooltip } from '@mui/material';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import DownloadIcon from '@mui/icons-material/Download';
+import { exportAsImage } from '../utils/exportUtils';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -18,9 +20,23 @@ interface ChartData {
 }
 
 const TopPlatformsWidget: React.FC = () => {
+  const cardRef = useRef<HTMLDivElement>(null);
   const [chartData, setChartData] = useState<ChartData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    if (!cardRef.current) return;
+    setExporting(true);
+    try {
+      await exportAsImage(cardRef.current, 'top-platforms');
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -123,9 +139,16 @@ const TopPlatformsWidget: React.FC = () => {
   }, []);
 
   return (
-    <Card sx={{ mb: 2 }}>
+    <Card ref={cardRef} sx={{ mb: 2 }}>
       <CardContent>
-        <Typography variant="h6" gutterBottom>Top Platforms</Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Typography variant="h6">Top Platforms</Typography>
+          <MuiTooltip title="Download as image">
+            <IconButton onClick={handleExport} disabled={exporting} size="small">
+              <DownloadIcon />
+            </IconButton>
+          </MuiTooltip>
+        </Box>
         {loading ? (
           <Typography>Loading...</Typography>
         ) : error ? (

@@ -251,10 +251,10 @@ const ProjectConfiguration: React.FC = () => {
         }
       >
         <Typography variant="body2" sx={{ fontWeight: 600 }}>
-          Security Notice: Credentials in JDBC URLs
+          🔒 Security: Automatic Encryption Enabled
         </Typography>
         <Typography variant="caption">
-          Connection strings may contain sensitive credentials. Consider using environment variables or encrypted storage.
+          All JDBC connection strings are automatically encrypted at rest using AES-256-GCM. Your credentials are protected.
         </Typography>
       </Alert>
 

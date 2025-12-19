@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Card,
@@ -14,8 +14,12 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  IconButton,
+  Tooltip
 } from '@mui/material';
+import DownloadIcon from '@mui/icons-material/Download';
+import { exportAsImage } from './utils/exportUtils';
 
 interface UserMetrics {
   deploymentsPerQuarter: number;
@@ -46,6 +50,7 @@ interface ROIBreakdown {
 }
 
 const RoiCalculationPage: React.FC = () => {
+  const pageRef = useRef<HTMLDivElement>(null);
   const [businessSize, setBusinessSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [userMetrics, setUserMetrics] = useState<UserMetrics>({
     deploymentsPerQuarter: 12,
@@ -68,6 +73,19 @@ const RoiCalculationPage: React.FC = () => {
 
   const [roi, setRoi] = useState<ROIBreakdown | null>(null);
   const [saved, setSaved] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    if (!pageRef.current) return;
+    setExporting(true);
+    try {
+      await exportAsImage(pageRef.current, 'roi-calculation');
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const getBusinessSizeDefaults = (size: 'small' | 'medium' | 'large'): UserMetrics => {
     const defaults = {
@@ -270,10 +288,17 @@ const RoiCalculationPage: React.FC = () => {
   }
 
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom>
-        ROI Calculation
-      </Typography>
+    <Box ref={pageRef}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h4">
+          ROI Calculation
+        </Typography>
+        <Tooltip title="Download as image">
+          <IconButton onClick={handleExport} disabled={exporting}>
+            <DownloadIcon />
+          </IconButton>
+        </Tooltip>
+      </Box>
       <Typography variant="body1" color="text.secondary" paragraph>
         Configure your baseline (pre-Flyway) metrics to calculate the return on investment from adopting Flyway.
       </Typography>
