@@ -10,7 +10,27 @@ const cors = require('cors');
 const path = require('path');
 const app = express();
 
-app.use(cors());
+// CORS configuration for production deployments
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : ['http://localhost:3000', 'http://localhost:3001'];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    
+    // Allow all origins in development, specific origins in production
+    if (process.env.NODE_ENV !== 'production' || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json());
 
 // Initialize database
@@ -45,6 +65,15 @@ const leadTimeHistoryRoutes = require('./routes/leadTimeHistoryRoutes');
 const leadTimesRoutes = require('./routes/leadTimesRoutes');
 const deploymentsRoutes = require('./routes/deploymentsRoutes');
 const jdbcConfigRoutes = require('./routes/jdbcConfigRoutes');
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'healthy',
+    mode: DEMO_MODE ? 'demo' : 'production',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Register routes
 app.use(userMetricsRoutes);
