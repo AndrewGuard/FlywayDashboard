@@ -16,9 +16,19 @@ import {
   Select,
   MenuItem,
   IconButton,
-  Tooltip
+  Tooltip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { exportAsImage } from './utils/exportUtils';
 
 interface UserMetrics {
@@ -441,6 +451,165 @@ const RoiCalculationPage: React.FC = () => {
                     onChange={(e) => setUserMetrics({ ...userMetrics, leadTimeDays: Number(e.target.value) })}
                     helperText="Average days from code commit to production (DORA metric)"
                   />
+                </Grid>
+                <Grid item xs={12}>
+                  <Accordion>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Typography variant="subtitle2">How does lead time affect ROI?</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Box>
+                        <Typography variant="body2" color="text.secondary" paragraph>
+                          Lead time <strong>directly drives one of the four major ROI components</strong> and often represents 40-60% of total ROI, making it the <strong>largest single contributor</strong> to Flyway's business value.
+                        </Typography>
+
+                        <Divider sx={{ my: 2 }} />
+
+                        <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
+                          Calculation Formula
+                        </Typography>
+                        <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.50', fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                          <Box component="div">
+                            leadTimeReduction = max(0, baseline_lead_time - flyway_lead_time)
+                            <br/>
+                            leadTimeSavingsPerDeployment = leadTimeReduction × costOfDelayPerDay
+                            <br/>
+                            timeSavingsPerQuarter = leadTimeSavingsPerDeployment × deployments_per_quarter
+                          </Box>
+                        </Paper>
+
+                        <Typography variant="subtitle2" gutterBottom sx={{ mt: 3 }}>
+                          Example Calculation
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" paragraph>
+                          If your baseline is <strong>35 days</strong> lead time and Flyway reduces it to <strong>5 days</strong>:
+                        </Typography>
+                        <Box component="ul" sx={{ pl: 3, mb: 2 }}>
+                          <Typography component="li" variant="body2" color="text.secondary">
+                            <strong>Lead time reduction:</strong> 30 days
+                          </Typography>
+                          <Typography component="li" variant="body2" color="text.secondary">
+                            <strong>Cost of delay:</strong> $500/day (medium business default)
+                          </Typography>
+                          <Typography component="li" variant="body2" color="text.secondary">
+                            <strong>Deployments per quarter:</strong> 12
+                          </Typography>
+                        </Box>
+                        <Paper elevation={0} sx={{ p: 2, bgcolor: 'success.lighter', borderLeft: 4, borderColor: 'success.main' }}>
+                          <Typography variant="body2" fontWeight="bold" color="success.dark">
+                            Quarterly savings from lead time alone: 30 days × $500/day × 12 = $180,000/quarter
+                          </Typography>
+                          <Typography variant="body2" fontWeight="bold" color="success.dark">
+                            Annual savings: $720,000/year
+                          </Typography>
+                        </Paper>
+
+                        <Typography variant="subtitle2" gutterBottom sx={{ mt: 3 }}>
+                          The Four ROI Components
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" paragraph>
+                          Lead time is one of four savings categories calculated:
+                        </Typography>
+                        <TableContainer component={Paper} elevation={0} sx={{ mb: 2 }}>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow>
+                                <TableCell><strong>Component</strong></TableCell>
+                                <TableCell><strong>Calculation</strong></TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              <TableRow>
+                                <TableCell><strong>1. Lead Time Savings</strong></TableCell>
+                                <TableCell>Days reduced × cost of delay per day × deployments</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell>2. Failure Rate Savings</TableCell>
+                                <TableCell>Percentage reduction × deployments × cost per failure</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell>3. Deployment Efficiency</TableCell>
+                                <TableCell>Additional deployments enabled × 30% of savings per deployment</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell>4. Labor Savings</TableCell>
+                                <TableCell>DBA + developer time saved (80% reduction) × hourly rates × deployments</TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+
+                        <Typography variant="subtitle2" gutterBottom sx={{ mt: 3 }}>
+                          Why Lead Time Matters for ROI
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" paragraph>
+                          <strong>Cost of Delay</strong> is the business value lost each day that features, fixes, or improvements sit waiting for production deployment. Lead time reduction captures:
+                        </Typography>
+                        <Box component="ul" sx={{ pl: 3, mb: 2 }}>
+                          <Typography component="li" variant="body2" color="text.secondary">
+                            <strong>Feature value delivery:</strong> Revenue from new features reaching customers sooner
+                          </Typography>
+                          <Typography component="li" variant="body2" color="text.secondary">
+                            <strong>Bug fix urgency:</strong> Customer satisfaction/retention from faster fixes
+                          </Typography>
+                          <Typography component="li" variant="body2" color="text.secondary">
+                            <strong>Competitive advantage:</strong> Market responsiveness vs competitors
+                          </Typography>
+                          <Typography component="li" variant="body2" color="text.secondary">
+                            <strong>Opportunity cost:</strong> Developer time spent on next features vs deployment overhead
+                          </Typography>
+                        </Box>
+
+                        <Typography variant="subtitle2" gutterBottom sx={{ mt: 3 }}>
+                          Impact by Business Size
+                        </Typography>
+                        <TableContainer component={Paper} elevation={0}>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow>
+                                <TableCell><strong>Size</strong></TableCell>
+                                <TableCell align="right"><strong>Baseline Lead Time</strong></TableCell>
+                                <TableCell align="right"><strong>Cost of Delay</strong></TableCell>
+                                <TableCell align="right"><strong>Typical Annual Impact</strong></TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              <TableRow>
+                                <TableCell><strong>Small</strong> (&lt;50 employees)</TableCell>
+                                <TableCell align="right">20 days</TableCell>
+                                <TableCell align="right">$200/day</TableCell>
+                                <TableCell align="right">~$48K/year</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell><strong>Medium</strong> (50-500)</TableCell>
+                                <TableCell align="right">35 days</TableCell>
+                                <TableCell align="right">$500/day</TableCell>
+                                <TableCell align="right">~$720K/year</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell><strong>Large</strong> (500+)</TableCell>
+                                <TableCell align="right">60 days</TableCell>
+                                <TableCell align="right">$1,500/day</TableCell>
+                                <TableCell align="right">~$4.3M/year</TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                        <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1, fontStyle: 'italic' }}>
+                          *Assumes Flyway reduces lead time to 3-5 days on average
+                        </Typography>
+
+                        <Paper elevation={0} sx={{ p: 2, mt: 3, bgcolor: 'primary.lighter', borderLeft: 4, borderColor: 'primary.main' }}>
+                          <Typography variant="subtitle2" color="primary.dark" gutterBottom>
+                            Key Insight
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            For many organizations, lead time savings represent 40-60% of total ROI, making it often the largest single contributor to Flyway's business value. This aligns with <Link href="https://dora.dev/research/" target="_blank" rel="noopener">DORA research</Link> showing lead time as a key predictor of organizational performance.
+                          </Typography>
+                        </Paper>
+                      </Box>
+                    </AccordionDetails>
+                  </Accordion>
                 </Grid>
                 <Grid item xs={12}>
                   <TextField
