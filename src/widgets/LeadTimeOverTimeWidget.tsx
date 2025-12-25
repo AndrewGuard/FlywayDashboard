@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Card, CardContent, Typography, Box, IconButton, Tooltip } from '@mui/material';
+import { Card, CardContent, Typography, Box, IconButton, Tooltip, Chip } from '@mui/material';
 import { LineChart } from '@mui/x-charts/LineChart';
 import DownloadIcon from '@mui/icons-material/Download';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import { exportAsImage } from '../utils/exportUtils';
 
 interface DataPoint {
@@ -102,11 +103,29 @@ const LeadTimeOverTimeWidget: React.FC = () => {
   const flywayData = dataPoints.map(p => p.flywayLeadTime ?? null);
   const nonFlywayData = dataPoints.map(p => p.nonFlywayLeadTime ?? null);
 
+  // Calculate average reduction for display
+  const validFlyway = flywayData.filter((v): v is number => v !== null);
+  const validBaseline = nonFlywayData.filter((v): v is number => v !== null);
+  const avgFlyway = validFlyway.length > 0 ? validFlyway.reduce((a, b) => a + b, 0) / validFlyway.length : 0;
+  const avgBaseline = validBaseline.length > 0 ? validBaseline.reduce((a, b) => a + b, 0) / validBaseline.length : 0;
+  const reduction = avgBaseline > 0 ? Math.round(((avgBaseline - avgFlyway) / avgBaseline) * 100) : 0;
+
   return (
     <Card ref={cardRef} sx={{ mb: 2 }}>
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <Typography variant="h6">Lead Time for Changes</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="h6">Lead Time for Changes</Typography>
+            {reduction > 0 && (
+              <Chip
+                icon={<TrendingDownIcon />}
+                label={`${reduction}% reduction`}
+                color="success"
+                size="small"
+                sx={{ fontWeight: 'bold' }}
+              />
+            )}
+          </Box>
           <Tooltip title="Download as image">
             <IconButton onClick={handleExport} disabled={exporting} size="small">
               <DownloadIcon />
@@ -114,7 +133,7 @@ const LeadTimeOverTimeWidget: React.FC = () => {
           </Tooltip>
         </Box>
         <Typography variant="body2" color="text.secondary" gutterBottom>
-          Comparing Flyway vs Non-Flyway lead times over time
+          Comparing Flyway vs Baseline lead times over time • <Box component="span" sx={{ color: 'success.main', fontWeight: 'medium' }}>Lower is better</Box>
         </Typography>
         <Box sx={{ height: 400, mt: 2 }}>
           <LineChart
@@ -137,7 +156,7 @@ const LeadTimeOverTimeWidget: React.FC = () => {
               },
               {
                 data: nonFlywayData,
-                label: 'Non-Flyway',
+                label: 'Baseline',
                 color: '#f44336',
                 showMark: true,
                 curve: 'linear'
