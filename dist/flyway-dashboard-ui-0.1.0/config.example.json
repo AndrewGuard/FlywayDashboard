@@ -1,4 +1,0 @@
-{
-  "apiBaseUrl": "http://your-server:3001",
-  "_comment": "Change apiBaseUrl to point to your Flyway Dashboard server"
-}
