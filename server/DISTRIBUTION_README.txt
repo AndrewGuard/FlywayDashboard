@@ -1,171 +1,293 @@
-# Flyway Dashboard Server - Standalone Edition
+================================================================================
+         Flyway Dashboard - Server Installation Guide
+================================================================================
 
-Welcome! This is the standalone server for Flyway Dashboard.
+Thank you for downloading Flyway Dashboard Server!
 
-## Quick Start (No Node.js Required!)
+This package contains the complete server source code. You'll install
+dependencies using npm, which will automatically compile native modules
+for your specific Node.js version and platform.
 
-This package includes everything you need to run the Flyway Dashboard server.
+================================================================================
+                           REQUIREMENTS
+================================================================================
 
-### Step 1: Extract Files
+Required Software:
+  - Node.js 18 or higher (download from https://nodejs.org/)
 
-Extract this ZIP to a folder, for example:
-```
-C:\FlywayDashboard\
-```
+That's it! No build tools, Python, or Visual Studio required.
 
-### Step 2: Configure Environment
+To check your Node.js version:
+  node --version
 
-1. Rename `.env.example` to `.env`
-2. Open `.env` in Notepad
-3. Update these settings:
+================================================================================
+                        QUICK START GUIDE
+================================================================================
 
-```
-# Use demo data or connect to real databases?
-DEMO_MODE=false
+1. EXTRACT FILES
+   Extract this ZIP file to your desired installation directory.
+   Example: C:\flyway-dashboard-server\
 
-# Server port (change if 3001 is already in use)
-PORT=3001
+2. INSTALL DEPENDENCIES
+   Open a command prompt or terminal in the extracted folder and run:
 
-# If you're accessing from another machine, add that URL here
-ALLOWED_ORIGINS=http://localhost:3000
-```
+   npm install
 
-### Step 3: Configure Database Connections
+   This will:
+   - Download all required packages
+   - Compile native modules (like better-sqlite3) for your system
+   - Take 1-2 minutes on first install
 
-1. Open `jdbc-connections.json` in Notepad
-2. Add your database connection strings:
+3. CONFIGURE SERVER
+   Before starting the server, you need to configure:
 
-```json
-{
-  "prod": [
-    "jdbc:postgresql://your-db-host:5432/database?user=username&password=password"
-  ],
-  "nonProd": [
-    "jdbc:sqlserver://your-db-host:1433;databaseName=testdb;user=username;password=password"
-  ]
-}
-```
+   a) Environment Variables (optional)
+      Copy .env.example to .env and customize if needed:
+      - PORT (default: 3001)
+      - Enable/disable demo mode
 
-**Supported databases:**
-- PostgreSQL: `jdbc:postgresql://host:5432/dbname?user=user&password=pass`
-- SQL Server: `jdbc:sqlserver://host:1433;databaseName=db;user=user;password=pass`
+   b) Database Connections (required)
+      Edit jdbc-connections.json to add your database connections.
+      
+      Example for SQL Server:
+      {
+        "prod": "jdbc:sqlserver://localhost:1433;databaseName=flyway_prod;user=sa;password=YourPassword",
+        "nonProd": "jdbc:sqlserver://localhost:1433;databaseName=flyway_test;user=sa;password=YourPassword"
+      }
 
-### Step 4: Start the Server
+      Example for PostgreSQL:
+      {
+        "prod": "jdbc:postgresql://localhost:5432/flyway_prod?user=postgres&password=YourPassword",
+        "nonProd": "jdbc:postgresql://localhost:5432/flyway_test?user=postgres&password=YourPassword"
+      }
 
-**Windows:**
-- Double-click `server.exe`
-- Or open Command Prompt and run: `server.exe`
+4. RUN SETUP WIZARD (Recommended)
+   For interactive configuration with live database testing:
 
-**Linux/Mac:**
-```bash
-chmod +x server
-./server
-```
+   npm run setup
 
-### Step 5: Access the Dashboard
+   The wizard will:
+   - Guide you through configuration
+   - Test database connections
+   - Validate settings
+   - Save configuration automatically
 
-Open your web browser to:
-```
-http://localhost:3001/health
-```
+5. START SERVER
+   npm start
 
-You should see:
-```json
-{"status":"healthy","mode":"production"}
-```
+   The server will start on http://localhost:3001 (or your configured port)
 
-Then open the React UI (if installed separately) at:
-```
-http://localhost:3000
-```
+   For development with auto-reload:
+   npm run dev
 
----
+6. VERIFY INSTALLATION
+   Run diagnostics to check everything is configured correctly:
 
-## Demo Mode (Try Without Databases)
+   npm run diagnostics
 
-Want to see the dashboard without connecting to databases?
+   This checks:
+   - Node.js version
+   - Port availability
+   - Database connectivity
+   - File permissions
+   - Migration data
 
-**In `.env` file:**
-```
-DEMO_MODE=true
-```
+================================================================================
+                         AVAILABLE COMMANDS
+================================================================================
 
-Then just run `server.exe` - it will use sample data!
+Production:
+  npm start              - Start the server
+  npm stop               - Stop the server (if running as service)
 
----
+Development:
+  npm run dev            - Start with auto-reload on file changes
 
-## Troubleshooting
+Setup & Diagnostics:
+  npm run setup          - Interactive setup wizard
+  npm run diagnostics    - Run full system diagnostics
+  npm run test-connections - Test all JDBC connections
 
-### "Port already in use"
+================================================================================
+                         CONFIGURATION
+================================================================================
 
-Change the port in `.env`:
-```
-PORT=3005
-```
+Environment Variables (.env file):
+  PORT=3001              - Server port (default: 3001)
+  DEMO_MODE=false        - Enable demo data without real databases
+  NODE_ENV=production    - Environment mode
 
-### "Cannot connect to database"
+Database Connections (jdbc-connections.json):
+  {
+    "prod": "jdbc:...",      - Production database
+    "nonProd": "jdbc:..."    - Non-production/test database
+  }
 
-1. Check your database is running
-2. Verify the JDBC connection string format
-3. Test network connectivity
-4. Ensure firewall allows connections
+  Supported databases:
+  - PostgreSQL  (requires: pg package - included)
+  - SQL Server  (requires: mssql package - included)
+  - Oracle      (requires: oracledb package)
+  - MySQL       (requires: mysql2 package)
 
-### "CORS error" in browser
+================================================================================
+                         DEMO MODE
+================================================================================
 
-Add your UI URL to `.env`:
-```
-ALLOWED_ORIGINS=http://localhost:3000,http://your-ui-url:8080
-```
+If you want to explore the dashboard without connecting to real databases:
 
-### Still having issues?
+1. Edit .env file:
+   DEMO_MODE=true
 
-Run the diagnostics tool:
-```
-server.exe --diagnostics
-```
+2. Start server:
+   npm start
 
-Or check the server logs in the console window.
+3. Access dashboard at:
+   http://localhost:3001
 
----
+Demo mode provides:
+- Sample migration data
+- Simulated deployment metrics
+- Pre-configured ROI calculations
+- No database connection required
 
-## Files Included
+================================================================================
+                         TROUBLESHOOTING
+================================================================================
 
-```
-├── server.exe              # The main server executable
-├── .env.example           # Configuration template
-├── jdbc-connections.json  # Database connections
-├── db/                    # SQLite database (auto-created)
-└── README.txt            # This file
-```
+Problem: "npm: command not found"
+Solution: Install Node.js from https://nodejs.org/
+          Node.js includes npm automatically.
 
----
+Problem: "Cannot find module 'better-sqlite3'"
+Solution: Run: npm install
+          This will install all dependencies including native modules.
 
-## Running as Windows Service (Optional)
+Problem: "Error: Module version mismatch"
+Solution: Rebuild native modules for your Node.js version:
+          npm rebuild
 
-To run the server as a Windows service that starts automatically:
+Problem: "EADDRINUSE: Port 3001 already in use"
+Solution: Either:
+          - Stop the application using port 3001
+          - OR change PORT in .env file to a different port
 
-1. Download NSSM: https://nssm.cc/
-2. Run as administrator:
-   ```
-   nssm install FlywayDashboard "C:\FlywayDashboard\server.exe"
-   nssm start FlywayDashboard
-   ```
+Problem: "Database connection failed"
+Solution: 1. Verify your JDBC connection string is correct
+          2. Check username/password
+          3. Ensure database server is running and accessible
+          4. Run: npm run test-connections
 
----
+Problem: "Permission denied" during npm install
+Solution: On Linux/Mac, you may need sudo or fix npm permissions:
+          https://docs.npmjs.com/resolving-eacces-permissions-errors
 
-## Support
+For more help, run:
+  npm run diagnostics
 
-- Documentation: See main README.md
-- Issues: Contact your IT administrator
-- Source: https://github.com/your-org/flyway-dashboard
+================================================================================
+                         DEPLOYMENT
+================================================================================
 
----
+Running as a Windows Service:
+  Use pm2, node-windows, or NSSM to run as a Windows service.
 
-## License
+  Example with pm2:
+    npm install -g pm2
+    pm2 start index.js --name flyway-dashboard
+    pm2 save
+    pm2 startup
 
-[Your License Here]
+Running as a Linux Service:
+  Create a systemd service file or use pm2.
 
----
+  Example systemd service (/etc/systemd/system/flyway-dashboard.service):
+    [Unit]
+    Description=Flyway Dashboard Server
+    After=network.target
 
-**Version:** 1.0.0  
-**Build Date:** [Build Date]
+    [Service]
+    Type=simple
+    User=flyway
+    WorkingDirectory=/opt/flyway-dashboard-server
+    ExecStart=/usr/bin/node index.js
+    Restart=on-failure
+
+    [Install]
+    WantedBy=multi-user.target
+
+  Enable and start:
+    sudo systemctl enable flyway-dashboard
+    sudo systemctl start flyway-dashboard
+
+Docker Deployment:
+  Create a Dockerfile in the server directory:
+
+    FROM node:18-alpine
+    WORKDIR /app
+    COPY . .
+    RUN npm install --production
+    EXPOSE 3001
+    CMD ["npm", "start"]
+
+  Build and run:
+    docker build -t flyway-dashboard-server .
+    docker run -p 3001:3001 flyway-dashboard-server
+
+================================================================================
+                         SECURITY NOTES
+================================================================================
+
+1. JDBC Connection Strings contain passwords
+   - Keep jdbc-connections.json secure
+   - Do not commit to source control
+   - Use environment variables for sensitive data in production
+
+2. SSL/TLS
+   - The server runs HTTP by default
+   - For production, use a reverse proxy (nginx, IIS, Apache) with HTTPS
+   - Or configure Express to use HTTPS directly
+
+3. Firewall
+   - Only expose port 3001 to trusted networks
+   - Use firewall rules to restrict access
+
+4. Authentication
+   - Current version has no authentication
+   - Implement authentication via reverse proxy or custom middleware
+
+================================================================================
+                         NEXT STEPS
+================================================================================
+
+1. Configure your database connections in jdbc-connections.json
+2. Run the setup wizard: npm run setup
+3. Start the server: npm start
+4. Deploy the UI package to your web server
+5. Configure the UI's config.json to point to this server:
+   {
+     "apiBaseUrl": "http://your-server:3001"
+   }
+
+For detailed documentation, see:
+- server/QUICKSTART.md - 3-minute setup guide
+- EXE_KNOWN_ISSUES.md - Why we use source distribution
+
+================================================================================
+                         SUPPORT
+================================================================================
+
+If you encounter issues:
+1. Run diagnostics: npm run diagnostics
+2. Check the troubleshooting section above
+3. Review server logs for error messages
+4. Ensure all requirements are met (Node.js 18+)
+
+For questions or feature requests, please contact your administrator.
+
+================================================================================
+
+Version: 1.0.0
+Build Date: 2024
+License: Private/Internal Use
+
+================================================================================

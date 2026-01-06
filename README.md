@@ -548,47 +548,56 @@ After deployment, end users simply:
 
 ## Build Distribution Packages
 
-### Server Package
+### Server Package (Source Distribution)
 
-Create a distributable server package:
+Create a distributable server source package:
 
 ```bash
-chmod +x build-server.sh
-./build-server.sh
+cd server
+npm run package-source
 ```
 
 **Creates:**
-- `dist/flyway-dashboard-server-{version}.tar.gz`
-- `dist/flyway-dashboard-server-{version}.zip`
+- `dist/flyway-dashboard-server-source-{version}.zip` (60 KB)
 
 **Includes:**
-- Server source code (`index.js`, routes, utils)
-- `package.json` with dependencies
+- Complete server source code
+- `package.json` with all dependencies
 - `.env.example` configuration template
-- `jdbc-connections.json` template
-- Installation scripts
-- DEPLOYMENT_SERVER.md documentation
+- `jdbc-connections.json` configuration file
+- Setup wizard and diagnostics tools
+- Documentation and quick start guide
 
-### UI Package
+**User Requirements:**
+- Node.js 18+ (only dependency needed)
+- Run `npm install` to install dependencies
+- Configure `.env` and `jdbc-connections.json`
+- Run `npm start` to launch server
+
+> **Note:** Source distribution is recommended over EXE builds due to native module compatibility. Users run `npm install` which automatically compiles native modules (like better-sqlite3) for their specific Node.js version and platform.
+
+### UI Package (Pre-Built Static Files)
 
 Create a distributable UI package:
 
 ```bash
-chmod +x build-ui.sh
-./build-ui.sh
+npm run package-ui
 ```
 
 **Creates:**
-- `dist/flyway-dashboard-ui-{version}.tar.gz`
-- `dist/flyway-dashboard-ui-{version}.zip`
+- `dist/flyway-dashboard-ui-{version}.zip` (1.58 MB)
 
 **Includes:**
-- Built React app (HTML/JS/CSS)
+- Pre-built React app (HTML/JS/CSS)
 - `config.json` configuration file
 - `config.example.json` template
-- `web.config` for IIS
-- `.htaccess` for Apache
-- DEPLOYMENT_UI.md documentation
+- `web.config` for IIS deployment
+- `.htaccess` for Apache deployment
+- README with deployment instructions
+
+**User Requirements:**
+- Web server (IIS, Apache, Nginx, or any static file server)
+- No build tools needed - ready to deploy
 
 ---
 

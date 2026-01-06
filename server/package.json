@@ -12,6 +12,7 @@
     "test-connections": "node -e \"require('./flywayHistory').testConnections()\"",
     "build-exe": "node build-exe.js",
     "package": "node build-package.js",
+    "package-source": "node build-source-package.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "pkg": {

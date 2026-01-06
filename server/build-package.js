@@ -35,8 +35,9 @@ console.log('Creating directories...');
 });
 console.log('✓ Directories created\n');
 
+// Note: Skip rebuilding better-sqlite3 - pkg will bundle the current version
 // Build executable
-console.log('Building Windows executable...');
+console.log('Building Windows executable with Node 18...');
 console.log('This may take a few minutes...\n');
 
 try {
