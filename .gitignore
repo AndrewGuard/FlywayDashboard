@@ -33,3 +33,6 @@ server/db/*.db-wal
 
 # Database connection configuration (contains passwords)
 server/jdbc-connections.json
+# Electron build outputs
+dist-electron/
+dist-electron/win-unpacked/
