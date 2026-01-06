@@ -36,3 +36,9 @@ server/jdbc-connections.json
 # Electron build outputs
 dist-electron/
 dist-electron/win-unpacked/
+
+
+# Build artifacts and executables
+dist/
+dist/executables/
+*.exe
