@@ -79,24 +79,6 @@ The Flyway Dashboard uses a **client-server architecture** for flexible deployme
    
    See [server/QUICKSTART.md](server/QUICKSTART.md) for detailed server setup guide.
 
-4. **Configure client (optional):**
-   ```bash
-   # Client configuration (optional - uses defaults if not set)
-   cp .env.example .env
-   # Edit .env to customize:
-   #   - PORT=3000 (client dev server port)
-   #   - REACT_APP_API_URL=http://localhost:3001 (API server URL)
-   
-   # Server configuration (optional for demo mode)
-   cd server
-   cp .env.example .env
-   # Edit .env to customize:
-   #   - DEMO_MODE=true (use demo data)
-   #   - PORT=3001 (API server port)
-   #   - ALLOWED_ORIGINS=http://localhost:3000 (client URL)
-   cd ..
-   ```
-
 ### Running the Application
 
 #### Development Mode (Recommended)
@@ -175,38 +157,20 @@ Navigate to **ROI Calculator** in the dashboard to enter your organization's bas
 
 #### Configure Ports (Optional)
 
-By default, the client runs on port **3000** and the server runs on port **3001**. To use custom ports:
+By default, the client runs on port **3000** and the server runs on port **3001**. 
 
-**Client Port (React dev server):**
-```bash
-# In .env (root folder)
-PORT=3002
-REACT_APP_API_URL=http://localhost:3001  # Keep pointing to server
-```
-
-**Server Port (API server):**
-```bash
-# In server/.env
-PORT=3005
-ALLOWED_ORIGINS=http://localhost:3000  # Must match client URL
-```
-
-**Important:** If you change the server port, you must also update:
-1. Client proxy in [package.json](package.json): `"proxy": "http://localhost:3005"`
-2. For production: [public/config.json](public/config.json): `{"apiBaseUrl": "http://localhost:3005"}`
+To use custom ports, see [PORT_CONFIGURATION.md](PORT_CONFIGURATION.md) for complete configuration steps.
 
 ---
 
 ## Production Deployment
 
-For enterprise/production deployments, deploy the server and UI separately:
+Deploy the server and UI separately for production. See detailed guides: [DEPLOYMENT_SERVER.md](DEPLOYMENT_SERVER.md) and [DEPLOYMENT_UI.md](DEPLOYMENT_UI.md).
 
 ### Server Deployment
 
-Deploy the server on a machine with access to your production databases.
-
 #### Prerequisites
-- **Node.js 16+** on the server machine
+- **Node.js 18+** on the server machine
 - Network access to Flyway databases
 - Open port (default: 3001) for API access
 
@@ -231,26 +195,11 @@ Deploy the server on a machine with access to your production databases.
 
    **Required settings:**
    ```bash
-   # Server mode
    NODE_ENV=production
    DEMO_MODE=false
-   
-   # Server port (API will listen on this port)
-   # Change if port 3001 is already in use or blocked by firewall
    PORT=3001
-   
-   # CORS - comma-separated UI domains
-   # Must include the URL where your React client is running
-   ALLOWED_ORIGINS=https://dashboard.yourcompany.com,https://flyway.internal
-   
-   # Optional: Override SQLite database location
-   # DB_PATH=/opt/flyway-dashboard/data/dashboard.db
-   
-   # Optional: External secrets (Azure Key Vault, AWS Secrets Manager)
-   # ENCRYPTION_KEY=your-256-bit-key
+   ALLOWED_ORIGINS=https://dashboard.yourcompany.com
    ```
-
-   **Note:** If you change PORT to something other than 3001, update your firewall rules and make sure to update the client's `config.json` with the new port.
 
 4. **Configure JDBC connections:**
    ```bash
@@ -366,15 +315,9 @@ Deploy the UI as static files to any web server (no database access required).
 
    ```json
    {
-     "apiBaseUrl": "http://your-server.internal:3001"
+     "apiBaseUrl": "https://api.yourcompany.com"
    }
    ```
-
-   **Important:** 
-   - Change `http://your-server.internal:3001` to your actual server URL
-   - Use HTTPS in production: `https://api.yourcompany.com`
-   - If your server uses a custom port (e.g., 3005), include it: `https://api.yourcompany.com:3005`
-   - The port must match the PORT setting in your server's `.env` file
 
 3. **Deploy to web server:**
 
@@ -574,8 +517,6 @@ npm run package-source
 - Configure `.env` and `jdbc-connections.json`
 - Run `npm start` to launch server
 
-> **Note:** Source distribution is recommended over EXE builds due to native module compatibility. Users run `npm install` which automatically compiles native modules (like better-sqlite3) for their specific Node.js version and platform.
-
 ### UI Package (Pre-Built Static Files)
 
 Create a distributable UI package:
@@ -723,38 +664,7 @@ This will identify configuration issues, port conflicts, or permission problems.
 
 ### Port Already in Use
 
-If port 3000 or 3001 is already taken by another application:
-
-**Change client port (React dev server):**
-```bash
-# In .env (root folder)
-PORT=3002
-```
-
-**Change server port (API server):**
-```bash
-# In server/.env
-PORT=3005
-
-# Also update ALLOWED_ORIGINS to match new client port
-ALLOWED_ORIGINS=http://localhost:3002
-```
-
-**Update client to point to new server port:**
-```bash
-# In .env (root folder)
-REACT_APP_API_URL=http://localhost:3005
-
-# AND in package.json, update the proxy
-"proxy": "http://localhost:3005"
-```
-
-**For production**, update [public/config.json](public/config.json):
-```json
-{
-  "apiBaseUrl": "http://your-server:3005"
-}
-```
+If port 3000 or 3001 is already taken, see [PORT_CONFIGURATION.md](PORT_CONFIGURATION.md) for complete instructions on changing ports.
 
 ### Database Connection Issues
 
@@ -912,14 +822,15 @@ flyway-dashboard/
 
 ---
 
-## Advanced Documentation
+## Additional Documentation
 
-For deep-dive technical details and advanced configurations:
-
-- **[PORT_CONFIGURATION.md](PORT_CONFIGURATION.md)** - Complete guide to configuring custom ports for client and server
-- **[DEPLOYMENT_SERVER.md](DEPLOYMENT_SERVER.md)** - Comprehensive server deployment guide (PM2, systemd, Windows Service, monitoring, backup strategies)
-- **[DEPLOYMENT_UI.md](DEPLOYMENT_UI.md)** - Comprehensive UI deployment guide (IIS, nginx, Apache, cloud hosting, CDN setup)
-- **[SEPARATION_IMPLEMENTATION.md](SEPARATION_IMPLEMENTATION.md)** - Technical architecture details, migration paths, API examples, security features
+- [PORT_CONFIGURATION.md](PORT_CONFIGURATION.md) - Custom port configuration
+- [DEPLOYMENT_SERVER.md](DEPLOYMENT_SERVER.md) - Advanced server deployment (PM2, systemd, Windows Service)
+- [DEPLOYMENT_UI.md](DEPLOYMENT_UI.md) - Advanced UI deployment (IIS, nginx, Apache, cloud hosting)
+- [DEPLOYMENT.md](DEPLOYMENT.md) - General deployment overview
+- [SEPARATION_IMPLEMENTATION.md](SEPARATION_IMPLEMENTATION.md) - Architecture details
+- [SECURITY.md](SECURITY.md) - Security best practices
+- [EXE_BUILD_GUIDE.md](EXE_BUILD_GUIDE.md) - EXE build troubleshooting (for advanced users)
 
 ---
 
