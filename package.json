@@ -21,10 +21,67 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "postbuild": "node -e \"require('fs').copyFileSync('electron-main.js', 'build/electron.js')\"",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "server": "cd server && npm run dev",
-    "dev": "concurrently \"npm run server\" \"npm start\" --names \"SERVER,CLIENT\" --prefix-colors \"blue,green\""
+    "dev": "concurrently \"npm run server\" \"npm start\" --names \"SERVER,CLIENT\" --prefix-colors \"blue,green\"",
+    "package-ui": "node build-ui-package.js",
+    "electron": "electron .",
+    "electron-build": "npm run build && electron-builder",
+    "electron-build-win": "npm run build && electron-builder --win",
+    "electron-build-mac": "npm run build && electron-builder --mac",
+    "electron-build-linux": "npm run build && electron-builder --linux"
+  },
+  "main": "build/electron.js",
+  "homepage": "./",
+  "build": {
+    "appId": "com.flyway.dashboard",
+    "productName": "Flyway Dashboard",
+    "directories": {
+      "buildResources": "assets",
+      "output": "dist-electron"
+    },
+    "files": [
+      "build/**/*"
+    ],
+    "extraFiles": [
+      {
+        "from": "server",
+        "to": "resources/server",
+        "filter": ["**/*", "!node_modules/**/*"]
+      }
+    ],
+    "extraFiles": [
+      {
+        "from": "server",
+        "to": "resources/server",
+        "filter": ["**/*", "!node_modules/**/*"]
+      }
+    ],
+    "asarUnpack": [
+      "resources/server/**/*"
+    ],
+    "win": {
+      "target": ["nsis"],
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": ["dmg", "zip"],
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.developer-tools"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "assets/icon.png",
+      "category": "Development"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   },
   "browserslist": {
     "production": [
@@ -42,6 +99,8 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
     "@types/jest": "^30.0.0",
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1"
   }
 }

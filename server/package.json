@@ -3,10 +3,38 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "bin": "index.js",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "setup": "node setup-wizard.js",
+    "diagnostics": "node diagnostics.js",
+    "test-connections": "node -e \"require('./flywayHistory').testConnections()\"",
+    "build-exe": "node build-exe.js",
+    "package": "node build-package.js",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "pkg": {
+    "scripts": [
+      "index.js",
+      "routes/**/*.js",
+      "utils/**/*.js",
+      "db/**/*.js",
+      "flywayHistory.js",
+      "jdbcConnections.js",
+      "setup-wizard.js",
+      "diagnostics.js",
+      "validate-connection.js"
+    ],
+    "assets": [
+      ".env.example",
+      "jdbc-connections.json.template",
+      "node_modules/better-sqlite3/build/Release/*.node"
+    ],
+    "targets": [
+      "node18-win-x64"
+    ],
+    "outputPath": "../dist/executables"
   },
   "keywords": [],
   "author": "",

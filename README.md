@@ -51,7 +51,35 @@ The Flyway Dashboard uses a **client-server architecture** for flexible deployme
    cd ..
    ```
 
-3. **Configure environment (optional):**
+3. **Server setup - Choose one:**
+
+   **Option A: Interactive Setup Wizard (Recommended) ✨**
+   ```bash
+   cd server
+   npm run setup
+   ```
+   
+   The wizard guides you through:
+   - Environment configuration (ports, CORS, demo mode)
+   - Database connections with live testing
+   - Encryption key generation
+   - Health validation
+   
+   **Option B: Manual Setup**
+   ```bash
+   cd server
+   cp .env.example .env
+   # Edit .env for your environment
+   
+   # Edit jdbc-connections.json for your databases
+   
+   # Test everything
+   npm run diagnostics
+   ```
+   
+   See [server/QUICKSTART.md](server/QUICKSTART.md) for detailed server setup guide.
+
+4. **Configure client (optional):**
    ```bash
    # Client configuration (optional - uses defaults if not set)
    cp .env.example .env
@@ -631,7 +659,58 @@ The server exposes the following REST API endpoints:
 
 ---
 
+## Server Setup Tools
+
+The server includes helpful tools to make installation easier:
+
+### Setup Wizard (Interactive)
+```bash
+cd server
+npm run setup
+```
+Guided wizard that configures environment, tests connections, and generates encryption keys.
+
+### Diagnostics
+```bash
+cd server
+npm run diagnostics
+```
+Validates your entire server configuration:
+- ✓ Environment variables
+- ✓ Database connectivity
+- ✓ Port availability  
+- ✓ File permissions
+- ✓ Migration data
+
+### Test Connections
+```bash
+cd server
+npm run test-connections
+```
+Tests all JDBC connections in `jdbc-connections.json`.
+
+### Validate Single Connection
+```bash
+cd server
+node validate-connection.js "jdbc:postgresql://localhost:5432/mydb?user=user&password=pass"
+```
+Quick validation of a JDBC URL before adding to config.
+
+See [server/QUICKSTART.md](server/QUICKSTART.md) for complete server setup guide.
+
+---
+
 ## Troubleshooting
+
+### Server Won't Start
+
+**Run diagnostics first:**
+```bash
+cd server
+npm run diagnostics
+```
+
+This will identify configuration issues, port conflicts, or permission problems.
 
 ### Port Already in Use
 

@@ -1,0 +1,10 @@
+{
+	"prod": [
+		"jdbc:postgresql://localhost:5432/your_prod_db?user=username&password=password",
+		"jdbc:sqlserver://localhost:1433;databaseName=your_prod_db;encrypt=true;trustServerCertificate=true;user=username;password=password"
+	],
+	"nonProd": [
+		"jdbc:postgresql://localhost:5432/your_test_db?user=username&password=password",
+		"jdbc:sqlserver://localhost:1433;databaseName=your_test_db;encrypt=true;trustServerCertificate=true;user=username;password=password"
+	]
+}
