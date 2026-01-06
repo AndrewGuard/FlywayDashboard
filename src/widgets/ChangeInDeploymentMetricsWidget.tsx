@@ -134,6 +134,12 @@ export default function ChangeInDeploymentMetricsWidget() {
     const nonFlywayLeadTime = Number(userData?.leadTimeDays) || 20;
     const nonFlywayFailureRate = Number(userData?.scriptFailureRate) || 5;
 
+    // If no Flyway data yet, don't calculate ROI
+    if (deploymentsPerQuarter === 0 && leadTimeDays === 0) {
+      setRoi(null);
+      return;
+    }
+
     // Lead time savings (DORA-aligned)
     const leadTimeReduction = Math.max(0, nonFlywayLeadTime - leadTimeDays);
     const leadTimeSavingsPerDeployment = leadTimeReduction * costOfDelayPerDay;
