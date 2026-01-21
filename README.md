@@ -805,8 +805,7 @@ flyway-dashboard/
 **Current Limitations:**
 1. **JDBC Discovery** - No automatic scanning for JDBC connections (manual configuration required)
 2. **Flyway Model** - Requires `flyway_schema_history` table (migrations model only, versioned model not supported)
-3. **Lead Time in ROI** - Lead time not yet integrated into ROI calculations
-4. **Platform Detection** - Limited to PostgreSQL, SQL Server, Oracle, MySQL (other databases show as "Unknown")
+3. **Platform Detection** - Limited to PostgreSQL, SQL Server, Oracle, MySQL (other databases show as "Unknown")
 
 **Roadmap:**
 - [ ] Automatic JDBC connection discovery via server/network scanning
