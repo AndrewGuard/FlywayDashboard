@@ -103,12 +103,45 @@ const LeadTimeOverTimeWidget: React.FC = () => {
   const flywayData = dataPoints.map(p => p.flywayLeadTime ?? null);
   const nonFlywayData = dataPoints.map(p => p.nonFlywayLeadTime ?? null);
 
-  // Calculate average reduction for display
+  // Industry standard benchmarks (DORA metrics)
+  // Elite: < 1 day, High: 1-7 days, Medium: 7-30 days, Low: > 30 days
+  const eliteThreshold = dataPoints.map(() => 1);
+  const highThreshold = dataPoints.map(() => 7);
+  const mediumThreshold = dataPoints.map(() => 30);
+
+  // Calculate average reduction for display (overall)
   const validFlyway = flywayData.filter((v): v is number => v !== null);
   const validBaseline = nonFlywayData.filter((v): v is number => v !== null);
   const avgFlyway = validFlyway.length > 0 ? validFlyway.reduce((a, b) => a + b, 0) / validFlyway.length : 0;
   const avgBaseline = validBaseline.length > 0 ? validBaseline.reduce((a, b) => a + b, 0) / validBaseline.length : 0;
   const reduction = avgBaseline > 0 ? Math.round(((avgBaseline - avgFlyway) / avgBaseline) * 100) : 0;
+
+  // Calculate performance tier based on LAST 60 DAYS only
+  const sixtyDaysAgo = new Date();
+  sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+  
+  const recent60DaysData = dataPoints
+    .filter(p => new Date(p.date) >= sixtyDaysAgo)
+    .map(p => p.flywayLeadTime)
+    .filter((v): v is number => v !== null && v >= 0);
+  
+  const avgFlywayRecent = recent60DaysData.length > 0 
+    ? recent60DaysData.reduce((a, b) => a + b, 0) / recent60DaysData.length 
+    : avgFlyway; // Fallback to overall average if < 60 days of data
+
+  // Determine performance tier based on recent 60-day average
+  let performanceTier = 'Low';
+  let tierColor = '#f44336';
+  if (avgFlywayRecent < 1) {
+    performanceTier = 'Elite';
+    tierColor = '#9c27b0';
+  } else if (avgFlywayRecent < 7) {
+    performanceTier = 'High';
+    tierColor = '#4caf50';
+  } else if (avgFlywayRecent < 30) {
+    performanceTier = 'Medium';
+    tierColor = '#ff9800';
+  }
 
   return (
     <Card ref={cardRef} sx={{ mb: 2 }}>
@@ -125,6 +158,15 @@ const LeadTimeOverTimeWidget: React.FC = () => {
                 sx={{ fontWeight: 'bold' }}
               />
             )}
+            <Chip
+              label={`${performanceTier} Performer`}
+              size="small"
+              sx={{ 
+                fontWeight: 'bold',
+                bgcolor: tierColor,
+                color: 'white'
+              }}
+            />
           </Box>
           <Tooltip title="Download as image">
             <IconButton onClick={handleExport} disabled={exporting} size="small">
@@ -133,7 +175,7 @@ const LeadTimeOverTimeWidget: React.FC = () => {
           </Tooltip>
         </Box>
         <Typography variant="body2" color="text.secondary" gutterBottom>
-          Comparing Flyway vs Baseline lead times over time • <Box component="span" sx={{ color: 'success.main', fontWeight: 'medium' }}>Lower is better</Box>
+          Comparing Flyway vs Baseline vs Industry Standards (DORA) • Performance tier based on last 60 days • <Box component="span" sx={{ color: 'success.main', fontWeight: 'medium' }}>Lower is better</Box>
         </Typography>
         <Box sx={{ height: 400, mt: 2 }}>
           <LineChart
@@ -160,10 +202,45 @@ const LeadTimeOverTimeWidget: React.FC = () => {
                 color: '#f44336',
                 showMark: true,
                 curve: 'linear'
+              },
+              {
+                data: eliteThreshold,
+                label: 'Elite (< 1 day)',
+                color: '#9c27b0',
+                showMark: false,
+                curve: 'linear',
+                area: false
+              },
+              {
+                data: highThreshold,
+                label: 'High (< 7 days)',
+                color: '#2196f3',
+                showMark: false,
+                curve: 'linear',
+                area: false
+              },
+              {
+                data: mediumThreshold,
+                label: 'Medium (< 30 days)',
+                color: '#ff9800',
+                showMark: false,
+                curve: 'linear',
+                area: false
               }
             ]}
             height={350}
-            margin={{ top: 20, right: 20, bottom: 60, left: 60 }}
+            margin={{ top: 20, right: 20, bottom: 80, left: 60 }}
+            slotProps={{
+              legend: {
+                direction: 'row',
+                position: { vertical: 'bottom', horizontal: 'middle' },
+                padding: 0,
+                itemMarkWidth: 12,
+                itemMarkHeight: 12,
+                markGap: 5,
+                itemGap: 15,
+              }
+            }}
           />
         </Box>
       </CardContent>

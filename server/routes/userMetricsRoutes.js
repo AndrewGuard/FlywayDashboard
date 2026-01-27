@@ -29,8 +29,22 @@ router.get('/api/user-defined-metrics', (req, res) => {
 router.post('/api/user-defined-metrics', (req, res) => {
   try {
     console.log('Received POST body:', JSON.stringify(req.body));
+    
+    // Get previous lead time value to check if it changed
+    const previousMetrics = dbHelpers.getUserMetrics();
+    const previousLeadTime = previousMetrics?.leadTimeDays;
+    const newLeadTime = req.body.leadTimeDays;
+    
+    // Update the user metrics
     const updated = dbHelpers.updateUserMetrics(req.body);
     console.log('Update successful, businessSize:', updated?.businessSize);
+    
+    // If lead time changed, update all historical baseline values to maintain flat line
+    if (newLeadTime !== undefined && newLeadTime !== previousLeadTime) {
+      console.log(`Updating historical baseline from ${previousLeadTime} to ${newLeadTime} days`);
+      dbHelpers.updateAllBaselineLeadTimes(newLeadTime);
+    }
+    
     res.json(updated);
   } catch (e) {
     console.error('Update user metrics error:', e.message);

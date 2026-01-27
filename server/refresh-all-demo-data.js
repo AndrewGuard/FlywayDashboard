@@ -18,7 +18,7 @@ try {
   console.log('  - Lead time data points: Updated with realistic examples');
   console.log('  - Historical chart data: 90 days of trend data generated');
   console.log('  - Average Flyway lead time: ~1.7 days');
-  console.log('  - Non-Flyway baseline: 20 days');
+  console.log('  - Non-Flyway baseline: 30 days (flat line from user-defined metrics)');
   console.log('\nRefresh your UI to see the updated metrics and charts.');
   
   process.exit(0);

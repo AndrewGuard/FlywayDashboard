@@ -160,6 +160,17 @@ const dbHelpers = {
     return this.getLeadTimeHistory();
   },
 
+  // Update all historical baseline values to match user-defined lead time
+  updateAllBaselineLeadTimes(newBaselineValue) {
+    const stmt = db.prepare(`
+      UPDATE lead_time_history 
+      SET non_flyway_lead_time = ?,
+          timestamp = CURRENT_TIMESTAMP
+    `);
+    stmt.run(newBaselineValue);
+    return this.getLeadTimeHistory();
+  },
+
   // Deployments over time
   getDeploymentsOverTime() {
     const rows = db.prepare('SELECT * FROM deployments_over_time ORDER BY date ASC').all();

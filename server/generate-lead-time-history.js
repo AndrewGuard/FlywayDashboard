@@ -31,17 +31,16 @@ function generateHistoricalLeadTimeData() {
     const improvementFactor = 1 - Math.pow(1 - progress, 2);
     const flywayLeadTime = startingLeadTime - (startingLeadTime - currentLeadTime) * improvementFactor;
     
-    // Add some realistic variation (+/- 10%)
+    // Add some realistic variation (+/- 10%) to Flyway lead times only
     const variation = (Math.random() - 0.5) * 0.2;
     const variedFlywayLeadTime = flywayLeadTime * (1 + variation);
     
-    // Non-Flyway stays relatively constant with minor variation
-    const variedNonFlywayLeadTime = nonFlywayLeadTime * (1 + (Math.random() - 0.5) * 0.1);
+    // Non-Flyway baseline stays constant (flat line) reflecting user-defined input
     
     dataPoints.push({
       date: dateStr,
       flywayLeadTime: Math.max(0, Math.round(variedFlywayLeadTime * 10) / 10),
-      nonFlywayLeadTime: Math.max(0, Math.round(variedNonFlywayLeadTime * 10) / 10),
+      nonFlywayLeadTime: nonFlywayLeadTime, // Flat line - no variation
       timestamp: new Date().toISOString()
     });
   }
@@ -49,7 +48,7 @@ function generateHistoricalLeadTimeData() {
   console.log(`Generated ${dataPoints.length} data points from ${dataPoints[0].date} to ${dataPoints[dataPoints.length - 1].date}`);
   console.log(`\nStarting Flyway lead time: ${dataPoints[0].flywayLeadTime} days`);
   console.log(`Current Flyway lead time: ${dataPoints[dataPoints.length - 1].flywayLeadTime} days`);
-  console.log(`Non-Flyway lead time (avg): ${nonFlywayLeadTime} days`);
+  console.log(`Non-Flyway baseline (flat line): ${nonFlywayLeadTime} days`);
   console.log(`Improvement: ${((dataPoints[0].flywayLeadTime - dataPoints[dataPoints.length - 1].flywayLeadTime) / dataPoints[0].flywayLeadTime * 100).toFixed(1)}%\n`);
 
   // Clear existing data and insert new historical data
@@ -72,7 +71,7 @@ function generateHistoricalLeadTimeData() {
   console.log(`✓ Inserted ${dataPoints.length} historical data points`);
   console.log('\nThe Lead Time Over Time chart should now display a trend showing:');
   console.log('  - Flyway lead times improving from ~20 days to ~1.7 days');
-  console.log('  - Non-Flyway lead times staying relatively constant at ~20 days');
+  console.log(`  - Non-Flyway baseline as a flat line at ${nonFlywayLeadTime} days (user-defined)`);
   console.log('\nRefresh your UI to see the updated chart.');
 }
 
