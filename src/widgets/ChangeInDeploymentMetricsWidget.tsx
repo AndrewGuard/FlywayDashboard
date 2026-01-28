@@ -9,10 +9,14 @@ import {
   Divider, 
   Link,
   IconButton,
-  Tooltip
+  Tooltip,
+  Paper,
+  Chip
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { exportAsImage } from '../utils/exportUtils';
+import { calculateROI, UserMetricsInput, FlywayMetricsInput } from '../utils/roiCalculations';
 
 interface Metrics {
   flywayDeployments: number;
@@ -110,8 +114,54 @@ export default function ChangeInDeploymentMetricsWidget() {
 
       setMetrics(metricsData);
 
-      // Calculate ROI
-      calculateROI(userData, flywayData.deploymentsPerQuarter, flywayLeadTime, flywayFailureRate);
+      // Calculate ROI using shared utility
+      if (userData && Object.keys(userData).length > 0) {
+        const baselineMetrics: UserMetricsInput = {
+          deploymentsPerQuarter: Number(userData.deploymentsPerQuarter) || 10,
+          leadTimeDays: Number(userData.leadTimeDays) || 20,
+          scriptFailureRate: Number(userData.scriptFailureRate) || 5,
+          savingsPerDeployment: Number(userData.savingsPerDeployment) || 1000,
+          implementationCost: Number(userData.implementationCost) || 9751,
+          costOfDelayPerDay: Number(userData.costOfDelayPerDay) || 250,
+          dbaHoursPerDeployment: Number(userData.dbaHoursPerDeployment) || 8,
+          developerHoursPerDeployment: Number(userData.developerHoursPerDeployment) || 4,
+          dbaAnnualSalary: Number(userData.dbaAnnualSalary) || 175000,
+          developerAnnualSalary: Number(userData.developerAnnualSalary) || 155000
+        };
+
+        const currentMetrics: FlywayMetricsInput = {
+          deploymentsPerQuarter: Number(flywayData?.deploymentsPerQuarter) || 0,
+          leadTimeDays: flywayLeadTime || 0,
+          scriptFailureRate: flywayFailureRate || 0
+        };
+
+        // Only calculate if we have actual Flyway data
+        if (currentMetrics.deploymentsPerQuarter > 0 || currentMetrics.leadTimeDays > 0) {
+          try {
+            const roiResult = calculateROI(baselineMetrics, currentMetrics);
+            if (roiResult) {
+              setRoi({
+                percentage: roiResult.roiPercentage,
+                annual: roiResult.annualSavings,
+                quarterly: roiResult.totalQuarterlySavings,
+                paybackMonths: roiResult.paybackMonths,
+                leadTimeSavings: roiResult.timeSavingsPerQuarter,
+                failureSavings: roiResult.failureSavingsPerQuarter,
+                frequencySavings: roiResult.efficiencySavings
+              });
+            } else {
+              setRoi(null);
+            }
+          } catch (roiError) {
+            console.error('ROI calculation error:', roiError);
+            setRoi(null);
+          }
+        } else {
+          setRoi(null);
+        }
+      } else {
+        setRoi(null);
+      }
 
       setLoading(false);
     } catch (err) {
@@ -119,60 +169,6 @@ export default function ChangeInDeploymentMetricsWidget() {
       setError((err as Error).message || 'Failed to load metrics');
       setLoading(false);
     }
-  }
-
-  function calculateROI(userData: any, flywayDeployments: number, flywayLeadTime: number, flywayFailureRate: number) {
-    const deploymentsPerQuarter = flywayDeployments || 0;
-    const leadTimeDays = flywayLeadTime || 0;
-    const scriptFailureRate = flywayFailureRate || 0;
-    
-    const savingsPerDeployment = Number(userData?.savingsPerDeployment) || 1000;
-    const implementationCost = Number(userData?.implementationCost) || 9751;
-    const costOfDelayPerDay = Number(userData?.costOfDelayPerDay) || 250;
-    
-    const nonFlywayDeployments = Number(userData?.deploymentsPerQuarter) || 10;
-    const nonFlywayLeadTime = Number(userData?.leadTimeDays) || 20;
-    const nonFlywayFailureRate = Number(userData?.scriptFailureRate) || 5;
-
-    // If no Flyway data yet, don't calculate ROI
-    if (deploymentsPerQuarter === 0 && leadTimeDays === 0) {
-      setRoi(null);
-      return;
-    }
-
-    // Lead time savings (DORA-aligned)
-    const leadTimeReduction = Math.max(0, nonFlywayLeadTime - leadTimeDays);
-    const leadTimeSavingsPerDeployment = leadTimeReduction * costOfDelayPerDay;
-    const totalLeadTimeSavingsPerQuarter = leadTimeSavingsPerDeployment * deploymentsPerQuarter;
-    
-    // Cost savings from reduced failures
-    const failureRateReduction = Math.max(0, nonFlywayFailureRate - scriptFailureRate) / 100;
-    const failureSavingsPerQuarter = failureRateReduction * deploymentsPerQuarter * savingsPerDeployment;
-    
-    // Deployment frequency increase (DORA elite: 1+ per day)
-    const deploymentIncrease = Math.max(0, deploymentsPerQuarter - nonFlywayDeployments);
-    const frequencySavings = deploymentIncrease * (savingsPerDeployment * 0.3);
-
-    // Total quarterly savings
-    const totalQuarterlySavings = 
-      totalLeadTimeSavingsPerQuarter + 
-      failureSavingsPerQuarter + 
-      frequencySavings;
-    
-    // Annual ROI
-    const annualSavings = totalQuarterlySavings * 4;
-    const netBenefit = annualSavings - implementationCost;
-    const roiPercentage = implementationCost > 0 ? (netBenefit / implementationCost) * 100 : 0;
-
-    setRoi({
-      percentage: Math.round(roiPercentage),
-      annual: Math.round(annualSavings),
-      quarterly: Math.round(totalQuarterlySavings),
-      paybackMonths: annualSavings > 0 ? Math.ceil((implementationCost / annualSavings) * 12) : 0,
-      leadTimeSavings: Math.round(totalLeadTimeSavingsPerQuarter),
-      failureSavings: Math.round(failureSavingsPerQuarter),
-      frequencySavings: Math.round(frequencySavings)
-    });
   }
 
   const MetricCard = ({ title, flywayValue, nonFlywayValue, unit, lowerIsBetter = false }: {
@@ -263,25 +259,133 @@ export default function ChangeInDeploymentMetricsWidget() {
             {roi && (
               <>
                 <Divider sx={{ my: 3 }} />
-                <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="h4" color="primary" gutterBottom>
-                    {roi.percentage}% ROI
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary" gutterBottom>
-                    Annual savings: ${roi.annual.toLocaleString()} | Payback period: {roi.paybackMonths} months
-                  </Typography>
-                  <Link 
-                    href="/roi" 
-                    underline="hover"
-                    sx={{ 
-                      fontSize: '0.875rem',
-                      cursor: 'pointer',
-                      '&:hover': { color: 'primary.dark' }
-                    }}
-                  >
-                    How is this calculated?
-                  </Link>
+                
+                {/* ROI Summary */}
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  <Grid item xs={12} md={3}>
+                    <Paper elevation={0} sx={{ p: 2, bgcolor: 'primary.lighter', textAlign: 'center', borderLeft: 4, borderColor: 'primary.main' }}>
+                      <Typography variant="h4" color="primary.dark" fontWeight="bold">
+                        {roi.percentage}%
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Return on Investment
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Paper elevation={0} sx={{ p: 2, bgcolor: 'success.lighter', textAlign: 'center', borderLeft: 4, borderColor: 'success.main' }}>
+                      <Typography variant="h5" color="success.dark" fontWeight="bold">
+                        ${roi.annual.toLocaleString()}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Annual Savings
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Paper elevation={0} sx={{ p: 2, bgcolor: 'info.lighter', textAlign: 'center', borderLeft: 4, borderColor: 'info.main' }}>
+                      <Typography variant="h5" color="info.dark" fontWeight="bold">
+                        ${roi.quarterly.toLocaleString()}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Quarterly Savings
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} md={3}>
+                    <Paper elevation={0} sx={{ p: 2, bgcolor: 'warning.lighter', textAlign: 'center', borderLeft: 4, borderColor: 'warning.main' }}>
+                      <Typography variant="h5" color="warning.dark" fontWeight="bold">
+                        {roi.paybackMonths} mo
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Payback Period
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                </Grid>
+
+                {/* Savings Breakdown */}
+                <Box sx={{ mb: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                    <TrendingUpIcon color="primary" />
+                    <Typography variant="subtitle1" fontWeight="bold">
+                      Quarterly Savings Breakdown
+                    </Typography>
+                  </Box>
+                  
+                  <Grid container spacing={1.5}>
+                    <Grid item xs={12} md={4}>
+                      <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.50' }}>
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          Lead Time Reduction
+                        </Typography>
+                        <Typography variant="h6" color="primary.dark">
+                          ${roi.leadTimeSavings.toLocaleString()}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {roi.quarterly > 0 ? Math.round((roi.leadTimeSavings / roi.quarterly) * 100) : 0}% of total savings
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.50' }}>
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          Failure Rate Reduction
+                        </Typography>
+                        <Typography variant="h6" color="success.dark">
+                          ${roi.failureSavings.toLocaleString()}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {roi.quarterly > 0 ? Math.round((roi.failureSavings / roi.quarterly) * 100) : 0}% of total savings
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.50' }}>
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          Deployment Efficiency
+                        </Typography>
+                        <Typography variant="h6" color="info.dark">
+                          ${roi.frequencySavings.toLocaleString()}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {roi.quarterly > 0 ? Math.round((roi.frequencySavings / roi.quarterly) * 100) : 0}% of total savings
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                  </Grid>
                 </Box>
+
+                {/* Call to Action */}
+                <Paper elevation={0} sx={{ p: 2, mt: 2, bgcolor: 'primary.lighter', borderRadius: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+                    <Box>
+                      <Typography variant="body2" color="text.primary" fontWeight="bold">
+                        Want to see the full ROI calculation?
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Customize your metrics and view detailed formulas, DORA benchmarks, and savings projections
+                      </Typography>
+                    </Box>
+                    <Link 
+                      href="/roi" 
+                      underline="none"
+                    >
+                      <Chip 
+                        label="View Full ROI Calculator" 
+                        color="primary" 
+                        clickable
+                        sx={{ 
+                          fontWeight: 'bold',
+                          fontSize: '0.95rem',
+                          py: 2.5,
+                          px: 1,
+                          height: 'auto'
+                        }}
+                      />
+                    </Link>
+                  </Box>
+                </Paper>
               </>
             )}
           </>

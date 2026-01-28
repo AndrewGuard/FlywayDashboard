@@ -29,35 +29,13 @@ import {
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import InfoIcon from '@mui/icons-material/Info';
 import { exportAsImage } from './utils/exportUtils';
+import { calculateROI, UserMetricsInput, ROIBreakdown } from './utils/roiCalculations';
 
-interface UserMetrics {
-  deploymentsPerQuarter: number;
-  leadTimeDays: number;
-  scriptFailureRate: number;
-  savingsPerDeployment: number;
-  implementationCost: number;
-  costOfDelayPerDay: number;
-  dbaHoursPerDeployment: number;
-  developerHoursPerDeployment: number;
-  dbaAnnualSalary: number;
-  developerAnnualSalary: number;
-}
-
-interface ROIBreakdown {
-  leadTimeReduction: number;
-  timeSavingsPerQuarter: number;
-  failureRateReduction: number;
-  failureSavingsPerQuarter: number;
-  deploymentIncrease: number;
-  efficiencySavings: number;
-  laborSavingsPerQuarter: number;
-  totalQuarterlySavings: number;
-  annualSavings: number;
-  netBenefit: number;
-  roiPercentage: number;
-  paybackMonths: number;
-}
+// Keep local interface for compatibility with existing form state
+interface UserMetrics extends UserMetricsInput {}
 
 const RoiCalculationPage: React.FC = () => {
   const pageRef = useRef<HTMLDivElement>(null);
@@ -84,6 +62,8 @@ const RoiCalculationPage: React.FC = () => {
   const [roi, setRoi] = useState<ROIBreakdown | null>(null);
   const [saved, setSaved] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showCalculationInfo, setShowCalculationInfo] = useState(false);
 
   const handleExport = async () => {
     if (!pageRef.current) return;
@@ -142,6 +122,12 @@ const RoiCalculationPage: React.FC = () => {
   const handleBusinessSizeChange = (size: 'small' | 'medium' | 'large') => {
     setBusinessSize(size);
     setUserMetrics(getBusinessSizeDefaults(size));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleMetricChange = (updates: Partial<UserMetrics>) => {
+    setUserMetrics({ ...userMetrics, ...updates });
+    setHasUnsavedChanges(true);
   };
 
   useEffect(() => {
@@ -150,7 +136,7 @@ const RoiCalculationPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    calculateROI();
+    calculateROIMetrics();
   }, [userMetrics, flywayMetrics]);
 
   async function loadUserMetrics() {
@@ -221,61 +207,9 @@ const RoiCalculationPage: React.FC = () => {
     }
   }
 
-  function calculateROI() {
-    const nonFlywayDep = userMetrics.deploymentsPerQuarter;
-    const nonFlywayLead = userMetrics.leadTimeDays;
-    const nonFlywayFail = userMetrics.scriptFailureRate;
-    const savingsPerDep = userMetrics.savingsPerDeployment;
-    const implCost = userMetrics.implementationCost;
-    const costOfDelay = userMetrics.costOfDelayPerDay;
-
-    const flywayDep = flywayMetrics.deploymentsPerQuarter;
-    const flywayLead = flywayMetrics.leadTimeDays;
-    const flywayFail = flywayMetrics.scriptFailureRate;
-
-    // Lead time savings (DORA-aligned)
-    const leadTimeReduction = Math.max(0, nonFlywayLead - flywayLead);
-    const leadTimeSavingsPerDeployment = leadTimeReduction * costOfDelay;
-    const timeSavingsPerQuarter = leadTimeSavingsPerDeployment * flywayDep;
-
-    // Cost savings from reduced failures
-    const failureRateReduction = Math.max(0, nonFlywayFail - flywayFail) / 100;
-    const failureSavingsPerQuarter = failureRateReduction * flywayDep * savingsPerDep;
-
-    // Deployment efficiency savings
-    const deploymentIncrease = Math.max(0, flywayDep - nonFlywayDep);
-    const efficiencySavings = deploymentIncrease * (savingsPerDep * 0.3);
-
-    // DBA and developer time savings (80% time reduction with automation)
-    const dbaHourlyRate = userMetrics.dbaAnnualSalary / 2080;
-    const devHourlyRate = userMetrics.developerAnnualSalary / 2080;
-    const dbaTimeSavingsPerDeployment = userMetrics.dbaHoursPerDeployment * 0.8 * dbaHourlyRate;
-    const devTimeSavingsPerDeployment = userMetrics.developerHoursPerDeployment * 0.8 * devHourlyRate;
-    const laborSavingsPerQuarter = (dbaTimeSavingsPerDeployment + devTimeSavingsPerDeployment) * flywayDep;
-
-    // Total quarterly savings
-    const totalQuarterlySavings = timeSavingsPerQuarter + failureSavingsPerQuarter + efficiencySavings + laborSavingsPerQuarter;
-
-    // Annual ROI
-    const annualSavings = totalQuarterlySavings * 4;
-    const netBenefit = annualSavings - implCost;
-    const roiPercentage = implCost > 0 ? (netBenefit / implCost) * 100 : 0;
-    const paybackMonths = annualSavings > 0 ? Math.ceil((implCost / annualSavings) * 12) : 0;
-
-    setRoi({
-      leadTimeReduction,
-      timeSavingsPerQuarter,
-      failureRateReduction: failureRateReduction * 100,
-      failureSavingsPerQuarter,
-      deploymentIncrease,
-      efficiencySavings,
-      laborSavingsPerQuarter,
-      totalQuarterlySavings,
-      annualSavings,
-      netBenefit,
-      roiPercentage: Math.round(roiPercentage),
-      paybackMonths
-    });
+  function calculateROIMetrics() {
+    const roiResult = calculateROI(userMetrics, flywayMetrics);
+    setRoi(roiResult);
   }
 
   async function handleSave() {
@@ -288,6 +222,7 @@ const RoiCalculationPage: React.FC = () => {
 
       if (res.ok) {
         setSaved(true);
+        setHasUnsavedChanges(false);
         setTimeout(() => setSaved(false), 3000);
       } else {
         throw new Error('Failed to save');
@@ -312,6 +247,100 @@ const RoiCalculationPage: React.FC = () => {
       <Typography variant="body1" color="text.secondary" paragraph>
         Configure your baseline (pre-Flyway) metrics to calculate the return on investment from adopting Flyway.
       </Typography>
+
+      {saved && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          Configuration saved successfully!
+        </Alert>
+      )}
+
+      {hasUnsavedChanges && (
+        <Alert 
+          severity="warning" 
+          sx={{ mb: 3 }}
+          icon={<InfoIcon />}
+        >
+          <strong>You have unsaved changes.</strong> Click the "Save Configuration" button at the bottom of the form to apply your changes to the ROI calculation.
+        </Alert>
+      )}
+
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          p: 3, 
+          mb: 3, 
+          bgcolor: 'primary.lighter', 
+          borderLeft: 6, 
+          borderColor: 'primary.main',
+          cursor: 'pointer',
+          transition: 'all 0.2s'
+        }}
+        onClick={() => setShowCalculationInfo(!showCalculationInfo)}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <HelpOutlineIcon color="primary" sx={{ fontSize: 28 }} />
+            <Typography variant="h6" color="primary.dark">
+              How is ROI Calculated?
+            </Typography>
+          </Box>
+          <ExpandMoreIcon 
+            sx={{ 
+              transform: showCalculationInfo ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 0.3s'
+            }} 
+          />
+        </Box>
+        {showCalculationInfo && (
+          <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              This calculator uses <strong>DORA (DevOps Research and Assessment)</strong> metrics — the industry-standard framework for measuring software delivery performance. We calculate ROI based on four key components:
+            </Typography>
+            
+            <TableContainer component={Paper} elevation={0} sx={{ mb: 2, bgcolor: 'background.paper' }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell><strong>Component</strong></TableCell>
+                    <TableCell><strong>Calculation Method</strong></TableCell>
+                    <TableCell align="right"><strong>Typical Impact</strong></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  <TableRow>
+                    <TableCell><strong>1. Lead Time Savings</strong></TableCell>
+                    <TableCell>Days reduced × cost of delay per day × deployments</TableCell>
+                    <TableCell align="right">40-60% of ROI</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell><strong>2. Failure Rate Savings</strong></TableCell>
+                    <TableCell>Percentage reduction × deployments × cost per failure</TableCell>
+                    <TableCell align="right">15-25% of ROI</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell><strong>3. Deployment Efficiency</strong></TableCell>
+                    <TableCell>Additional deployments enabled × 30% of savings per deployment</TableCell>
+                    <TableCell align="right">10-20% of ROI</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell><strong>4. Labor Savings</strong></TableCell>
+                    <TableCell>DBA + developer time saved (80% reduction) × hourly rates × deployments</TableCell>
+                    <TableCell align="right">15-25% of ROI</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            <Typography variant="body2" color="text.secondary" paragraph>
+              <strong>Formula:</strong> ROI % = (Annual Savings - Implementation Cost) / Implementation Cost × 100
+            </Typography>
+
+            <Typography variant="body2" color="text.secondary">
+              Based on <Link href="https://dora.dev/research/2023/dora-report/" target="_blank" rel="noopener">2023 State of DevOps Report</Link> and industry benchmarks. Learn more about <Link href="https://dora.dev/guides/dora-metrics-four-keys/" target="_blank" rel="noopener">DORA's Four Keys</Link>.
+            </Typography>
+          </Box>
+        )}
+      </Paper>
 
       <Paper elevation={0} sx={{ p: 3, mb: 3, bgcolor: 'info.lighter', borderLeft: 4, borderColor: 'info.main' }}>
         <Typography variant="h6" gutterBottom>
@@ -438,7 +467,7 @@ const RoiCalculationPage: React.FC = () => {
                     label="Deployments per Quarter"
                     type="number"
                     value={userMetrics.deploymentsPerQuarter}
-                    onChange={(e) => setUserMetrics({ ...userMetrics, deploymentsPerQuarter: Number(e.target.value) })}
+                    onChange={(e) => handleMetricChange({ deploymentsPerQuarter: Number(e.target.value) })}
                     helperText="How many production deployments did you complete quarterly before Flyway?"
                   />
                 </Grid>
@@ -448,7 +477,7 @@ const RoiCalculationPage: React.FC = () => {
                     label="Lead Time (days)"
                     type="number"
                     value={userMetrics.leadTimeDays}
-                    onChange={(e) => setUserMetrics({ ...userMetrics, leadTimeDays: Number(e.target.value) })}
+                    onChange={(e) => handleMetricChange({ leadTimeDays: Number(e.target.value) })}
                     helperText="Average days from code commit to production (DORA metric)"
                   />
                 </Grid>
@@ -617,7 +646,7 @@ const RoiCalculationPage: React.FC = () => {
                     label="Script Failure Rate (%)"
                     type="number"
                     value={userMetrics.scriptFailureRate}
-                    onChange={(e) => setUserMetrics({ ...userMetrics, scriptFailureRate: Number(e.target.value) })}
+                    onChange={(e) => handleMetricChange({ scriptFailureRate: Number(e.target.value) })}
                     helperText="Percentage of deployments that required rollback or caused incidents"
                   />
                 </Grid>
@@ -627,7 +656,7 @@ const RoiCalculationPage: React.FC = () => {
                     label="Cost of Delay per Day ($)"
                     type="number"
                     value={userMetrics.costOfDelayPerDay}
-                    onChange={(e) => setUserMetrics({ ...userMetrics, costOfDelayPerDay: Number(e.target.value) })}
+                    onChange={(e) => handleMetricChange({ costOfDelayPerDay: Number(e.target.value) })}
                     helperText="Business value lost per day features/fixes are delayed reaching production"
                   />
                   <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5, pl: 1.75 }}>
@@ -640,7 +669,7 @@ const RoiCalculationPage: React.FC = () => {
                     label="Savings per Deployment ($)"
                     type="number"
                     value={userMetrics.savingsPerDeployment}
-                    onChange={(e) => setUserMetrics({ ...userMetrics, savingsPerDeployment: Number(e.target.value) })}
+                    onChange={(e) => handleMetricChange({ savingsPerDeployment: Number(e.target.value) })}
                     helperText="Cost avoided per successful deployment (downtime, remediation, support tickets)"
                   />
                 </Grid>
@@ -650,7 +679,7 @@ const RoiCalculationPage: React.FC = () => {
                     label="DBA Hours per Deployment (Pre-Flyway)"
                     type="number"
                     value={userMetrics.dbaHoursPerDeployment}
-                    onChange={(e) => setUserMetrics({ ...userMetrics, dbaHoursPerDeployment: Number(e.target.value) })}
+                    onChange={(e) => handleMetricChange({ dbaHoursPerDeployment: Number(e.target.value) })}
                     helperText="Manual deployment time: planning, review, execution, validation (typically 6-12 hours)"
                   />
                 </Grid>
@@ -660,7 +689,7 @@ const RoiCalculationPage: React.FC = () => {
                     label="Developer Hours per Deployment (Pre-Flyway)"
                     type="number"
                     value={userMetrics.developerHoursPerDeployment}
-                    onChange={(e) => setUserMetrics({ ...userMetrics, developerHoursPerDeployment: Number(e.target.value) })}
+                    onChange={(e) => handleMetricChange({ developerHoursPerDeployment: Number(e.target.value) })}
                     helperText="Script writing, testing, coordination time (typically 3-6 hours)"
                   />
                 </Grid>
@@ -670,7 +699,7 @@ const RoiCalculationPage: React.FC = () => {
                     label="DBA Annual Salary ($)"
                     type="number"
                     value={userMetrics.dbaAnnualSalary}
-                    onChange={(e) => setUserMetrics({ ...userMetrics, dbaAnnualSalary: Number(e.target.value) })}
+                    onChange={(e) => handleMetricChange({ dbaAnnualSalary: Number(e.target.value) })}
                     helperText="Fully-loaded cost including benefits (US avg: $150K-200K for mid-level)"
                   />
                 </Grid>
@@ -680,7 +709,7 @@ const RoiCalculationPage: React.FC = () => {
                     label="Developer Annual Salary ($)"
                     type="number"
                     value={userMetrics.developerAnnualSalary}
-                    onChange={(e) => setUserMetrics({ ...userMetrics, developerAnnualSalary: Number(e.target.value) })}
+                    onChange={(e) => handleMetricChange({ developerAnnualSalary: Number(e.target.value) })}
                     helperText="Fully-loaded cost including benefits (US avg: $130K-180K for mid-level)"
                   />
                 </Grid>
@@ -690,14 +719,42 @@ const RoiCalculationPage: React.FC = () => {
                     label="Implementation Cost ($)"
                     type="number"
                     value={userMetrics.implementationCost}
-                    onChange={(e) => setUserMetrics({ ...userMetrics, implementationCost: Number(e.target.value) })}
+                    onChange={(e) => handleMetricChange({ implementationCost: Number(e.target.value) })}
                     helperText="Total investment: licenses, consulting, training, internal setup effort"
                   />
                 </Grid>
                 <Grid item xs={12}>
-                  <Button variant="contained" fullWidth onClick={handleSave}>
-                    Save Configuration
+                  <Button 
+                    variant="contained" 
+                    fullWidth 
+                    onClick={handleSave}
+                    size="large"
+                    sx={{
+                      py: 1.5,
+                      fontSize: '1.1rem',
+                      fontWeight: 'bold',
+                      bgcolor: hasUnsavedChanges ? 'warning.main' : 'primary.main',
+                      '&:hover': {
+                        bgcolor: hasUnsavedChanges ? 'warning.dark' : 'primary.dark',
+                      },
+                      animation: hasUnsavedChanges ? 'pulse 2s infinite' : 'none',
+                      '@keyframes pulse': {
+                        '0%, 100%': {
+                          boxShadow: '0 0 0 0 rgba(237, 108, 2, 0.7)'
+                        },
+                        '50%': {
+                          boxShadow: '0 0 0 8px rgba(237, 108, 2, 0)'
+                        }
+                      }
+                    }}
+                  >
+                    {hasUnsavedChanges ? '⚠️ Save Configuration to Apply Changes' : 'Save Configuration'}
                   </Button>
+                  {hasUnsavedChanges && (
+                    <Typography variant="caption" color="warning.dark" display="block" sx={{ mt: 1, textAlign: 'center', fontWeight: 'bold' }}>
+                      Changes will not affect ROI calculation until saved
+                    </Typography>
+                  )}
                 </Grid>
               </Grid>
             </CardContent>
