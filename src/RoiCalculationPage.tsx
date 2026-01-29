@@ -66,6 +66,7 @@ const RoiCalculationPage: React.FC = () => {
   const [exporting, setExporting] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showCalculationInfo, setShowCalculationInfo] = useState(false);
+  const [implementationCostPct, setImplementationCostPct] = useState<number>(10);
 
   const handleExport = async () => {
     if (!pageRef.current) return;
@@ -139,7 +140,7 @@ const RoiCalculationPage: React.FC = () => {
 
   useEffect(() => {
     calculateROIMetrics();
-  }, [userMetrics, flywayMetrics, roiParameters]);
+  }, [userMetrics, flywayMetrics, roiParameters, implementationCostPct]);
 
   async function loadUserMetrics() {
     try {
@@ -227,7 +228,13 @@ const RoiCalculationPage: React.FC = () => {
   }
 
   function calculateROIMetrics() {
-    const roiResult = calculateROI(userMetrics, flywayMetrics, roiParameters);
+    // Calculate annual savings first to determine implementation cost
+    const preliminaryROI = calculateROI(userMetrics, flywayMetrics, roiParameters);
+    const actualImplementationCost = preliminaryROI.annualSavings * (implementationCostPct / 100);
+    
+    // Recalculate with actual implementation cost
+    const finalMetrics = { ...userMetrics, implementationCost: actualImplementationCost };
+    const roiResult = calculateROI(finalMetrics, flywayMetrics, roiParameters);
     setRoi(roiResult);
   }
 
@@ -704,6 +711,42 @@ const RoiCalculationPage: React.FC = () => {
                     Value of additional deployments (50% = each deployment worth 50% of savings)
                   </Typography>
                 </Grid>
+
+                <Grid item xs={12}>
+                  <Divider sx={{ my: 1 }} />
+                  <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
+                    Cost of Implementation
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Implementation Cost: {implementationCostPct}% of Annual Savings
+                  </Typography>
+                  <Box sx={{ px: 1 }}>  
+                    <input
+                      type="range"
+                      min="0"
+                      max="50"
+                      step="1"
+                      value={implementationCostPct}
+                      onChange={(e) => {
+                        setImplementationCostPct(Number(e.target.value));
+                        setHasUnsavedChanges(true);
+                      }}
+                      style={{ width: '100%' }}
+                    />
+                  </Box>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                    Implementation cost as percentage of annual savings (licenses, consulting, training, setup)
+                    {roi && (
+                      <>
+                        <br />
+                        <strong>Calculated cost: ${(roi.annualSavings * (implementationCostPct / 100)).toLocaleString()}</strong>
+                      </>
+                    )}
+                  </Typography>
+                </Grid>
               </Grid>
             </CardContent>
           </Card>
@@ -985,16 +1028,6 @@ const RoiCalculationPage: React.FC = () => {
                     value={userMetrics.developerAnnualSalary}
                     onChange={(e) => handleMetricChange({ developerAnnualSalary: Number(e.target.value) })}
                     helperText="Fully-loaded cost including benefits (US avg: $130K-180K for mid-level)"
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    label="Implementation Cost ($)"
-                    type="number"
-                    value={userMetrics.implementationCost}
-                    onChange={(e) => handleMetricChange({ implementationCost: Number(e.target.value) })}
-                    helperText="Total investment: licenses, consulting, training, internal setup effort"
                   />
                 </Grid>
                 <Grid item xs={12}>
