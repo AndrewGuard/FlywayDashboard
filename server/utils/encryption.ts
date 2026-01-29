@@ -1,6 +1,6 @@
-const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
+import * as crypto from 'crypto';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Encryption configuration
 const ALGORITHM = 'aes-256-gcm';
@@ -12,7 +12,7 @@ const AUTH_TAG_LENGTH = 16;
  * Initialize encryption - auto-generates key if needed
  * Call this once on server startup BEFORE dotenv.config()
  */
-function initializeEncryption() {
+export function initializeEncryption(): boolean {
   const envPath = path.join(__dirname, '../.env');
   let created = false;
   
@@ -65,8 +65,8 @@ JDBC_ENCRYPTION_KEY=${key}\n`;
  * Get or generate encryption key from environment
  * In production, this should come from a secure source (Azure Key Vault, AWS Secrets Manager, etc.)
  */
-function getEncryptionKey() {
-  let key = process.env.JDBC_ENCRYPTION_KEY;
+export function getEncryptionKey(): Buffer {
+  const key = process.env.JDBC_ENCRYPTION_KEY;
   
   if (!key) {
     throw new Error('JDBC_ENCRYPTION_KEY not found in environment - server initialization failed');
@@ -78,10 +78,10 @@ function getEncryptionKey() {
 
 /**
  * Encrypt JDBC connection data
- * @param {Object} data - The connection data to encrypt (prod/nonProd structure)
- * @returns {string} Base64 encoded encrypted data with IV and auth tag
+ * @param data - The connection data to encrypt (prod/nonProd structure)
+ * @returns Base64 encoded encrypted data with IV and auth tag
  */
-function encryptJdbcData(data) {
+export function encryptJdbcData(data: any): string {
   try {
     const key = getEncryptionKey();
     const iv = crypto.randomBytes(IV_LENGTH);
@@ -102,17 +102,18 @@ function encryptJdbcData(data) {
     
     return combined.toString('base64');
   } catch (error) {
-    console.error('Encryption error:', error.message);
+    const err = error as Error;
+    console.error('Encryption error:', err.message);
     throw new Error('Failed to encrypt JDBC data');
   }
 }
 
 /**
  * Decrypt JDBC connection data
- * @param {string} encryptedData - Base64 encoded encrypted data
- * @returns {Object} Decrypted connection data (prod/nonProd structure)
+ * @param encryptedData - Base64 encoded encrypted data
+ * @returns Decrypted connection data (prod/nonProd structure)
  */
-function decryptJdbcData(encryptedData) {
+export function decryptJdbcData(encryptedData: string): any {
   try {
     const key = getEncryptionKey();
     const combined = Buffer.from(encryptedData, 'base64');
@@ -130,17 +131,18 @@ function decryptJdbcData(encryptedData) {
     
     return JSON.parse(decrypted);
   } catch (error) {
-    console.error('Decryption error:', error.message);
+    const err = error as Error;
+    console.error('Decryption error:', err.message);
     throw new Error('Failed to decrypt JDBC data - key may be incorrect or data corrupted');
   }
 }
 
 /**
  * Check if data is encrypted (starts with base64 header)
- * @param {string} data - The data to check
- * @returns {boolean}
+ * @param data - The data to check
+ * @returns boolean
  */
-function isEncrypted(data) {
+export function isEncrypted(data: string): boolean {
   // Encrypted data will be base64 and much longer than JSON
   // Simple heuristic: encrypted data won't start with { or [
   const trimmed = data.trim();
@@ -149,17 +151,8 @@ function isEncrypted(data) {
 
 /**
  * Generate a new encryption key (for initial setup)
- * @returns {string} Hex-encoded key
+ * @returns Hex-encoded key
  */
-function generateEncryptionKey() {
+export function generateEncryptionKey(): string {
   return crypto.randomBytes(KEY_LENGTH).toString('hex');
 }
-
-module.exports = {
-  initializeEncryption,
-  encryptJdbcData,
-  decryptJdbcData,
-  isEncrypted,
-  generateEncryptionKey,
-  getEncryptionKey
-};

@@ -1,8 +1,19 @@
-const Database = require('better-sqlite3');
-const path = require('path');
+import Database from 'better-sqlite3';
+import * as path from 'path';
+import {
+  UserMetrics,
+  LeadTimeHistory,
+  LeadTimeHistoryPoint,
+  DeploymentsOverTime,
+  DeploymentPoint,
+  LeadTimesData,
+  LeadTime,
+  MigrationLeadTime
+} from '../types';
 
 const DB_PATH = path.join(__dirname, 'flyway-dashboard.db');
-const db = new Database(DB_PATH);
+const db: Database.Database = new Database(DB_PATH);
+export { db };
 
 // Enable foreign keys
 db.pragma('foreign_keys = ON');
@@ -74,11 +85,60 @@ db.exec(`
   INSERT OR IGNORE INTO user_defined_metrics (id) VALUES (1);
 `);
 
+interface UserMetricsRow {
+  business_size: string;
+  deployments_per_quarter: number;
+  lead_time_days: number;
+  script_failure_rate: number;
+  savings_per_deployment: number;
+  implementation_cost: number;
+  cost_of_delay_per_day: number;
+  dba_hours_per_deployment: number;
+  developer_hours_per_deployment: number;
+  dba_annual_salary: number;
+  developer_annual_salary: number;
+  updated_at: string;
+}
+
+interface LeadTimeHistoryRow {
+  date: string;
+  flyway_lead_time: number;
+  non_flyway_lead_time: number;
+  timestamp: string;
+}
+
+interface DeploymentRow {
+  date: string;
+  flyway_deployments: number;
+  non_flyway_deployments: number;
+  timestamp: string;
+}
+
+interface LeadTimeRow {
+  script: string;
+  version: string;
+  script_date: string;
+  deploy_date: string;
+  lead_time_days: number;
+  original_lead_time: number;
+  database: string | null;
+  environment: string | null;
+  db_type: string | null;
+}
+
+interface MigrationLeadTimeRow {
+  script: string;
+  version: string;
+  script_date: string;
+  deploy_date: string;
+  lead_time_days: number;
+}
+
 // Helper functions
-const dbHelpers = {
+export const dbHelpers = {
   // User-defined metrics
-  getUserMetrics() {
-    const row = db.prepare('SELECT * FROM user_defined_metrics WHERE id = 1').get();
+  getUserMetrics(): UserMetrics | null {
+    const row = db.prepare('SELECT * FROM user_defined_metrics WHERE id = 1').get() as UserMetricsRow | undefined;
     if (!row) return null;
     return {
       businessSize: row.business_size,
@@ -96,7 +156,7 @@ const dbHelpers = {
     };
   },
 
-  updateUserMetrics(metrics) {
+  updateUserMetrics(metrics: Partial<UserMetrics>): UserMetrics | null {
     const stmt = db.prepare(`
       UPDATE user_defined_metrics SET
         business_size = ?,
@@ -130,8 +190,8 @@ const dbHelpers = {
   },
 
   // Lead time history
-  getLeadTimeHistory() {
-    const rows = db.prepare('SELECT * FROM lead_time_history ORDER BY date ASC').all();
+  getLeadTimeHistory(): LeadTimeHistory {
+    const rows = db.prepare('SELECT * FROM lead_time_history ORDER BY date ASC').all() as LeadTimeHistoryRow[];
     return {
       dataPoints: rows.map(r => ({
         date: r.date,
@@ -142,7 +202,7 @@ const dbHelpers = {
     };
   },
 
-  upsertLeadTimeHistory(point) {
+  upsertLeadTimeHistory(point: LeadTimeHistoryPoint): LeadTimeHistory {
     const stmt = db.prepare(`
       INSERT INTO lead_time_history (date, flyway_lead_time, non_flyway_lead_time, timestamp)
       VALUES (?, ?, ?, ?)
@@ -161,7 +221,7 @@ const dbHelpers = {
   },
 
   // Update all historical baseline values to match user-defined lead time
-  updateAllBaselineLeadTimes(newBaselineValue) {
+  updateAllBaselineLeadTimes(newBaselineValue: number): LeadTimeHistory {
     const stmt = db.prepare(`
       UPDATE lead_time_history 
       SET non_flyway_lead_time = ?,
@@ -172,8 +232,8 @@ const dbHelpers = {
   },
 
   // Deployments over time
-  getDeploymentsOverTime() {
-    const rows = db.prepare('SELECT * FROM deployments_over_time ORDER BY date ASC').all();
+  getDeploymentsOverTime(): DeploymentsOverTime {
+    const rows = db.prepare('SELECT * FROM deployments_over_time ORDER BY date ASC').all() as DeploymentRow[];
     return {
       dataPoints: rows.map(r => ({
         date: r.date,
@@ -184,7 +244,7 @@ const dbHelpers = {
     };
   },
 
-  upsertDeploymentsOverTime(point) {
+  upsertDeploymentsOverTime(point: DeploymentPoint): DeploymentsOverTime {
     const stmt = db.prepare(`
       INSERT INTO deployments_over_time (date, flyway_deployments, non_flyway_deployments, timestamp)
       VALUES (?, ?, ?, ?)
@@ -203,8 +263,8 @@ const dbHelpers = {
   },
 
   // Lead times (migration calculations)
-  getLeadTimes() {
-    const rows = db.prepare('SELECT * FROM lead_times ORDER BY deploy_date DESC').all();
+  getLeadTimes(): LeadTimesData {
+    const rows = db.prepare('SELECT * FROM lead_times ORDER BY deploy_date DESC').all() as LeadTimeRow[];
     return {
       leadTimes: rows.map(r => ({
         script: r.script,
@@ -213,20 +273,20 @@ const dbHelpers = {
         deployDate: r.deploy_date,
         leadTimeDays: r.lead_time_days,
         originalLeadTime: r.original_lead_time,
-        database: r.database,
-        environment: r.environment,
-        dbType: r.db_type
+        database: r.database ?? undefined,
+        environment: r.environment ?? undefined,
+        dbType: r.db_type ?? undefined
       }))
     };
   },
 
-  clearAndInsertLeadTimes(leadTimes) {
+  clearAndInsertLeadTimes(leadTimes: LeadTime[]): LeadTimesData {
     db.prepare('DELETE FROM lead_times').run();
     const stmt = db.prepare(`
       INSERT INTO lead_times (script, version, script_date, deploy_date, lead_time_days, original_lead_time, database, environment, db_type, timestamp)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    const insertMany = db.transaction((items) => {
+    const insertMany = db.transaction((items: LeadTime[]) => {
       for (const lt of items) {
         stmt.run(
           lt.script,
@@ -247,8 +307,8 @@ const dbHelpers = {
   },
 
   // Migration lead times cache
-  getMigrationLeadTimes() {
-    const rows = db.prepare('SELECT * FROM migration_lead_times ORDER BY deploy_date DESC').all();
+  getMigrationLeadTimes(): MigrationLeadTime[] {
+    const rows = db.prepare('SELECT * FROM migration_lead_times ORDER BY deploy_date DESC').all() as MigrationLeadTimeRow[];
     return rows.map(r => ({
       script: r.script,
       version: r.version,
@@ -258,17 +318,17 @@ const dbHelpers = {
     }));
   },
 
-  clearAndInsertMigrationLeadTimes(leadTimes) {
+  clearAndInsertMigrationLeadTimes(leadTimes: MigrationLeadTime[]): MigrationLeadTime[] {
     db.prepare('DELETE FROM migration_lead_times').run();
     const stmt = db.prepare(`
       INSERT INTO migration_lead_times (script, version, script_date, deploy_date, lead_time_days, timestamp)
       VALUES (?, ?, ?, ?, ?, ?)
     `);
-    const insertMany = db.transaction((items) => {
+    const insertMany = db.transaction((items: MigrationLeadTime[]) => {
       for (const lt of items) {
         stmt.run(
           lt.script,
-          lt.version,
+          lt.version ?? null,
           lt.scriptDate,
           lt.deployDate,
           lt.leadTimeDays ?? 0,
@@ -280,5 +340,3 @@ const dbHelpers = {
     return this.getMigrationLeadTimes();
   }
 };
-
-module.exports = { db, dbHelpers };

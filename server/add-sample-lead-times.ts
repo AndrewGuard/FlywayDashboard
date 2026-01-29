@@ -1,7 +1,8 @@
-const { dbHelpers } = require('./db/database');
+import { dbHelpers } from './db/database';
+import { LeadTime } from './types';
 
 // Add sample migrations with realistic lead times for demonstration
-function addSampleLeadTimes() {
+function addSampleLeadTimes(): void {
   console.log('Adding sample migrations with longer lead times...\n');
 
   // Get current lead times
@@ -11,8 +12,7 @@ function addSampleLeadTimes() {
   console.log(`Current migrations: ${currentLeadTimes.length}`);
 
   // Create sample migrations with various lead times across different platforms
-  const today = new Date();
-  const sampleMigrations = [
+  const sampleMigrations: LeadTime[] = [
     {
       script: 'V100_20251201120000__feature_user_profile.sql',
       version: '100.20251201120000',
@@ -100,50 +100,25 @@ function addSampleLeadTimes() {
       database: 'inventory_prod',
       environment: 'prod',
       dbType: 'Oracle'
-    },
-    {
-      script: 'V108_20251215080000__optimize_search.sql',
-      version: '108.20251215080000',
-      scriptDate: new Date('2025-12-15T08:00:00Z').toISOString(),
-      deployDate: new Date('2025-12-16T16:00:00Z').toISOString(),
-      leadTimeDays: 1.33,
-      originalLeadTime: 1.33,
-      database: 'ecommerce_prod',
-      environment: 'prod',
-      dbType: 'MySQL'
-    },
-    {
-      script: 'V109_20251216100000__add_product_categories.sql',
-      version: '109.20251216100000',
-      scriptDate: new Date('2025-12-16T10:00:00Z').toISOString(),
-      deployDate: new Date('2025-12-17T13:00:00Z').toISOString(),
-      leadTimeDays: 1.13,
-      originalLeadTime: 1.13,
-      database: 'ecommerce_prod',
-      environment: 'prod',
-      dbType: 'MySQL'
     }
   ];
 
-  // Combine with existing migrations
-  const allLeadTimes = [...currentLeadTimes, ...sampleMigrations];
+  console.log(`Adding ${sampleMigrations.length} sample migrations...\n`);
 
-  console.log(`\nSample migrations to add: ${sampleMigrations.length}`);
-  console.log('\nSample lead times:');
-  sampleMigrations.forEach(m => {
-    console.log(`  ${m.script}: ${m.leadTimeDays.toFixed(2)} days`);
-  });
+  // Clear existing lead times and insert samples
+  const result = dbHelpers.clearAndInsertLeadTimes(sampleMigrations);
 
-  // Calculate new average
-  const avgLeadTime = allLeadTimes.reduce((sum, m) => sum + m.leadTimeDays, 0) / allLeadTimes.length;
-  console.log(`\nNew average lead time: ${avgLeadTime.toFixed(2)} days`);
-
-  // Save to database
-  dbHelpers.clearAndInsertLeadTimes(allLeadTimes);
-  
-  console.log(`\n✓ Added ${sampleMigrations.length} sample migrations`);
-  console.log(`✓ Total migrations now: ${allLeadTimes.length}`);
-  console.log('\nYou can now refresh the UI to see the updated lead times.');
+  console.log(`✓ Successfully added ${result.leadTimes.length} migrations`);
+  console.log('\nSample lead time statistics:');
+  const times = sampleMigrations.map(m => m.leadTimeDays);
+  const avg = times.reduce((a, b) => a + b, 0) / times.length;
+  const min = Math.min(...times);
+  const max = Math.max(...times);
+  console.log(`  Average: ${avg.toFixed(2)} days`);
+  console.log(`  Range: ${min.toFixed(2)} - ${max.toFixed(2)} days`);
+  console.log('\nDatabases represented:');
+  const dbs = [...new Set(sampleMigrations.map(m => `${m.database} (${m.dbType})`))];
+  dbs.forEach(db => console.log(`  - ${db}`));
 }
 
 // Run the script
@@ -151,6 +126,7 @@ try {
   addSampleLeadTimes();
   process.exit(0);
 } catch (e) {
-  console.error('Error adding sample data:', e);
+  const err = e as Error;
+  console.error('Error adding sample lead times:', err);
   process.exit(1);
 }

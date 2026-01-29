@@ -1,9 +1,10 @@
-const express = require('express');
-const router = express.Router();
-const { dbHelpers } = require('../db/database');
+import { Router, Request, Response } from 'express';
+import { dbHelpers } from '../db/database';
+
+const router = Router();
 
 // GET user-defined metrics
-router.get('/api/user-defined-metrics', (req, res) => {
+router.get('/api/user-defined-metrics', (_req: Request, res: Response) => {
   try {
     const metrics = dbHelpers.getUserMetrics();
     res.json(metrics || {
@@ -20,13 +21,14 @@ router.get('/api/user-defined-metrics', (req, res) => {
       developerAnnualSalary: 155000
     });
   } catch (e) {
-    console.error('Get user metrics error:', e);
+    const err = e as Error;
+    console.error('Get user metrics error:', err);
     res.status(500).json({ message: 'Failed to get user metrics' });
   }
 });
 
 // POST/PUT user-defined metrics
-router.post('/api/user-defined-metrics', (req, res) => {
+router.post('/api/user-defined-metrics', (req: Request, res: Response) => {
   try {
     console.log('Received POST body:', JSON.stringify(req.body));
     
@@ -47,10 +49,11 @@ router.post('/api/user-defined-metrics', (req, res) => {
     
     res.json(updated);
   } catch (e) {
-    console.error('Update user metrics error:', e.message);
-    console.error('Stack:', e.stack);
-    res.status(500).json({ message: 'Failed to update user metrics', error: e.message });
+    const err = e as Error;
+    console.error('Update user metrics error:', err.message);
+    console.error('Stack:', err.stack);
+    res.status(500).json({ message: 'Failed to update user metrics', error: err.message });
   }
 });
 
-module.exports = router;
+export default router;

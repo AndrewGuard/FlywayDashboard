@@ -1,11 +1,11 @@
-const express = require('express');
-const router = express.Router();
-const { dbHelpers } = require('../db/database');
+import { Router, Request, Response } from 'express';
+import { dbHelpers } from '../db/database';
+import * as flywayHistory from '../flywayHistory';
 
 // Helper to parse script datetime from script name
 // Expects format like V012_20250929152836__bar.sql (YYYYMMDDHHMMSS)
 // The timestamp represents UTC time (matching the database installed_on field)
-function parseScriptDateTime(scriptName) {
+function parseScriptDateTime(scriptName: string): Date | null {
   if (!scriptName) return null;
   
   // Pattern to match V###_YYYYMMDDHHMMSS__description.sql
@@ -30,33 +30,36 @@ function parseScriptDateTime(scriptName) {
   return null;
 }
 
+const router = Router();
+
 // GET lead times
-router.get('/api/metrics/lead-times', (req, res) => {
+router.get('/api/metrics/lead-times', (_req: Request, res: Response) => {
   try {
     const data = dbHelpers.getLeadTimes();
     res.json(data);
   } catch (e) {
-    console.error('Get lead times error:', e);
+    const err = e as Error;
+    console.error('Get lead times error:', err);
     res.status(500).json({ message: 'Failed to get lead times' });
   }
 });
 
 // Refresh lead times from flyway history
-router.get('/api/metrics/lead-times/refresh', async (req, res) => {
+router.get('/api/metrics/lead-times/refresh', async (_req: Request, res: Response) => {
   try {
-    let prodHistory = [];
+    let prodHistory: any[] = [];
 
     // Get PRODUCTION flyway history only
     try {
-      const flywayHistory = require('../flywayHistory');
       if (flywayHistory?.getFlywayHistoryProd) {
         prodHistory = await flywayHistory.getFlywayHistoryProd() ?? [];
       }
     } catch (e) {
-      console.warn('Failed to get flyway history:', e);
+      const err = e as Error;
+      console.warn('Failed to get flyway history:', err);
     }
 
-    const leadTimes = [];
+    const leadTimes: any[] = [];
     const msPerDay = 24 * 60 * 60 * 1000;
 
     prodHistory.forEach(m => {
@@ -83,7 +86,7 @@ router.get('/api/metrics/lead-times/refresh', async (req, res) => {
       }
 
       // Calculate lead time as the delta between script creation and deployment
-      const rawLeadTime = (deployDate - scriptDateTime) / msPerDay;
+      const rawLeadTime = (deployDate.getTime() - scriptDateTime.getTime()) / msPerDay;
       
       // If script was created AFTER deployment (negative), set to 0
       const leadTimeDays = Math.max(0, rawLeadTime);
@@ -106,9 +109,10 @@ router.get('/api/metrics/lead-times/refresh', async (req, res) => {
     const data = dbHelpers.clearAndInsertLeadTimes(leadTimes);
     res.json(data);
   } catch (e) {
-    console.error('Refresh lead times error:', e);
+    const err = e as Error;
+    console.error('Refresh lead times error:', err);
     res.status(500).json({ message: 'Failed to refresh lead times' });
   }
 });
 
-module.exports = router;
+export default router;

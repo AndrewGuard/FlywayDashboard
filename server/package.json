@@ -2,30 +2,32 @@
   "name": "server",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
-  "bin": "index.js",
+  "main": "dist/index.js",
+  "bin": "dist/index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
-    "setup": "node setup-wizard.js",
-    "diagnostics": "node diagnostics.js",
-    "test-connections": "node -e \"require('./flywayHistory').testConnections()\"",
-    "build-exe": "node build-exe.js",
-    "package": "node build-package.js",
-    "package-source": "node build-source-package.js",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "nodemon --exec ts-node index.ts",
+    "setup": "ts-node setup-wizard.ts",
+    "diagnostics": "ts-node diagnostics.ts",
+    "test-connections": "ts-node -e \"require('./flywayHistory').testConnections()\"",
+    "build-exe": "npm run build && node dist/build-exe.js",
+    "package": "npm run build && node dist/build-package.js",
+    "package-source": "npm run build && node dist/build-source-package.js",
+    "refresh-demo": "ts-node refresh-all-demo-data.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "pkg": {
     "scripts": [
-      "index.js",
-      "routes/**/*.js",
-      "utils/**/*.js",
-      "db/**/*.js",
-      "flywayHistory.js",
-      "jdbcConnections.js",
-      "setup-wizard.js",
-      "diagnostics.js",
-      "validate-connection.js"
+      "dist/index.js",
+      "dist/routes/**/*.js",
+      "dist/utils/**/*.js",
+      "dist/db/**/*.js",
+      "dist/flywayHistory.js",
+      "dist/jdbcConnections.js",
+      "dist/setup-wizard.js",
+      "dist/diagnostics.js",
+      "dist/validate-connection.js"
     ],
     "assets": [
       ".env.example",
@@ -50,7 +52,15 @@
     "pg": "^8.16.3"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/mssql": "^9.1.5",
+    "@types/node": "^20.17.10",
+    "@types/pg": "^8.11.10",
     "concurrently": "^9.2.1",
-    "nodemon": "^3.1.11"
+    "nodemon": "^3.1.11",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
   }
 }

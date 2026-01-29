@@ -13,15 +13,6 @@ import MetricsChart from './MetricsChart';
 const Dashboard: React.FC = () => {
   return (
     <Box>
-      {/* Page Header */}
-      <Box id="overview" sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
-          Flyway Dashboard
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Track your database migration metrics and ROI
-        </Typography>
-      </Box>
 
       {/* Dashboard Grid */}
       <Grid container spacing={3}>

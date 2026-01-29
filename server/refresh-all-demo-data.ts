@@ -1,4 +1,6 @@
-const { execSync } = require('child_process');
+#!/usr/bin/env node
+
+import { execSync } from 'child_process';
 
 console.log('========================================');
 console.log('Refreshing All Lead Time Demo Data');
@@ -6,10 +8,10 @@ console.log('========================================\n');
 
 try {
   console.log('Step 1: Adding sample lead time data points...');
-  execSync('node add-sample-lead-times.js', { stdio: 'inherit' });
+  execSync('ts-node add-sample-lead-times.ts', { stdio: 'inherit' });
   
   console.log('\n\nStep 2: Generating historical lead time chart data...');
-  execSync('node generate-lead-time-history.js', { stdio: 'inherit' });
+  execSync('ts-node generate-lead-time-history.ts', { stdio: 'inherit' });
   
   console.log('\n========================================');
   console.log('✓ All demo data refreshed successfully!');
@@ -23,6 +25,7 @@ try {
   
   process.exit(0);
 } catch (e) {
-  console.error('\n✗ Error refreshing demo data:', e.message);
+  const err = e as Error;
+  console.error('\n✗ Error refreshing demo data:', err.message);
   process.exit(1);
 }

@@ -1,7 +1,8 @@
-const { dbHelpers } = require('./db/database');
+import { dbHelpers, db } from './db/database';
+import { LeadTimeHistoryPoint } from './types';
 
 // Generate historical lead time data points for the chart
-function generateHistoricalLeadTimeData() {
+function generateHistoricalLeadTimeData(): void {
   console.log('Generating historical lead time data for chart visualization...\n');
 
   // Get current user-defined non-Flyway lead time
@@ -9,7 +10,7 @@ function generateHistoricalLeadTimeData() {
   const nonFlywayLeadTime = Number(userData?.leadTimeDays) || 20;
 
   // Create data points for the last 90 days
-  const dataPoints = [];
+  const dataPoints: LeadTimeHistoryPoint[] = [];
   const today = new Date();
   
   // Simulate a gradual improvement in Flyway lead times over 90 days
@@ -52,7 +53,6 @@ function generateHistoricalLeadTimeData() {
   console.log(`Improvement: ${((dataPoints[0].flywayLeadTime - dataPoints[dataPoints.length - 1].flywayLeadTime) / dataPoints[0].flywayLeadTime * 100).toFixed(1)}%\n`);
 
   // Clear existing data and insert new historical data
-  const db = require('./db/database').db;
   db.prepare('DELETE FROM lead_time_history').run();
   
   const stmt = db.prepare(`
@@ -60,7 +60,7 @@ function generateHistoricalLeadTimeData() {
     VALUES (?, ?, ?, ?)
   `);
   
-  const insertMany = db.transaction((points) => {
+  const insertMany = db.transaction((points: LeadTimeHistoryPoint[]) => {
     for (const point of points) {
       stmt.run(point.date, point.flywayLeadTime, point.nonFlywayLeadTime, point.timestamp);
     }
@@ -80,6 +80,7 @@ try {
   generateHistoricalLeadTimeData();
   process.exit(0);
 } catch (e) {
-  console.error('Error generating historical data:', e);
+  const err = e as Error;
+  console.error('Error generating historical data:', err);
   process.exit(1);
 }

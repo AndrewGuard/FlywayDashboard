@@ -4,12 +4,12 @@
  * Quick JDBC Connection Validator
  * 
  * Usage:
- *   node validate-connection.js "jdbc:postgresql://localhost:5432/mydb?user=user&password=pass"
- *   node validate-connection.js "jdbc:sqlserver://localhost:1433;databaseName=mydb;user=sa;password=pass"
+ *   ts-node validate-connection.ts "jdbc:postgresql://localhost:5432/mydb?user=user&password=pass"
+ *   ts-node validate-connection.ts "jdbc:sqlserver://localhost:1433;databaseName=mydb;user=sa;password=pass"
  */
 
-const { Pool } = require('pg');
-const sql = require('mssql');
+import { Pool } from 'pg';
+import * as sql from 'mssql';
 
 const colors = {
   reset: '\x1b[0m',
@@ -19,19 +19,19 @@ const colors = {
   cyan: '\x1b[36m'
 };
 
-function success(text) {
+function success(text: string): void {
   console.log(`${colors.green}✓ ${text}${colors.reset}`);
 }
 
-function error(text) {
+function error(text: string): void {
   console.log(`${colors.red}✗ ${text}${colors.reset}`);
 }
 
-function info(text) {
+function info(text: string): void {
   console.log(`${colors.cyan}ℹ ${text}${colors.reset}`);
 }
 
-async function validatePostgres(jdbcUrl) {
+async function validatePostgres(jdbcUrl: string): Promise<boolean> {
   const urlMatch = jdbcUrl.match(/^jdbc:postgresql:\/\/([^:/]+)(?::(\d+))?\/([^?]+)\??(.*)$/);
   
   if (!urlMatch) {
@@ -41,12 +41,13 @@ async function validatePostgres(jdbcUrl) {
   }
   
   const [, host, port, database, query] = urlMatch;
-  let user, password;
+  let user: string | undefined;
+  let password: string | undefined;
   
   if (query) {
     const params = new URLSearchParams(query);
-    user = params.get('user');
-    password = params.get('password');
+    user = params.get('user') ?? undefined;
+    password = params.get('password') ?? undefined;
   }
   
   info(`Connecting to PostgreSQL...`);
@@ -87,13 +88,14 @@ async function validatePostgres(jdbcUrl) {
     await pool.end();
     return true;
   } catch (e) {
-    error(`Connection failed: ${e.message}`);
+    const err = e as any;
+    error(`Connection failed: ${err.message}`);
     
-    if (e.code === 'ECONNREFUSED') {
+    if (err.code === 'ECONNREFUSED') {
       info('Database server is not running or not accessible');
-    } else if (e.code === '28P01') {
+    } else if (err.code === '28P01') {
       info('Authentication failed - check username and password');
-    } else if (e.code === '3D000') {
+    } else if (err.code === '3D000') {
       info('Database does not exist');
     }
     
@@ -102,7 +104,7 @@ async function validatePostgres(jdbcUrl) {
   }
 }
 
-async function validateMssql(jdbcUrl) {
+async function validateMssql(jdbcUrl: string): Promise<boolean> {
   const serverMatch = jdbcUrl.match(/jdbc:sqlserver:\/\/([^:;]+)(?::(\d+))?/);
   const dbMatch = jdbcUrl.match(/databaseName=([^;]+)/);
   const userMatch = jdbcUrl.match(/user=([^;]+)/);
@@ -114,24 +116,18 @@ async function validateMssql(jdbcUrl) {
     return false;
   }
   
-  const server = serverMatch[1];
-  const port = serverMatch[2] ? parseInt(serverMatch[2]) : 1433;
-  const database = dbMatch[1];
-  const user = userMatch ? userMatch[1] : '';
-  const password = passwordMatch ? passwordMatch[1] : '';
-  
   info(`Connecting to SQL Server...`);
-  info(`  Host: ${server}`);
-  info(`  Port: ${port}`);
-  info(`  Database: ${database}`);
-  info(`  User: ${user || 'not specified'}`);
+  info(`  Server: ${serverMatch[1]}`);
+  info(`  Port: ${serverMatch[2] || 1433}`);
+  info(`  Database: ${dbMatch[1]}`);
+  info(`  User: ${userMatch ? userMatch[1] : 'not specified'}`);
   
-  const config = {
-    server,
-    port,
-    database,
-    user,
-    password,
+  const config: sql.config = {
+    server: serverMatch[1],
+    port: serverMatch[2] ? parseInt(serverMatch[2]) : 1433,
+    database: dbMatch[1],
+    user: userMatch ? userMatch[1] : '',
+    password: passwordMatch ? passwordMatch[1] : '',
     options: {
       trustServerCertificate: true,
       encrypt: true,
@@ -143,12 +139,15 @@ async function validateMssql(jdbcUrl) {
   
   try {
     const pool = await sql.connect(config);
+    
+    // Test basic connection
+    await pool.request().query('SELECT 1 as test');
     success('Database connection successful');
     
     // Test Flyway table
     const result = await pool.request().query(`
-      SELECT COUNT(*) as count 
-      FROM INFORMATION_SCHEMA.TABLES 
+      SELECT COUNT(*) as count
+      FROM INFORMATION_SCHEMA.TABLES
       WHERE TABLE_NAME = 'flyway_schema_history'
     `);
     
@@ -163,11 +162,12 @@ async function validateMssql(jdbcUrl) {
     await pool.close();
     return true;
   } catch (e) {
-    error(`Connection failed: ${e.message}`);
+    const err = e as any;
+    error(`Connection failed: ${err.message}`);
     
-    if (e.code === 'ESOCKET') {
-      info('Cannot reach database server - check host/port and firewall');
-    } else if (e.code === 'ELOGIN') {
+    if (err.code === 'ECONNREFUSED') {
+      info('Database server is not running or not accessible');
+    } else if (err.code === 'ELOGIN') {
       info('Authentication failed - check username and password');
     }
     
@@ -175,43 +175,37 @@ async function validateMssql(jdbcUrl) {
   }
 }
 
-async function main() {
-  const jdbcUrl = process.argv[2];
+async function main(): Promise<void> {
+  const args = process.argv.slice(2);
   
-  if (!jdbcUrl) {
-    console.log('Usage: node validate-connection.js "jdbc:....."');
-    console.log('');
-    console.log('Examples:');
+  if (args.length === 0) {
+    console.log('Usage: ts-node validate-connection.ts <JDBC_URL>');
+    console.log('\nExamples:');
     console.log('  PostgreSQL:');
-    console.log('    node validate-connection.js "jdbc:postgresql://localhost:5432/mydb?user=postgres&password=secret"');
-    console.log('');
+    console.log('    ts-node validate-connection.ts "jdbc:postgresql://localhost:5432/mydb?user=user&password=pass"');
     console.log('  SQL Server:');
-    console.log('    node validate-connection.js "jdbc:sqlserver://localhost:1433;databaseName=mydb;user=sa;password=secret"');
+    console.log('    ts-node validate-connection.ts "jdbc:sqlserver://localhost:1433;databaseName=mydb;user=sa;password=pass"');
     process.exit(1);
   }
   
-  console.log('');
-  info(`Validating: ${jdbcUrl.substring(0, 50)}...`);
-  console.log('');
+  const jdbcUrl = args[0];
   
-  let success = false;
+  console.log('\n=== JDBC Connection Validator ===\n');
+  
+  let result = false;
   
   if (jdbcUrl.startsWith('jdbc:postgresql://')) {
-    success = await validatePostgres(jdbcUrl);
+    result = await validatePostgres(jdbcUrl);
   } else if (jdbcUrl.startsWith('jdbc:sqlserver://')) {
-    success = await validateMssql(jdbcUrl);
+    result = await validateMssql(jdbcUrl);
   } else {
-    error('Unsupported database type');
-    info('Currently supported: PostgreSQL, SQL Server');
+    error('Unsupported JDBC URL type');
+    info('Only PostgreSQL and SQL Server are supported');
     process.exit(1);
   }
   
   console.log('');
-  process.exit(success ? 0 : 1);
+  process.exit(result ? 0 : 1);
 }
 
-main().catch(e => {
-  error(`Unexpected error: ${e.message}`);
-  console.error(e);
-  process.exit(1);
-});
+main();

@@ -1,30 +1,30 @@
-const express = require('express');
-const router = express.Router();
+import { Router, Request, Response } from 'express';
+import { dbHelpers } from '../db/database';
+import * as flywayHistory from '../flywayHistory';
 
+const router = Router();
 const DEMO_MODE = process.env.DEMO_MODE === 'true';
-const { dbHelpers } = require('../db/database');
-
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const DAYS_IN_QUARTER = 90;
 
 // GET deployments over time
-router.get('/api/metrics/deployments-over-time', (req, res) => {
+router.get('/api/metrics/deployments-over-time', (_req: Request, res: Response) => {
   try {
     const data = dbHelpers.getDeploymentsOverTime();
     res.json(data);
   } catch (e) {
-    console.error('Get deployments over time error:', e);
+    const err = e as Error;
+    console.error('Get deployments over time error:', err);
     res.status(500).json({ message: 'Failed to get deployments over time' });
   }
 });
 
 // GET deployments per quarter
-router.get('/api/metrics/deployments-per-quarter', async (req, res) => {
+router.get('/api/metrics/deployments-per-quarter', async (_req: Request, res: Response) => {
   try {
-    let history = [];
+    let history: any[] = [];
 
     try {
-      const flywayHistory = require('../flywayHistory');
       if (DEMO_MODE) {
         // Demo mode: use mock data
         history = flywayHistory.getMockFlywayHistory() ?? [];
@@ -36,7 +36,8 @@ router.get('/api/metrics/deployments-per-quarter', async (req, res) => {
         }
       }
     } catch (e) {
-      console.warn('Failed to get flyway history:', e);
+      const err = e as Error;
+      console.warn('Failed to get flyway history:', err);
     }
 
     const now = new Date();
@@ -44,10 +45,7 @@ router.get('/api/metrics/deployments-per-quarter', async (req, res) => {
 
     const validMigrations = history
       .filter(m => {
-        // Check script field (which has V prefix) or version field
-        const script = m.script ?? '';
         const type = m.type ?? '';
-        // Include SQL type migrations (exclude UNDO and BASELINE)
         return type === 'SQL' && type !== 'UNDO_SQL' && type !== 'BASELINE';
       })
       .map(m => ({
@@ -63,7 +61,7 @@ router.get('/api/metrics/deployments-per-quarter', async (req, res) => {
       validMigrations.reduce((min, m) => m.deployDate < min ? m.deployDate : min, validMigrations[0].deployDate) :
       now;
 
-    const availableDays = Math.min(DAYS_IN_QUARTER, Math.ceil((now - oldestDate) / MS_PER_DAY));
+    const availableDays = Math.min(DAYS_IN_QUARTER, Math.ceil((now.getTime() - oldestDate.getTime()) / MS_PER_DAY));
     const shouldExtrapolate = availableDays < DAYS_IN_QUARTER && availableDays > 0;
     const deploymentsPerQuarter = shouldExtrapolate && availableDays > 0 ?
       Math.round((count / availableDays) * DAYS_IN_QUARTER) :
@@ -76,23 +74,24 @@ router.get('/api/metrics/deployments-per-quarter', async (req, res) => {
       totalMigrations: validMigrations.length
     });
   } catch (e) {
-    console.error('Deployments per quarter error:', e);
+    const err = e as Error;
+    console.error('Deployments per quarter error:', err);
     res.status(500).json({ deploymentsPerQuarter: 0, message: 'Failed to get deployments per quarter' });
   }
 });
 
 // Refresh deployments per quarter
-router.get('/api/metrics/deployments-per-quarter/refresh', async (req, res) => {
+router.get('/api/metrics/deployments-per-quarter/refresh', async (_req: Request, res: Response) => {
   try {
-    let history = [];
+    let history: any[] = [];
 
     try {
-      const flywayHistory = require('../flywayHistory');
       if (flywayHistory?.getFlywayHistory) {
         history = await flywayHistory.getFlywayHistory() ?? [];
       }
     } catch (e) {
-      console.warn('Failed to get flyway history:', e);
+      const err = e as Error;
+      console.warn('Failed to get flyway history:', err);
     }
 
     const now = new Date();
@@ -101,7 +100,6 @@ router.get('/api/metrics/deployments-per-quarter/refresh', async (req, res) => {
     const validMigrations = history
       .filter(m => {
         // Check script field (which has V prefix) or version field
-        const script = m.script ?? '';
         const type = m.type ?? '';
         // Include SQL type migrations (exclude UNDO and BASELINE)
         return type === 'SQL' && type !== 'UNDO_SQL' && type !== 'BASELINE';
@@ -119,7 +117,7 @@ router.get('/api/metrics/deployments-per-quarter/refresh', async (req, res) => {
       validMigrations.reduce((min, m) => m.deployDate < min ? m.deployDate : min, validMigrations[0].deployDate) :
       now;
 
-    const availableDays = Math.min(DAYS_IN_QUARTER, Math.ceil((now - oldestDate) / MS_PER_DAY));
+    const availableDays = Math.min(DAYS_IN_QUARTER, Math.ceil((now.getTime() - oldestDate.getTime()) / MS_PER_DAY));
     const shouldExtrapolate = availableDays < DAYS_IN_QUARTER && availableDays > 0;
     const deploymentsPerQuarter = shouldExtrapolate && availableDays > 0 ?
       Math.round((count / availableDays) * DAYS_IN_QUARTER) :
@@ -142,9 +140,10 @@ router.get('/api/metrics/deployments-per-quarter/refresh', async (req, res) => {
       totalMigrations: validMigrations.length
     });
   } catch (e) {
-    console.error('Deployments per quarter refresh error:', e);
+    const err = e as Error;
+    console.error('Deployments per quarter refresh error:', err);
     res.status(500).json({ deploymentsPerQuarter: 0, message: 'Failed to refresh deployments per quarter' });
   }
 });
 
-module.exports = router;
+export default router;

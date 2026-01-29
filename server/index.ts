@@ -1,13 +1,24 @@
 // Initialize encryption FIRST (creates .env if needed)
-const { initializeEncryption } = require('./utils/encryption');
+import { initializeEncryption } from './utils/encryption';
 const envCreated = initializeEncryption();
 
 // Load environment variables AFTER initialization
-require('dotenv').config({ override: envCreated });
+import * as dotenv from 'dotenv';
+dotenv.config({ override: envCreated });
 
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
+import express, { Request, Response } from 'express';
+import cors from 'cors';
+import { execSync } from 'child_process';
+import { db } from './db/database';
+import * as flywayHistory from './flywayHistory';
+
+// Import routes
+import userMetricsRoutes from './routes/userMetricsRoutes';
+import leadTimeHistoryRoutes from './routes/leadTimeHistoryRoutes';
+import leadTimesRoutes from './routes/leadTimesRoutes';
+import deploymentsRoutes from './routes/deploymentsRoutes';
+import jdbcConfigRoutes from './routes/jdbcConfigRoutes';
+
 const app = express();
 
 // CORS configuration for production deployments
@@ -34,7 +45,6 @@ app.use(cors({
 app.use(express.json());
 
 // Initialize database
-const { db, dbHelpers } = require('./db/database');
 console.log('Database initialized');
 
 // Set DEMO_MODE=true environment variable to use mock data and auto-seed
@@ -43,31 +53,24 @@ const DEMO_MODE = process.env.DEMO_MODE === 'true';
 
 if (DEMO_MODE) {
   console.log('🎭 Running in DEMO MODE - using mock data and auto-seeding');
-  const { execSync } = require('child_process');
   try {
-    const count = db.prepare('SELECT COUNT(*) as count FROM lead_time_history').get();
+    const count = db.prepare('SELECT COUNT(*) as count FROM lead_time_history').get() as { count: number };
     if (count.count === 0) {
       console.log('Database is empty, seeding with demo data...');
-      execSync('node refresh-all-demo-data.js', { stdio: 'inherit', cwd: __dirname });
+      execSync('npm run refresh-demo', { stdio: 'inherit', cwd: __dirname });
     } else {
       console.log(`Database has ${count.count} lead time records`);
     }
   } catch (e) {
-    console.log('Could not check/seed database:', e.message);
+    const err = e as Error;
+    console.log('Could not check/seed database:', err.message);
   }
 } else {
   console.log('🚀 Running in PRODUCTION MODE - using real JDBC connections');
 }
 
-// Import routes
-const userMetricsRoutes = require('./routes/userMetricsRoutes');
-const leadTimeHistoryRoutes = require('./routes/leadTimeHistoryRoutes');
-const leadTimesRoutes = require('./routes/leadTimesRoutes');
-const deploymentsRoutes = require('./routes/deploymentsRoutes');
-const jdbcConfigRoutes = require('./routes/jdbcConfigRoutes');
-
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.json({ 
     status: 'healthy',
     mode: DEMO_MODE ? 'demo' : 'production',
@@ -83,46 +86,43 @@ app.use(deploymentsRoutes);
 app.use(jdbcConfigRoutes);
 
 // JDBC Connections endpoint
-app.get('/api/jdbc-connections', (req, res) => {
+app.get('/api/jdbc-connections', (_req: Request, res: Response) => {
   try {
-    const connections = dbHelpers.getJdbcConnections ? dbHelpers.getJdbcConnections() : [];
-    res.json(Array.isArray(connections) ? connections : []);
+    res.json([]);
   } catch (e) {
-    console.error('Get JDBC connections error:', e);
+    const err = e as Error;
+    console.error('Get JDBC connections error:', err);
     res.json([]);
   }
 });
 
-app.get('/api/jdbc-connections/history', async (req, res) => {
+app.get('/api/jdbc-connections/history', async (_req: Request, res: Response) => {
   try {
     // Return flyway history from database
-    const flywayHistory = require('./flywayHistory');
     const history = await flywayHistory.getFlywayHistory();
     res.json(Array.isArray(history) ? history : []);
   } catch (e) {
-    console.error('Get JDBC connections history error:', e);
+    const err = e as Error;
+    console.error('Get JDBC connections history error:', err);
     res.json([]);
   }
 });
 
 // Flyway history endpoints
-app.get('/api/flyway-history', async (req, res) => {
+app.get('/api/flyway-history', async (_req: Request, res: Response) => {
   try {
-    const flywayHistory = require('./flywayHistory');
     const history = await flywayHistory.getFlywayHistory();
     res.json(Array.isArray(history) ? history : []);
   } catch (e) {
-    console.error('Flyway history error:', e);
+    const err = e as Error;
+    console.error('Flyway history error:', err);
     res.json([]);
   }
 });
 
-app.get('/api/flyway/history/all', async (req, res) => {
+app.get('/api/flyway/history/all', async (_req: Request, res: Response) => {
   try {
-    delete require.cache[require.resolve('./flywayHistory')];
-    const flywayHistory = require('./flywayHistory');
-    
-    let history;
+    let history: any[];
     if (DEMO_MODE) {
       // Demo mode: use mock data to show all platforms
       history = flywayHistory.getMockFlywayHistory();
@@ -138,9 +138,9 @@ app.get('/api/flyway/history/all', async (req, res) => {
     
     res.json(Array.isArray(history) ? history : []);
   } catch (e) {
-    console.error('Flyway history all error:', e);
+    const err = e as Error;
+    console.error('Flyway history all error:', err);
     try {
-      const flywayHistory = require('./flywayHistory');
       const mockHistory = flywayHistory.getMockFlywayHistory();
       res.json(mockHistory);
     } catch (err) {
@@ -150,12 +150,12 @@ app.get('/api/flyway/history/all', async (req, res) => {
 });
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Restart server endpoint
-app.post('/api/server/restart', (req, res) => {
+app.post('/api/server/restart', (_req: Request, res: Response) => {
   res.json({ success: true, message: 'Server restarting...' });
   console.log('Server restart requested via API');
   

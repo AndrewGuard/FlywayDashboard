@@ -1,4 +1,7 @@
-# Flyway Dashboard
+TODO
+
+1. Make roi calculator custom configurable
+2. Expose backend scripts to gather roi baseline metrics
 
 A comprehensive dashboard for visualizing and analyzing Flyway database migration metrics with DORA-aligned performance indicators and ROI calculations.
 
