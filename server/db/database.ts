@@ -34,6 +34,11 @@ db.exec(`
     developer_hours_per_deployment REAL DEFAULT 4,
     dba_annual_salary REAL DEFAULT 175000,
     developer_annual_salary REAL DEFAULT 155000,
+    roi_algorithm TEXT DEFAULT 'dora',
+    labor_automation_pct REAL DEFAULT 75,
+    failure_cost_multiplier REAL DEFAULT 1.0,
+    cost_of_delay_multiplier REAL DEFAULT 1.0,
+    deployment_value_factor REAL DEFAULT 0.5,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -97,6 +102,11 @@ interface UserMetricsRow {
   developer_hours_per_deployment: number;
   dba_annual_salary: number;
   developer_annual_salary: number;
+  roi_algorithm: string;
+  labor_automation_pct: number;
+  failure_cost_multiplier: number;
+  cost_of_delay_multiplier: number;
+  deployment_value_factor: number;
   updated_at: string;
 }
 
@@ -152,6 +162,11 @@ export const dbHelpers = {
       developerHoursPerDeployment: row.developer_hours_per_deployment,
       dbaAnnualSalary: row.dba_annual_salary,
       developerAnnualSalary: row.developer_annual_salary,
+      roiAlgorithm: row.roi_algorithm,
+      laborAutomationPct: row.labor_automation_pct,
+      failureCostMultiplier: row.failure_cost_multiplier,
+      costOfDelayMultiplier: row.cost_of_delay_multiplier,
+      deploymentValueFactor: row.deployment_value_factor,
       updatedAt: row.updated_at
     };
   },
@@ -170,6 +185,11 @@ export const dbHelpers = {
         developer_hours_per_deployment = ?,
         dba_annual_salary = ?,
         developer_annual_salary = ?,
+        roi_algorithm = ?,
+        labor_automation_pct = ?,
+        failure_cost_multiplier = ?,
+        cost_of_delay_multiplier = ?,
+        deployment_value_factor = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = 1
     `);
@@ -184,7 +204,12 @@ export const dbHelpers = {
       metrics.dbaHoursPerDeployment ?? 8,
       metrics.developerHoursPerDeployment ?? 4,
       metrics.dbaAnnualSalary ?? 175000,
-      metrics.developerAnnualSalary ?? 155000
+      metrics.developerAnnualSalary ?? 155000,
+      metrics.roiAlgorithm ?? 'dora',
+      metrics.laborAutomationPct ?? 75,
+      metrics.failureCostMultiplier ?? 1.0,
+      metrics.costOfDelayMultiplier ?? 1.0,
+      metrics.deploymentValueFactor ?? 0.5
     );
     return this.getUserMetrics();
   },

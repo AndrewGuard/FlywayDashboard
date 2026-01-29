@@ -16,7 +16,7 @@ import {
 import DownloadIcon from '@mui/icons-material/Download';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { exportAsImage } from '../utils/exportUtils';
-import { calculateROI, UserMetricsInput, FlywayMetricsInput } from '../utils/roiCalculations';
+import { calculateROI, UserMetricsInput, FlywayMetricsInput, ROIParameters, DEFAULT_ROI_PARAMETERS } from '../utils/roiCalculations';
 
 interface Metrics {
   flywayDeployments: number;
@@ -138,7 +138,14 @@ export default function ChangeInDeploymentMetricsWidget() {
         // Only calculate if we have actual Flyway data
         if (currentMetrics.deploymentsPerQuarter > 0 || currentMetrics.leadTimeDays > 0) {
           try {
-            const roiResult = calculateROI(baselineMetrics, currentMetrics);
+            // Use the saved parameters, default to balanced DORA
+            const parameters: ROIParameters = {
+              laborAutomationPct: userData.laborAutomationPct ?? DEFAULT_ROI_PARAMETERS.laborAutomationPct,
+              failureCostMultiplier: userData.failureCostMultiplier ?? DEFAULT_ROI_PARAMETERS.failureCostMultiplier,
+              costOfDelayMultiplier: userData.costOfDelayMultiplier ?? DEFAULT_ROI_PARAMETERS.costOfDelayMultiplier,
+              deploymentValueFactor: userData.deploymentValueFactor ?? DEFAULT_ROI_PARAMETERS.deploymentValueFactor
+            };
+            const roiResult = calculateROI(baselineMetrics, currentMetrics, parameters);
             if (roiResult) {
               setRoi({
                 percentage: roiResult.roiPercentage,

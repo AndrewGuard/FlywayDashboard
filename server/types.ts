@@ -11,6 +11,11 @@ export interface UserMetrics {
   developerHoursPerDeployment: number;
   dbaAnnualSalary: number;
   developerAnnualSalary: number;
+  roiAlgorithm?: string;
+  laborAutomationPct?: number;
+  failureCostMultiplier?: number;
+  costOfDelayMultiplier?: number;
+  deploymentValueFactor?: number;
   updatedAt?: string;
 }
 

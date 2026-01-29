@@ -32,7 +32,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import InfoIcon from '@mui/icons-material/Info';
 import { exportAsImage } from './utils/exportUtils';
-import { calculateROI, UserMetricsInput, ROIBreakdown } from './utils/roiCalculations';
+import { calculateROI, UserMetricsInput, ROIBreakdown, ROIParameters, DEFAULT_ROI_PARAMETERS, ROI_PRESETS } from './utils/roiCalculations';
 
 // Keep local interface for compatibility with existing form state
 interface UserMetrics extends UserMetricsInput {}
@@ -40,6 +40,8 @@ interface UserMetrics extends UserMetricsInput {}
 const RoiCalculationPage: React.FC = () => {
   const pageRef = useRef<HTMLDivElement>(null);
   const [businessSize, setBusinessSize] = useState<'small' | 'medium' | 'large'>('medium');
+  const [roiParameters, setRoiParameters] = useState<ROIParameters>(DEFAULT_ROI_PARAMETERS);
+  const [selectedPreset, setSelectedPreset] = useState<string>('balanced');
   const [userMetrics, setUserMetrics] = useState<UserMetrics>({
     deploymentsPerQuarter: 12,
     leadTimeDays: 30,
@@ -137,7 +139,7 @@ const RoiCalculationPage: React.FC = () => {
 
   useEffect(() => {
     calculateROIMetrics();
-  }, [userMetrics, flywayMetrics]);
+  }, [userMetrics, flywayMetrics, roiParameters]);
 
   async function loadUserMetrics() {
     try {
@@ -148,6 +150,23 @@ const RoiCalculationPage: React.FC = () => {
           // Always load business size if it exists
           if (data.businessSize) {
             setBusinessSize(data.businessSize);
+          }
+          // Load ROI parameters if they exist
+          if (data.laborAutomationPct !== undefined) {
+            setRoiParameters({
+              laborAutomationPct: data.laborAutomationPct,
+              failureCostMultiplier: data.failureCostMultiplier ?? 1.0,
+              costOfDelayMultiplier: data.costOfDelayMultiplier ?? 1.0,
+              deploymentValueFactor: data.deploymentValueFactor ?? 0.5
+            });
+            // Check if it matches a preset
+            const matchingPreset = Object.entries(ROI_PRESETS).find(([_, preset]) =>
+              preset.parameters.laborAutomationPct === data.laborAutomationPct &&
+              preset.parameters.failureCostMultiplier === data.failureCostMultiplier &&
+              preset.parameters.costOfDelayMultiplier === data.costOfDelayMultiplier &&
+              preset.parameters.deploymentValueFactor === data.deploymentValueFactor
+            );
+            setSelectedPreset(matchingPreset ? matchingPreset[0] : 'custom');
           }
           // Load all user metrics from saved data
           setUserMetrics({
@@ -208,7 +227,7 @@ const RoiCalculationPage: React.FC = () => {
   }
 
   function calculateROIMetrics() {
-    const roiResult = calculateROI(userMetrics, flywayMetrics);
+    const roiResult = calculateROI(userMetrics, flywayMetrics, roiParameters);
     setRoi(roiResult);
   }
 
@@ -217,7 +236,11 @@ const RoiCalculationPage: React.FC = () => {
       const res = await fetch('/api/user-defined-metrics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...userMetrics, businessSize })
+        body: JSON.stringify({ 
+          ...userMetrics, 
+          businessSize,
+          ...roiParameters
+        })
       });
 
       if (res.ok) {
@@ -338,14 +361,12 @@ const RoiCalculationPage: React.FC = () => {
             <Typography variant="body2" color="text.secondary">
               Based on <Link href="https://dora.dev/research/2023/dora-report/" target="_blank" rel="noopener">2023 State of DevOps Report</Link> and industry benchmarks. Learn more about <Link href="https://dora.dev/guides/dora-metrics-four-keys/" target="_blank" rel="noopener">DORA's Four Keys</Link>.
             </Typography>
-          </Box>
-        )}
-      </Paper>
 
-      <Paper elevation={0} sx={{ p: 3, mb: 3, bgcolor: 'info.lighter', borderLeft: 4, borderColor: 'info.main' }}>
-        <Typography variant="h6" gutterBottom>
-          About These Defaults
-        </Typography>
+            <Divider sx={{ my: 3 }} />
+
+            <Typography variant="h6" gutterBottom>
+              About These Defaults
+            </Typography>
         <Typography variant="body2" color="text.secondary" paragraph>
           This calculator uses <strong>DORA (DevOps Research and Assessment)</strong> metrics — the industry-standard framework for measuring software delivery performance. DORA research has proven these four metrics predict organizational success (<Link href="https://dora.dev/guides/dora-metrics-four-keys/" target="_blank" rel="noopener">learn more about the Four Keys</Link>):
         </Typography>
@@ -426,6 +447,8 @@ const RoiCalculationPage: React.FC = () => {
             </Typography>
           </>
         )}
+          </Box>
+        )}
       </Paper>
 
       {saved && (
@@ -436,6 +459,257 @@ const RoiCalculationPage: React.FC = () => {
 
       <Grid container spacing={3}>
         <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Current Flyway Performance
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Your current deployment metrics with Flyway
+              </Typography>
+
+              <Paper elevation={0} sx={{ p: 2, mb: 2, bgcolor: 'grey.50' }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={4}>
+                    <Typography variant="caption" color="text.secondary">Deployments/Q</Typography>
+                    <Typography variant="h6">{flywayMetrics.deploymentsPerQuarter}</Typography>
+                  </Grid>
+                  <Grid item xs={4}>
+                    <Typography variant="caption" color="text.secondary">Lead Time</Typography>
+                    <Typography variant="h6">{flywayMetrics.leadTimeDays} days</Typography>
+                  </Grid>
+                  <Grid item xs={4}>
+                    <Typography variant="caption" color="text.secondary">Failure Rate</Typography>
+                    <Typography variant="h6">{flywayMetrics.scriptFailureRate}%</Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+
+              <Divider sx={{ my: 2 }} />
+
+              {roi && (
+                <>
+                  <Box sx={{ textAlign: 'center', mb: 3 }}>
+                    <Typography variant="h3" color="primary" gutterBottom>
+                      {roi.roiPercentage}%
+                    </Typography>
+                    <Typography variant="h6" color="text.secondary">
+                      Return on Investment
+                    </Typography>
+                  </Box>
+
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      <Paper elevation={0} sx={{ p: 2, bgcolor: 'success.light' }}>
+                        <Typography variant="caption" color="success.dark">Annual Savings</Typography>
+                        <Typography variant="h6" color="success.dark">
+                          ${roi.annualSavings.toLocaleString()}
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Paper elevation={0} sx={{ p: 2, bgcolor: 'info.light' }}>
+                        <Typography variant="caption" color="info.dark">Payback Period</Typography>
+                        <Typography variant="h6" color="info.dark">
+                          {roi.paybackMonths} months
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                  </Grid>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  <Typography variant="subtitle2" gutterBottom>
+                    Quarterly Savings Breakdown
+                  </Typography>
+                  <Box sx={{ pl: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      <strong>Lead time reduction:</strong> {roi.leadTimeReduction.toFixed(1)} days × ${(userMetrics.costOfDelayPerDay * roiParameters.costOfDelayMultiplier).toFixed(0)}/day × {flywayMetrics.deploymentsPerQuarter} deps = ${roi.timeSavingsPerQuarter.toLocaleString()}/quarter
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      <strong>Failure rate reduction:</strong> {roi.failureRateReduction.toFixed(1)}% × ${(userMetrics.savingsPerDeployment * roiParameters.failureCostMultiplier).toFixed(0)} cost × {flywayMetrics.deploymentsPerQuarter} deps = ${roi.failureSavingsPerQuarter.toLocaleString()}/quarter
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      <strong>Deployment efficiency:</strong> +{roi.deploymentIncrease} deployments × ${(userMetrics.savingsPerDeployment * roiParameters.deploymentValueFactor).toFixed(0)} value = ${roi.efficiencySavings.toLocaleString()}/quarter
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      <strong>DBA & developer labor savings:</strong> {roiParameters.laborAutomationPct}% automation → ${roi.laborSavingsPerQuarter.toLocaleString()}/quarter
+                    </Typography>
+                    <Typography variant="body2" fontWeight="bold" sx={{ mt: 1 }}>
+                      Total quarterly savings: ${roi.totalQuarterlySavings.toLocaleString()}
+                    </Typography>
+                  </Box>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  <Accordion sx={{ bgcolor: 'grey.50' }}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Typography variant="subtitle2" color="primary">
+                        📊 How This ROI is Calculated (DORA Metrics)
+                      </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Typography variant="body2" color="text.secondary" paragraph>
+                        <strong>1. Lead Time Savings:</strong> (Baseline Lead Time - Flyway Lead Time) × Cost of Delay × Deployments per Quarter
+                        <br />• Cost of Delay Multiplier: <strong>{roiParameters.costOfDelayMultiplier}x</strong> ({roiParameters.costOfDelayMultiplier === 1 ? 'base cost only' : roiParameters.costOfDelayMultiplier > 1 ? 'includes opportunity costs' : 'conservative estimate'})
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" paragraph>
+                        <strong>2. Failure Cost Reduction:</strong> (Baseline Failure Rate - Flyway Failure Rate) × Failure Cost × Deployments
+                        <br />• Failure Cost Multiplier: <strong>{roiParameters.failureCostMultiplier}x</strong> ({roiParameters.failureCostMultiplier === 1 ? 'failures = deployment cost' : roiParameters.failureCostMultiplier > 1 ? 'failures cost more than deployments' : 'failures cost less than deployments'})
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" paragraph>
+                        <strong>3. Deployment Frequency Value:</strong> (Flyway Deployments - Baseline Deployments) × Deployment Value
+                        <br />• Deployment Value Factor: <strong>{(roiParameters.deploymentValueFactor * 100).toFixed(0)}%</strong> of savings per deployment
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>4. Labor Automation Savings:</strong> (DBA Hours + Dev Hours) × Hourly Rate × Automation % × Deployments
+                        <br />• Labor Automation: <strong>{roiParameters.laborAutomationPct}%</strong> time reduction from manual work
+                      </Typography>
+                    </AccordionDetails>
+                  </Accordion>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                ROI Calculation Parameters
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Adjust how ROI is calculated using DORA metrics
+              </Typography>
+
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <FormControl fullWidth>
+                    <InputLabel>Preset Configuration</InputLabel>
+                    <Select
+                      value={selectedPreset}
+                      label="Preset Configuration"
+                      onChange={(e) => {
+                        const preset = e.target.value;
+                        setSelectedPreset(preset);
+                        if (preset !== 'custom' && ROI_PRESETS[preset]) {
+                          setRoiParameters(ROI_PRESETS[preset].parameters);
+                          setHasUnsavedChanges(true);
+                        }
+                      }}
+                    >
+                      {Object.entries(ROI_PRESETS).map(([key, preset]) => (
+                        <MenuItem key={key} value={key}>
+                          {preset.name} - {preset.description}
+                        </MenuItem>
+                      ))}
+                      <MenuItem value="custom">Custom - Fine-tune individual parameters</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Labor Automation: {roiParameters.laborAutomationPct}%
+                  </Typography>
+                  <Box sx={{ px: 1 }}>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="5"
+                      value={roiParameters.laborAutomationPct}
+                      onChange={(e) => {
+                        setRoiParameters(prev => ({ ...prev, laborAutomationPct: Number(e.target.value) }));
+                        setSelectedPreset('custom');
+                        setHasUnsavedChanges(true);
+                      }}
+                      style={{ width: '100%' }}
+                    />
+                  </Box>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                    Percentage of manual labor automated by Flyway (recommended: 75%)
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Failure Cost Multiplier: {roiParameters.failureCostMultiplier.toFixed(2)}x
+                  </Typography>
+                  <Box sx={{ px: 1 }}>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="3"
+                      step="0.25"
+                      value={roiParameters.failureCostMultiplier}
+                      onChange={(e) => {
+                        setRoiParameters(prev => ({ ...prev, failureCostMultiplier: Number(e.target.value) }));
+                        setSelectedPreset('custom');
+                        setHasUnsavedChanges(true);
+                      }}
+                      style={{ width: '100%' }}
+                    />
+                  </Box>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                    How much failures cost vs successful deployments (1.0 = equal cost, 2.0 = failures cost 2x)
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Cost of Delay Multiplier: {roiParameters.costOfDelayMultiplier.toFixed(2)}x
+                  </Typography>
+                  <Box sx={{ px: 1 }}>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="2"
+                      step="0.1"
+                      value={roiParameters.costOfDelayMultiplier}
+                      onChange={(e) => {
+                        setRoiParameters(prev => ({ ...prev, costOfDelayMultiplier: Number(e.target.value) }));
+                        setSelectedPreset('custom');
+                        setHasUnsavedChanges(true);
+                      }}
+                      style={{ width: '100%' }}
+                    />
+                  </Box>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                    Multiplier for opportunity costs (1.0 = base cost, 1.5 = includes indirect impact)
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Deployment Value Factor: {(roiParameters.deploymentValueFactor * 100).toFixed(0)}%
+                  </Typography>
+                  <Box sx={{ px: 1 }}>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={roiParameters.deploymentValueFactor}
+                      onChange={(e) => {
+                        setRoiParameters(prev => ({ ...prev, deploymentValueFactor: Number(e.target.value) }));
+                        setSelectedPreset('custom');
+                        setHasUnsavedChanges(true);
+                      }}
+                      style={{ width: '100%' }}
+                    />
+                  </Box>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                    Value of additional deployments (50% = each deployment worth 50% of savings)
+                  </Typography>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -461,7 +735,7 @@ const RoiCalculationPage: React.FC = () => {
                   </FormControl>
                   <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1, pl: 1.75 }}>Selecting a business size will update all fields with industry-standard defaults</Typography>
                 </Grid>
-                <Grid item xs={12}>
+                <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
                     label="Deployments per Quarter"
@@ -471,7 +745,7 @@ const RoiCalculationPage: React.FC = () => {
                     helperText="How many production deployments did you complete quarterly before Flyway?"
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
                     label="Lead Time (days)"
@@ -481,7 +755,7 @@ const RoiCalculationPage: React.FC = () => {
                     helperText="Average days from code commit to production (DORA metric)"
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid item xs={12} md={6}>
                   <Accordion>
                     <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                       <Typography variant="subtitle2">How does lead time affect ROI?</Typography>
@@ -640,7 +914,7 @@ const RoiCalculationPage: React.FC = () => {
                     </AccordionDetails>
                   </Accordion>
                 </Grid>
-                <Grid item xs={12}>
+                <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
                     label="Script Failure Rate (%)"
@@ -650,7 +924,7 @@ const RoiCalculationPage: React.FC = () => {
                     helperText="Percentage of deployments that required rollback or caused incidents"
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
                     label="Cost of Delay per Day ($)"
@@ -663,7 +937,7 @@ const RoiCalculationPage: React.FC = () => {
                     Typical ranges: Startup (&lt;20 devs) $100-200/day | Mid-market (20-200) $300-600/day | Enterprise (200+) $800-2000/day
                   </Typography>
                 </Grid>
-                <Grid item xs={12}>
+                <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
                     label="Savings per Deployment ($)"
@@ -673,7 +947,7 @@ const RoiCalculationPage: React.FC = () => {
                     helperText="Cost avoided per successful deployment (downtime, remediation, support tickets)"
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
                     label="DBA Hours per Deployment (Pre-Flyway)"
@@ -683,7 +957,7 @@ const RoiCalculationPage: React.FC = () => {
                     helperText="Manual deployment time: planning, review, execution, validation (typically 6-12 hours)"
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
                     label="Developer Hours per Deployment (Pre-Flyway)"
@@ -693,7 +967,7 @@ const RoiCalculationPage: React.FC = () => {
                     helperText="Script writing, testing, coordination time (typically 3-6 hours)"
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
                     label="DBA Annual Salary ($)"
@@ -703,7 +977,7 @@ const RoiCalculationPage: React.FC = () => {
                     helperText="Fully-loaded cost including benefits (US avg: $150K-200K for mid-level)"
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
                     label="Developer Annual Salary ($)"
@@ -713,7 +987,7 @@ const RoiCalculationPage: React.FC = () => {
                     helperText="Fully-loaded cost including benefits (US avg: $130K-180K for mid-level)"
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
                     label="Implementation Cost ($)"
@@ -757,89 +1031,6 @@ const RoiCalculationPage: React.FC = () => {
                   )}
                 </Grid>
               </Grid>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Current Flyway Performance
-              </Typography>
-              <Paper elevation={0} sx={{ p: 2, mb: 2, bgcolor: 'grey.50' }}>
-                <Grid container spacing={2}>
-                  <Grid item xs={4}>
-                    <Typography variant="caption" color="text.secondary">Deployments/Q</Typography>
-                    <Typography variant="h6">{flywayMetrics.deploymentsPerQuarter}</Typography>
-                  </Grid>
-                  <Grid item xs={4}>
-                    <Typography variant="caption" color="text.secondary">Lead Time</Typography>
-                    <Typography variant="h6">{flywayMetrics.leadTimeDays} days</Typography>
-                  </Grid>
-                  <Grid item xs={4}>
-                    <Typography variant="caption" color="text.secondary">Failure Rate</Typography>
-                    <Typography variant="h6">{flywayMetrics.scriptFailureRate}%</Typography>
-                  </Grid>
-                </Grid>
-              </Paper>
-
-              <Divider sx={{ my: 2 }} />
-
-              {roi && (
-                <>
-                  <Box sx={{ textAlign: 'center', mb: 3 }}>
-                    <Typography variant="h3" color="primary" gutterBottom>
-                      {roi.roiPercentage}%
-                    </Typography>
-                    <Typography variant="h6" color="text.secondary">
-                      Return on Investment
-                    </Typography>
-                  </Box>
-
-                  <Grid container spacing={2}>
-                    <Grid item xs={6}>
-                      <Paper elevation={0} sx={{ p: 2, bgcolor: 'success.light' }}>
-                        <Typography variant="caption" color="success.dark">Annual Savings</Typography>
-                        <Typography variant="h6" color="success.dark">
-                          ${roi.annualSavings.toLocaleString()}
-                        </Typography>
-                      </Paper>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Paper elevation={0} sx={{ p: 2, bgcolor: 'info.light' }}>
-                        <Typography variant="caption" color="info.dark">Payback Period</Typography>
-                        <Typography variant="h6" color="info.dark">
-                          {roi.paybackMonths} months
-                        </Typography>
-                      </Paper>
-                    </Grid>
-                  </Grid>
-
-                  <Divider sx={{ my: 2 }} />
-
-                  <Typography variant="subtitle2" gutterBottom>
-                    Quarterly Savings Breakdown
-                  </Typography>
-                  <Box sx={{ pl: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>Lead time reduction:</strong> {roi.leadTimeReduction.toFixed(1)} days → ${roi.timeSavingsPerQuarter.toLocaleString()}/quarter
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>Failure rate reduction:</strong> {roi.failureRateReduction.toFixed(1)}% → ${roi.failureSavingsPerQuarter.toLocaleString()}/quarter
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>Deployment efficiency:</strong> +{roi.deploymentIncrease} deployments → ${roi.efficiencySavings.toLocaleString()}/quarter
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>DBA & developer labor savings:</strong> 80% time reduction → ${roi.laborSavingsPerQuarter.toLocaleString()}/quarter
-                    </Typography>
-                    <Typography variant="body2" fontWeight="bold" sx={{ mt: 1 }}>
-                      Total quarterly savings: ${roi.totalQuarterlySavings.toLocaleString()}
-                    </Typography>
-                  </Box>
-                </>
-              )}
             </CardContent>
           </Card>
         </Grid>
