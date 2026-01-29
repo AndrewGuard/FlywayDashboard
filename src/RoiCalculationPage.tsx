@@ -458,6 +458,230 @@ const RoiCalculationPage: React.FC = () => {
         )}
       </Paper>
 
+      <Accordion sx={{ mb: 3 }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <HelpOutlineIcon color="primary" />
+            Need Help Getting Baseline Metrics?
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            If you don't have historical deployment data, you can use these SQL scripts to infer deployment frequency from your database itself. 
+            These scripts analyze database object modification patterns to estimate deployment activity.
+          </Typography>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Typography variant="body2" fontWeight="bold" gutterBottom>
+              📋 How to Use These Scripts:
+            </Typography>
+            <Typography variant="body2" component="div">
+              • Have your DBA run the appropriate script against your production database
+              <br/>
+              • The script counts database object changes over time
+              <br/>
+              • Use the results to estimate your quarterly deployment frequency
+              <br/>
+              • <strong>Note:</strong> This won't be a perfect 1:1 mapping to "deployments" (multiple changes may happen in one deployment, or vice versa), 
+              but it provides real historical data to inform your baseline metrics
+            </Typography>
+          </Alert>
+
+          <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
+            Select Your Database Platform:
+          </Typography>
+
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="subtitle2">📊 Oracle Database Script</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                Click to copy the Oracle script:
+              </Typography>
+              <Paper 
+                elevation={0} 
+                sx={{ 
+                  p: 2, 
+                  bgcolor: 'grey.100', 
+                  fontFamily: 'monospace', 
+                  fontSize: '0.75rem',
+                  maxHeight: '400px',
+                  overflow: 'auto',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  '&:hover': { bgcolor: 'grey.200' }
+                }}
+                onClick={(e) => {
+                  const text = (e.currentTarget as HTMLElement).querySelector('pre')?.textContent || '';
+                  navigator.clipboard.writeText(text);
+                }}
+              >
+                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{`-- Database Change Metrics Query - Oracle
+-- ============================================
+-- CONFIGURATION: Change time window here (number of months to look back)
+-- ============================================
+
+-- this shows how many objects changed in a given day. this is to help understand how many releases happen in a unit of time.
+-- number of releases can be inferred from average number of objects touched per release - this gives number of objects altered over a unit of time.
+-- multiple changes to a single object only count as 1
+-- the number you get is the minimum number of releases that happened over a unit of time
+DEFINE months_back = 12
+
+-- Variables hoisted to top
+DECLARE
+    v_start_date DATE := ADD_MONTHS(TRUNC(SYSDATE), -&months_back);
+    v_end_date DATE := TRUNC(SYSDATE);
+    v_excluded_schemas VARCHAR2(100) := '''SYS'',''SYSTEM''';
+    v_object_types VARCHAR2(500) := '''TABLE'',''INDEX'',''VIEW'',''SEQUENCE'',''PROCEDURE'',''FUNCTION'',''PACKAGE'',''PACKAGE BODY'',''TRIGGER'',''TYPE'',''TYPE BODY'',''MATERIALIZED VIEW''';
+BEGIN
+    -- Query 1: Daily count of objects with DDL changes (based on last modification time)
+    FOR rec IN (
+        SELECT
+            TRUNC(last_ddl_time) AS change_date,
+            COUNT(*) AS release_count
+        FROM dba_objects
+        WHERE last_ddl_time >= v_start_date
+          AND owner NOT IN ('SYS','SYSTEM')
+          AND object_type IN (
+                'TABLE','INDEX','VIEW','SEQUENCE',
+                'PROCEDURE','FUNCTION','PACKAGE','PACKAGE BODY',
+                'TRIGGER','TYPE','TYPE BODY','MATERIALIZED VIEW'
+              )
+        GROUP BY TRUNC(last_ddl_time)
+        ORDER BY change_date
+    ) LOOP
+        DBMS_OUTPUT.PUT_LINE('Date: ' || rec.change_date || ', Releases: ' || rec.release_count);
+    END LOOP;
+    
+    -- Query 2: Daily count of unique objects touched by DDL (requires auditing)
+    FOR rec IN (
+        SELECT
+            TRUNC(event_timestamp) AS change_date,
+            COUNT(DISTINCT object_schema || '.' || object_name) AS release_count
+        FROM unified_audit_trail
+        WHERE TRUNC(event_timestamp) >= v_start_date
+          AND TRUNC(event_timestamp) < v_end_date
+          AND object_schema NOT IN ('SYS','SYSTEM')
+          AND (
+            action_name LIKE '%CREATE%'
+            OR action_name LIKE '%ALTER%'
+            OR action_name LIKE '%DROP%'
+          )
+        GROUP BY TRUNC(event_timestamp)
+        ORDER BY change_date
+    ) LOOP
+        DBMS_OUTPUT.PUT_LINE('Date: ' || rec.change_date || ', Releases: ' || rec.release_count);
+    END LOOP;
+END;
+/
+
+
+-- Alternative: Standalone query versions
+-- (Uses the same months_back variable defined at the top)
+
+-- Calculate date range
+DEFINE p_start_ts = ADD_MONTHS(TRUNC(SYSDATE), -&months_back)
+DEFINE p_end_ts = TRUNC(SYSDATE)
+
+-- Set column formatting for better display
+SET LINESIZE 200
+SET PAGESIZE 100
+COLUMN change_date FORMAT A12 HEADING 'Change Date'
+COLUMN release_count FORMAT 999,999 HEADING 'Release|Count'
+
+-- Query 1: Daily count of objects with DDL changes
+SELECT
+    TO_CHAR(TRUNC(last_ddl_time), 'DD-MON-YYYY') AS change_date,
+    COUNT(*) AS release_count
+FROM dba_objects
+WHERE last_ddl_time >= &p_start_ts
+  AND owner NOT IN ('SYS','SYSTEM')
+  AND object_type IN (
+        'TABLE','INDEX','VIEW','SEQUENCE',
+        'PROCEDURE','FUNCTION','PACKAGE','PACKAGE BODY',
+        'TRIGGER','TYPE','TYPE BODY','MATERIALIZED VIEW'
+      )
+GROUP BY TRUNC(last_ddl_time)
+ORDER BY TRUNC(last_ddl_time);
+
+-- Query 2: Daily count of unique objects touched by DDL (with auditing)
+SELECT
+    TO_CHAR(TRUNC(event_timestamp), 'DD-MON-YYYY') AS change_date,
+    COUNT(DISTINCT object_schema || '.' || object_name) AS release_count
+FROM unified_audit_trail
+WHERE TRUNC(event_timestamp) >= &p_start_ts
+  AND TRUNC(event_timestamp) < &p_end_ts
+  AND object_schema NOT IN ('SYS','SYSTEM')
+  AND (
+    action_name LIKE '%CREATE%'
+    OR action_name LIKE '%ALTER%'
+    OR action_name LIKE '%DROP%'
+  )
+GROUP BY TRUNC(event_timestamp)
+ORDER BY TRUNC(event_timestamp);`}</pre>
+              </Paper>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                💡 Adjust the <code>months_back</code> variable at the top to change the analysis time window
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="subtitle2">📊 SQL Server Script</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                Click to copy the SQL Server script:
+              </Typography>
+              <Paper 
+                elevation={0} 
+                sx={{ 
+                  p: 2, 
+                  bgcolor: 'grey.100', 
+                  fontFamily: 'monospace', 
+                  fontSize: '0.75rem',
+                  maxHeight: '400px',
+                  overflow: 'auto',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  '&:hover': { bgcolor: 'grey.200' }
+                }}
+                onClick={(e) => {
+                  const text = (e.currentTarget as HTMLElement).querySelector('pre')?.textContent || '';
+                  navigator.clipboard.writeText(text);
+                }}
+              >
+                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{`-- this shows how many objects changed in a given day. this is to help understand how many releases happen in a unit of time.
+-- number of releases can be inferred from average number of objects touched per release - this gives number of objects altered over a unit of time.
+-- multiple changes to a single object only count as 1
+-- the number you get is the minimum number of releases that happened over a unit of time
+
+/* Configuration: How many months back to analyze */
+DECLARE @MonthsBack int = 3;
+
+/* Daily count of unique objects touched by DDL */
+DECLARE @StartDate date = DATEADD(month, -@MonthsBack, CONVERT(date, GETDATE()));
+
+SELECT
+    CONVERT(date, o.modify_date) AS change_date,
+    COUNT(*) AS objects_modified
+FROM sys.objects o
+JOIN sys.schemas s ON s.schema_id = o.schema_id
+WHERE o.modify_date >= @StartDate
+  AND s.name NOT IN ('sys')
+  AND o.type IN ('U','V','P','FN','TF','IF','TR')  -- tables, views, procs, funcs, triggers
+GROUP BY CONVERT(date, o.modify_date)
+ORDER BY change_date;`}</pre>
+              </Paper>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                💡 Adjust the <code>@MonthsBack</code> variable at the top to change the analysis time window
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+        </AccordionDetails>
+      </Accordion>
+
       {saved && (
         <Alert severity="success" sx={{ mb: 3 }}>
           Configuration saved successfully!
