@@ -335,10 +335,35 @@ const RoiCalculationPage: React.FC = () => {
       {hasUnsavedChanges && (
         <Alert 
           severity="warning" 
-          sx={{ mb: 3 }}
+          sx={{ mb: 3, display: 'flex', alignItems: 'center' }}
           icon={<InfoIcon />}
+          action={
+            <Button 
+              variant="contained" 
+              onClick={handleSave}
+              size="small"
+              sx={{
+                fontWeight: 'bold',
+                bgcolor: 'warning.main',
+                '&:hover': {
+                  bgcolor: 'warning.dark',
+                },
+                animation: 'pulse 2s infinite',
+                '@keyframes pulse': {
+                  '0%, 100%': {
+                    boxShadow: '0 0 0 0 rgba(237, 108, 2, 0.7)'
+                  },
+                  '50%': {
+                    boxShadow: '0 0 0 8px rgba(237, 108, 2, 0)'
+                  }
+                }
+              }}
+            >
+              Save Configuration
+            </Button>
+          }
         >
-          <strong>You have unsaved changes.</strong> Click the "Save Configuration" button at the bottom of the form to apply your changes to the ROI calculation.
+          <strong>You have unsaved changes.</strong> Click "Save Configuration" to apply your changes to the ROI calculation.
         </Alert>
       )}
 
