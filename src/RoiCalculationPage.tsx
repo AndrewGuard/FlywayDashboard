@@ -492,7 +492,7 @@ const RoiCalculationPage: React.FC = () => {
 
           <Accordion>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography variant="subtitle2">📊 Oracle Database Script</Typography>
+              <Typography variant="subtitle2">📊 Oracle Release Frequency Script</Typography>
             </AccordionSummary>
             <AccordionDetails>
               <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
@@ -520,6 +520,8 @@ const RoiCalculationPage: React.FC = () => {
 -- ============================================
 -- CONFIGURATION: Change time window here (number of months to look back)
 -- ============================================
+-- For Oracle, without Auditing(19c and above) the following will be CLOSEST.  
+-- What is Unified Auditing in Oracle:  https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/AUDIT-Unified-Auditing.html
 
 -- this shows how many objects changed in a given day. this is to help understand how many releases happen in a unit of time.
 -- number of releases can be inferred from average number of objects touched per release - this gives number of objects altered over a unit of time.
@@ -628,7 +630,7 @@ ORDER BY TRUNC(event_timestamp);`}</pre>
 
           <Accordion>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography variant="subtitle2">📊 SQL Server Script</Typography>
+              <Typography variant="subtitle2">📊 SQL Server Release Frequency Script</Typography>
             </AccordionSummary>
             <AccordionDetails>
               <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
@@ -652,7 +654,11 @@ ORDER BY TRUNC(event_timestamp);`}</pre>
                   navigator.clipboard.writeText(text);
                 }}
               >
-                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{`-- this shows how many objects changed in a given day. this is to help understand how many releases happen in a unit of time.
+                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{`-- Without auditing turned on, this is as close as we get, (last change to an object) similar to Oracle LAST_DDL_TIME.
+-- What is SQL Server Auditing and how to configure?  https://learn.microsoft.com/en-us/sql/relational-databases/security/auditing/sql-server-audit-database-engine?view=sql-server-ver17
+
+
+-- this shows how many objects changed in a given day. this is to help understand how many releases happen in a unit of time.
 -- number of releases can be inferred from average number of objects touched per release - this gives number of objects altered over a unit of time.
 -- multiple changes to a single object only count as 1
 -- the number you get is the minimum number of releases that happened over a unit of time
@@ -676,6 +682,188 @@ ORDER BY change_date;`}</pre>
               </Paper>
               <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
                 💡 Adjust the <code>@MonthsBack</code> variable at the top to change the analysis time window
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="subtitle2">📊 Oracle Release Failure Rate Script</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                <Typography variant="body2" fontWeight="bold">
+                  ⚠️ Requires Unified Auditing (Oracle 19c+)
+                </Typography>
+                <Typography variant="body2">
+                  This script requires Unified Auditing to be configured in Oracle 19c or later.
+                  See <Link href="https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/AUDIT-Unified-Auditing.html" target="_blank" rel="noopener">Oracle documentation</Link> for setup instructions.
+                </Typography>
+              </Alert>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                Click to copy the Oracle failure rate script:
+              </Typography>
+              <Paper 
+                elevation={0} 
+                sx={{ 
+                  p: 2, 
+                  bgcolor: 'grey.100', 
+                  fontFamily: 'monospace', 
+                  fontSize: '0.75rem',
+                  maxHeight: '400px',
+                  overflow: 'auto',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  '&:hover': { bgcolor: 'grey.200' }
+                }}
+                onClick={(e) => {
+                  const text = (e.currentTarget as HTMLElement).querySelector('pre')?.textContent || '';
+                  navigator.clipboard.writeText(text);
+                }}
+              >
+                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{`-- Oracle Release Failure Rate Script
+-- ============================================
+-- CONFIGURATION: Change time window here (number of months to look back)
+-- ============================================
+-- Requires Unified Auditing to be configured - this is a 19c+ feature
+-- What is Unified Auditing in Oracle: https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/AUDIT-Unified-Auditing.html
+
+-- Failure Rate for releases can only be done on # of times scripts, (per DDL statements) fail inside a database.
+-- This script tracks DDL statement success/failure rates to help estimate deployment script failure rates.
+
+/* Configuration: How many months back to analyze */
+DEFINE months_back = 3
+
+-- Calculate date range
+DEFINE start_ts = ADD_MONTHS(TRUNC(SYSDATE), -&months_back)
+DEFINE end_ts = TRUNC(SYSDATE)
+
+-- Daily DDL success and failure rate
+SELECT
+  TRUNC(event_timestamp) AS day,
+  COUNT(*) AS ddl_events,
+  SUM(CASE WHEN return_code <> 0 THEN 1 ELSE 0 END) AS ddl_failures,
+  ROUND(
+    100 * SUM(CASE WHEN return_code <> 0 THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0)
+  , 2) AS failure_rate_pct
+FROM unified_audit_trail
+WHERE event_timestamp >= &start_ts
+  AND event_timestamp <  &end_ts
+  AND action_name IN (
+    'CREATE TABLE','ALTER TABLE','DROP TABLE',
+    'TRUNCATE TABLE',
+    'CREATE INDEX','DROP INDEX',
+    'CREATE VIEW','DROP VIEW',
+    'CREATE PROCEDURE','CREATE PACKAGE','CREATE PACKAGE BODY',
+    'CREATE FUNCTION','CREATE TYPE', 'DROP PROCEDURE','DROP PACKAGE',
+    'DROP TYPE','DROP FUNCTION'
+  )
+GROUP BY TRUNC(event_timestamp)
+ORDER BY day;`}</pre>
+              </Paper>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                💡 Adjust the <code>months_back</code> variable at the top to change the analysis time window
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                📈 This script tracks DDL failures to help estimate your script failure rate baseline
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="subtitle2">📊 SQL Server Release Failure Rate Script</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                <Typography variant="body2" fontWeight="bold">
+                  ⚠️ Requires SQL Server Audit or Extended Events
+                </Typography>
+                <Typography variant="body2">
+                  This script uses SQL Server Audit or Extended Events to track DDL failures.
+                  See <Link href="https://learn.microsoft.com/en-us/sql/relational-databases/security/auditing/sql-server-audit-database-engine?view=sql-server-ver17" target="_blank" rel="noopener">Microsoft documentation</Link> for setup instructions.
+                </Typography>
+              </Alert>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                Click to copy the SQL Server failure rate script (includes both Audit and Extended Events options):
+              </Typography>
+              <Paper 
+                elevation={0} 
+                sx={{ 
+                  p: 2, 
+                  bgcolor: 'grey.100', 
+                  fontFamily: 'monospace', 
+                  fontSize: '0.75rem',
+                  maxHeight: '500px',
+                  overflow: 'auto',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  '&:hover': { bgcolor: 'grey.200' }
+                }}
+                onClick={(e) => {
+                  const text = (e.currentTarget as HTMLElement).querySelector('pre')?.textContent || '';
+                  navigator.clipboard.writeText(text);
+                }}
+              >
+                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{`-- SQL Server Release Failure Rate Script
+-- ============================================
+-- We're back to SQL Server Audit or Extended Events for this kind of information
+-- What is SQL Server Auditing? https://learn.microsoft.com/en-us/sql/relational-databases/security/auditing/sql-server-audit-database-engine?view=sql-server-ver17
+-- ============================================
+
+/*============================================================================
+OPTION 1: Using SQL Server Audit
+=============================================================================*/
+
+DECLARE @start datetime2(0) = '2026-01-01 00:00:00';
+DECLARE @end   datetime2(0) = '2026-01-28 00:00:00';
+
+SELECT
+    CAST(event_time AS date) AS [day],
+    CASE
+        WHEN statement LIKE 'CREATE %' THEN 'CREATE'
+        WHEN statement LIKE 'DROP %'   THEN 'DROP'
+        ELSE 'OTHER'
+    END AS ddl_verb,
+    COUNT(*) AS failed_count
+FROM sys.fn_get_audit_file('D:\\SqlAudit\\MyAudit\\*.sqlaudit', DEFAULT, DEFAULT)
+WHERE event_time >= @start
+  AND event_time <  @end
+  AND succeeded = 0
+  AND (statement LIKE 'CREATE %' OR statement LIKE 'DROP %')
+GROUP BY CAST(event_time AS date),
+         CASE
+            WHEN statement LIKE 'CREATE %' THEN 'CREATE'
+            WHEN statement LIKE 'DROP %'   THEN 'DROP'
+            ELSE 'OTHER'
+         END
+ORDER BY [day], ddl_verb;
+
+
+/*============================================================================
+OPTION 2: Using Extended Events (More Involved)
+=============================================================================*/
+
+-- See full script for complete Extended Events setup including:
+-- - Event session creation for error_reported events
+-- - Filtering for DDL operations (CREATE/ALTER/DROP)
+-- - Reporting queries to bucket failures by day and hour
+-- 
+-- The full script includes:
+-- 1. Configuration variables (@DbName, @TargetFolder, etc.)
+-- 2. Event session creation with error filtering
+-- 3. Reporting query using sys.fn_xe_file_target_read_file
+--
+-- Copy this entire script to a .sql file for the complete implementation.`}</pre>
+              </Paper>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                💡 <strong>OPTION 1 (Audit):</strong> Adjust <code>@start</code> and <code>@end</code> dates, and update the audit file path
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                💡 <strong>OPTION 2 (Extended Events):</strong> Requires more setup but provides detailed tracking - see full script
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                📈 This script tracks DDL failures to help estimate your script failure rate baseline
               </Typography>
             </AccordionDetails>
           </Accordion>

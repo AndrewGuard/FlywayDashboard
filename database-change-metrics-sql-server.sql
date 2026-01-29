@@ -1,3 +1,7 @@
+-- Without auditing turned on, this is as close as we get, (last change to an object) similar to Oracle LAST_DDL_TIME.
+-- What is SQL Server Auditing and how to configure?  https://learn.microsoft.com/en-us/sql/relational-databases/security/auditing/sql-server-audit-database-engine?view=sql-server-ver17
+
+
 -- this shows how many objects changed in a given day. this is to help understand how many releases happen in a unit of time.
 -- number of releases can be inferred from average number of objects touched per release - this gives number of objects altered over a unit of time.
 -- multiple changes to a single object only count as 1

@@ -2,6 +2,8 @@
 -- ============================================
 -- CONFIGURATION: Change time window here (number of months to look back)
 -- ============================================
+-- For Oracle, without Auditing(19c and above) the following will be CLOSEST.  
+-- What is Unified Auditing in Oracle:  https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/AUDIT-Unified-Auditing.html
 
 -- this shows how many objects changed in a given day. this is to help understand how many releases happen in a unit of time.
 -- number of releases can be inferred from average number of objects touched per release - this gives number of objects altered over a unit of time.
