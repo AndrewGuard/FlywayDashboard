@@ -40,7 +40,10 @@ interface UserMetrics extends UserMetricsInput {}
 const RoiCalculationPage: React.FC = () => {
   const pageRef = useRef<HTMLDivElement>(null);
   const [businessSize, setBusinessSize] = useState<'small' | 'medium' | 'large'>('medium');
-  const [roiParameters, setRoiParameters] = useState<ROIParameters>(DEFAULT_ROI_PARAMETERS);
+  const [laborAutomationPct, setLaborAutomationPct] = useState<number>(75);
+  const [failureCostMultiplier, setFailureCostMultiplier] = useState<number>(1.0);
+  const [costOfDelayMultiplier, setCostOfDelayMultiplier] = useState<number>(1.0);
+  const [deploymentValueFactor, setDeploymentValueFactor] = useState<number>(0.5);
   const [selectedPreset, setSelectedPreset] = useState<string>('balanced');
   const [userMetrics, setUserMetrics] = useState<UserMetrics>({
     deploymentsPerQuarter: 12,
@@ -138,9 +141,64 @@ const RoiCalculationPage: React.FC = () => {
     loadFlywayMetrics();
   }, []);
 
+  // Separate effect to calculate baseline annual savings (used to derive implementation cost)
+  // This only recalculates when baseline metrics change, not when ROI parameters change
+  const [baselineAnnualSavings, setBaselineAnnualSavings] = useState<number>(0);
+  
   useEffect(() => {
-    calculateROIMetrics();
-  }, [userMetrics, flywayMetrics, roiParameters, implementationCostPct]);
+    const baselineROI = calculateROI(userMetrics, flywayMetrics, DEFAULT_ROI_PARAMETERS);
+    setBaselineAnnualSavings(baselineROI.annualSavings);
+  }, [
+    userMetrics.deploymentsPerQuarter,
+    userMetrics.leadTimeDays,
+    userMetrics.scriptFailureRate,
+    userMetrics.savingsPerDeployment,
+    userMetrics.costOfDelayPerDay,
+    userMetrics.dbaHoursPerDeployment,
+    userMetrics.developerHoursPerDeployment,
+    userMetrics.dbaAnnualSalary,
+    userMetrics.developerAnnualSalary,
+    flywayMetrics.deploymentsPerQuarter,
+    flywayMetrics.leadTimeDays,
+    flywayMetrics.scriptFailureRate
+  ]);
+
+  // Main ROI calculation effect
+  useEffect(() => {
+    const roiParameters: ROIParameters = {
+      laborAutomationPct,
+      failureCostMultiplier,
+      costOfDelayMultiplier,
+      deploymentValueFactor
+    };
+    
+    // Implementation cost is based on baseline annual savings, not current parameters
+    const actualImplementationCost = baselineAnnualSavings * (implementationCostPct / 100);
+    
+    // Calculate ROI with current parameters and fixed implementation cost
+    const finalMetrics = { ...userMetrics, implementationCost: actualImplementationCost };
+    const roiResult = calculateROI(finalMetrics, flywayMetrics, roiParameters);
+    setRoi(roiResult);
+  }, [
+    userMetrics.deploymentsPerQuarter,
+    userMetrics.leadTimeDays,
+    userMetrics.scriptFailureRate,
+    userMetrics.savingsPerDeployment,
+    userMetrics.costOfDelayPerDay,
+    userMetrics.dbaHoursPerDeployment,
+    userMetrics.developerHoursPerDeployment,
+    userMetrics.dbaAnnualSalary,
+    userMetrics.developerAnnualSalary,
+    flywayMetrics.deploymentsPerQuarter,
+    flywayMetrics.leadTimeDays,
+    flywayMetrics.scriptFailureRate,
+    baselineAnnualSavings,
+    laborAutomationPct,
+    failureCostMultiplier,
+    costOfDelayMultiplier,
+    deploymentValueFactor,
+    implementationCostPct
+  ]);
 
   async function loadUserMetrics() {
     try {
@@ -154,12 +212,10 @@ const RoiCalculationPage: React.FC = () => {
           }
           // Load ROI parameters if they exist
           if (data.laborAutomationPct !== undefined) {
-            setRoiParameters({
-              laborAutomationPct: data.laborAutomationPct,
-              failureCostMultiplier: data.failureCostMultiplier ?? 1.0,
-              costOfDelayMultiplier: data.costOfDelayMultiplier ?? 1.0,
-              deploymentValueFactor: data.deploymentValueFactor ?? 0.5
-            });
+            setLaborAutomationPct(data.laborAutomationPct ?? 75);
+            setFailureCostMultiplier(data.failureCostMultiplier ?? 1.0);
+            setCostOfDelayMultiplier(data.costOfDelayMultiplier ?? 1.0);
+            setDeploymentValueFactor(data.deploymentValueFactor ?? 0.5);
             // Check if it matches a preset
             const matchingPreset = Object.entries(ROI_PRESETS).find(([_, preset]) =>
               preset.parameters.laborAutomationPct === data.laborAutomationPct &&
@@ -227,17 +283,6 @@ const RoiCalculationPage: React.FC = () => {
     }
   }
 
-  function calculateROIMetrics() {
-    // Calculate annual savings first to determine implementation cost
-    const preliminaryROI = calculateROI(userMetrics, flywayMetrics, roiParameters);
-    const actualImplementationCost = preliminaryROI.annualSavings * (implementationCostPct / 100);
-    
-    // Recalculate with actual implementation cost
-    const finalMetrics = { ...userMetrics, implementationCost: actualImplementationCost };
-    const roiResult = calculateROI(finalMetrics, flywayMetrics, roiParameters);
-    setRoi(roiResult);
-  }
-
   async function handleSave() {
     try {
       const res = await fetch('/api/user-defined-metrics', {
@@ -246,7 +291,10 @@ const RoiCalculationPage: React.FC = () => {
         body: JSON.stringify({ 
           ...userMetrics, 
           businessSize,
-          ...roiParameters
+          laborAutomationPct,
+          failureCostMultiplier,
+          costOfDelayMultiplier,
+          deploymentValueFactor
         })
       });
 
@@ -943,16 +991,16 @@ OPTION 2: Using Extended Events (More Involved)
                   </Typography>
                   <Box sx={{ pl: 2 }}>
                     <Typography variant="body2" color="text.secondary">
-                      <strong>Lead time reduction:</strong> {roi.leadTimeReduction.toFixed(1)} days × ${(userMetrics.costOfDelayPerDay * roiParameters.costOfDelayMultiplier).toFixed(0)}/day × {flywayMetrics.deploymentsPerQuarter} deps = ${roi.timeSavingsPerQuarter.toLocaleString()}/quarter
+                      <strong>Lead time reduction:</strong> {roi.leadTimeReduction.toFixed(1)} days × ${(userMetrics.costOfDelayPerDay * costOfDelayMultiplier).toFixed(0)}/day × {flywayMetrics.deploymentsPerQuarter} deps = ${roi.timeSavingsPerQuarter.toLocaleString()}/quarter
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      <strong>Failure rate reduction:</strong> {roi.failureRateReduction.toFixed(1)}% × ${(userMetrics.savingsPerDeployment * roiParameters.failureCostMultiplier).toFixed(0)} cost × {flywayMetrics.deploymentsPerQuarter} deps = ${roi.failureSavingsPerQuarter.toLocaleString()}/quarter
+                      <strong>Failure rate reduction:</strong> {roi.failureRateReduction.toFixed(1)}% × ${(userMetrics.savingsPerDeployment * failureCostMultiplier).toFixed(0)} cost × {flywayMetrics.deploymentsPerQuarter} deps = ${roi.failureSavingsPerQuarter.toLocaleString()}/quarter
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      <strong>Deployment efficiency:</strong> +{roi.deploymentIncrease} deployments × ${(userMetrics.savingsPerDeployment * roiParameters.deploymentValueFactor).toFixed(0)} value = ${roi.efficiencySavings.toLocaleString()}/quarter
+                      <strong>Deployment efficiency:</strong> +{roi.deploymentIncrease} deployments × ${(userMetrics.savingsPerDeployment * deploymentValueFactor).toFixed(0)} value = ${roi.efficiencySavings.toLocaleString()}/quarter
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      <strong>DBA & developer labor savings:</strong> {roiParameters.laborAutomationPct}% automation → ${roi.laborSavingsPerQuarter.toLocaleString()}/quarter
+                      <strong>DBA & developer labor savings:</strong> {laborAutomationPct}% automation → ${roi.laborSavingsPerQuarter.toLocaleString()}/quarter
                     </Typography>
                     <Typography variant="body2" fontWeight="bold" sx={{ mt: 1 }}>
                       Total quarterly savings: ${roi.totalQuarterlySavings.toLocaleString()}
@@ -970,19 +1018,19 @@ OPTION 2: Using Extended Events (More Involved)
                     <AccordionDetails>
                       <Typography variant="body2" color="text.secondary" paragraph>
                         <strong>1. Lead Time Savings:</strong> (Baseline Lead Time - Flyway Lead Time) × Cost of Delay × Deployments per Quarter
-                        <br />• Cost of Delay Multiplier: <strong>{roiParameters.costOfDelayMultiplier}x</strong> ({roiParameters.costOfDelayMultiplier === 1 ? 'base cost only' : roiParameters.costOfDelayMultiplier > 1 ? 'includes opportunity costs' : 'conservative estimate'})
+                        <br />• Cost of Delay Multiplier: <strong>{costOfDelayMultiplier}x</strong> ({costOfDelayMultiplier === 1 ? 'base cost only' : costOfDelayMultiplier > 1 ? 'includes opportunity costs' : 'conservative estimate'})
                       </Typography>
                       <Typography variant="body2" color="text.secondary" paragraph>
                         <strong>2. Failure Cost Reduction:</strong> (Baseline Failure Rate - Flyway Failure Rate) × Failure Cost × Deployments
-                        <br />• Failure Cost Multiplier: <strong>{roiParameters.failureCostMultiplier}x</strong> ({roiParameters.failureCostMultiplier === 1 ? 'failures = deployment cost' : roiParameters.failureCostMultiplier > 1 ? 'failures cost more than deployments' : 'failures cost less than deployments'})
+                        <br />• Failure Cost Multiplier: <strong>{failureCostMultiplier}x</strong> ({failureCostMultiplier === 1 ? 'failures = deployment cost' : failureCostMultiplier > 1 ? 'failures cost more than deployments' : 'failures cost less than deployments'})
                       </Typography>
                       <Typography variant="body2" color="text.secondary" paragraph>
                         <strong>3. Deployment Frequency Value:</strong> (Flyway Deployments - Baseline Deployments) × Deployment Value
-                        <br />• Deployment Value Factor: <strong>{(roiParameters.deploymentValueFactor * 100).toFixed(0)}%</strong> of savings per deployment
+                        <br />• Deployment Value Factor: <strong>{(deploymentValueFactor * 100).toFixed(0)}%</strong> of savings per deployment
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         <strong>4. Labor Automation Savings:</strong> (DBA Hours + Dev Hours) × Hourly Rate × Automation % × Deployments
-                        <br />• Labor Automation: <strong>{roiParameters.laborAutomationPct}%</strong> time reduction from manual work
+                        <br />• Labor Automation: <strong>{laborAutomationPct}%</strong> time reduction from manual work
                       </Typography>
                     </AccordionDetails>
                   </Accordion>
@@ -1013,7 +1061,11 @@ OPTION 2: Using Extended Events (More Involved)
                         const preset = e.target.value;
                         setSelectedPreset(preset);
                         if (preset !== 'custom' && ROI_PRESETS[preset]) {
-                          setRoiParameters(ROI_PRESETS[preset].parameters);
+                          const params = ROI_PRESETS[preset].parameters;
+                          setLaborAutomationPct(params.laborAutomationPct);
+                          setFailureCostMultiplier(params.failureCostMultiplier);
+                          setCostOfDelayMultiplier(params.costOfDelayMultiplier);
+                          setDeploymentValueFactor(params.deploymentValueFactor);
                           setHasUnsavedChanges(true);
                         }
                       }}
@@ -1030,7 +1082,7 @@ OPTION 2: Using Extended Events (More Involved)
 
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" gutterBottom>
-                    Labor Automation: {roiParameters.laborAutomationPct}%
+                    Labor Automation: {laborAutomationPct}%
                   </Typography>
                   <Box sx={{ px: 1 }}>
                     <input
@@ -1038,9 +1090,9 @@ OPTION 2: Using Extended Events (More Involved)
                       min="0"
                       max="100"
                       step="5"
-                      value={roiParameters.laborAutomationPct}
+                      value={laborAutomationPct}
                       onChange={(e) => {
-                        setRoiParameters(prev => ({ ...prev, laborAutomationPct: Number(e.target.value) }));
+                        setLaborAutomationPct(Number(e.target.value));
                         setSelectedPreset('custom');
                         setHasUnsavedChanges(true);
                       }}
@@ -1054,7 +1106,7 @@ OPTION 2: Using Extended Events (More Involved)
 
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" gutterBottom>
-                    Failure Cost Multiplier: {roiParameters.failureCostMultiplier.toFixed(2)}x
+                    Failure Cost Multiplier: {failureCostMultiplier.toFixed(2)}x
                   </Typography>
                   <Box sx={{ px: 1 }}>
                     <input
@@ -1062,9 +1114,9 @@ OPTION 2: Using Extended Events (More Involved)
                       min="0.5"
                       max="3"
                       step="0.25"
-                      value={roiParameters.failureCostMultiplier}
+                      value={failureCostMultiplier}
                       onChange={(e) => {
-                        setRoiParameters(prev => ({ ...prev, failureCostMultiplier: Number(e.target.value) }));
+                        setFailureCostMultiplier(Number(e.target.value));
                         setSelectedPreset('custom');
                         setHasUnsavedChanges(true);
                       }}
@@ -1078,7 +1130,7 @@ OPTION 2: Using Extended Events (More Involved)
 
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" gutterBottom>
-                    Cost of Delay Multiplier: {roiParameters.costOfDelayMultiplier.toFixed(2)}x
+                    Cost of Delay Multiplier: {costOfDelayMultiplier.toFixed(2)}x
                   </Typography>
                   <Box sx={{ px: 1 }}>
                     <input
@@ -1086,9 +1138,9 @@ OPTION 2: Using Extended Events (More Involved)
                       min="0.5"
                       max="2"
                       step="0.1"
-                      value={roiParameters.costOfDelayMultiplier}
+                      value={costOfDelayMultiplier}
                       onChange={(e) => {
-                        setRoiParameters(prev => ({ ...prev, costOfDelayMultiplier: Number(e.target.value) }));
+                        setCostOfDelayMultiplier(Number(e.target.value));
                         setSelectedPreset('custom');
                         setHasUnsavedChanges(true);
                       }}
@@ -1102,7 +1154,7 @@ OPTION 2: Using Extended Events (More Involved)
 
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" gutterBottom>
-                    Deployment Value Factor: {(roiParameters.deploymentValueFactor * 100).toFixed(0)}%
+                    Deployment Value Factor: {(deploymentValueFactor * 100).toFixed(0)}%
                   </Typography>
                   <Box sx={{ px: 1 }}>
                     <input
@@ -1110,9 +1162,9 @@ OPTION 2: Using Extended Events (More Involved)
                       min="0"
                       max="1"
                       step="0.05"
-                      value={roiParameters.deploymentValueFactor}
+                      value={deploymentValueFactor}
                       onChange={(e) => {
-                        setRoiParameters(prev => ({ ...prev, deploymentValueFactor: Number(e.target.value) }));
+                        setDeploymentValueFactor(Number(e.target.value));
                         setSelectedPreset('custom');
                         setHasUnsavedChanges(true);
                       }}
