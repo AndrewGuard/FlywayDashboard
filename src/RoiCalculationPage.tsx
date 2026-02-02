@@ -28,6 +28,7 @@ import {
   TableRow
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
+import { apiFetch } from './apiClient';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import InfoIcon from '@mui/icons-material/Info';
@@ -55,7 +56,8 @@ const RoiCalculationPage: React.FC = () => {
     dbaHoursPerDeployment: 8,
     developerHoursPerDeployment: 4,
     dbaAnnualSalary: 175000,
-    developerAnnualSalary: 155000
+    developerAnnualSalary: 155000,
+    roiAlgorithm: 'dora'
   });
 
   const [flywayMetrics, setFlywayMetrics] = useState({
@@ -95,7 +97,8 @@ const RoiCalculationPage: React.FC = () => {
         dbaHoursPerDeployment: 4,
         developerHoursPerDeployment: 2,
         dbaAnnualSalary: 120000,
-        developerAnnualSalary: 110000
+        developerAnnualSalary: 110000,
+        roiAlgorithm: 'dora'
       },
       medium: {
         deploymentsPerQuarter: 12,
@@ -107,7 +110,8 @@ const RoiCalculationPage: React.FC = () => {
         dbaHoursPerDeployment: 8,
         developerHoursPerDeployment: 5,
         dbaAnnualSalary: 175000,
-        developerAnnualSalary: 155000
+        developerAnnualSalary: 155000,
+        roiAlgorithm: 'dora'
       },
       large: {
         deploymentsPerQuarter: 20,
@@ -119,7 +123,8 @@ const RoiCalculationPage: React.FC = () => {
         dbaHoursPerDeployment: 16,
         developerHoursPerDeployment: 10,
         dbaAnnualSalary: 220000,
-        developerAnnualSalary: 190000
+        developerAnnualSalary: 190000,
+        roiAlgorithm: 'dora'
       }
     };
     return defaults[size];
@@ -202,7 +207,7 @@ const RoiCalculationPage: React.FC = () => {
 
   async function loadUserMetrics() {
     try {
-      const res = await fetch('/api/user-defined-metrics');
+      const res = await apiFetch('/api/user-defined-metrics');
       if (res.ok) {
         const data = await res.json();
         if (data && Object.keys(data).length > 0) {
@@ -236,7 +241,8 @@ const RoiCalculationPage: React.FC = () => {
             dbaHoursPerDeployment: Number(data.dbaHoursPerDeployment) || 8,
             developerHoursPerDeployment: Number(data.developerHoursPerDeployment) || 4,
             dbaAnnualSalary: Number(data.dbaAnnualSalary) || 175000,
-            developerAnnualSalary: Number(data.developerAnnualSalary) || 155000
+            developerAnnualSalary: Number(data.developerAnnualSalary) || 155000,
+            roiAlgorithm: data.roiAlgorithm || 'dora'
           });
         }
       }
@@ -247,10 +253,10 @@ const RoiCalculationPage: React.FC = () => {
 
   async function loadFlywayMetrics() {
     try {
-      const depRes = await fetch('/api/metrics/deployments-per-quarter');
+      const depRes = await apiFetch('/api/metrics/deployments-per-quarter');
       const depData = depRes.ok ? await depRes.json() : {};
 
-      const leadRes = await fetch('/api/metrics/lead-times');
+      const leadRes = await apiFetch('/api/metrics/lead-times');
       const leadData = leadRes.ok ? await leadRes.json() : {};
       
       let avgLeadTime = 0;
@@ -265,7 +271,7 @@ const RoiCalculationPage: React.FC = () => {
       }
 
       let failureRate = 0;
-      const histRes = await fetch('/api/flyway/history/all');
+      const histRes = await apiFetch('/api/flyway/history/all');
       const histData = histRes.ok ? await histRes.json() : [];
       const history = Array.isArray(histData) ? histData : [];
       if (history.length) {
@@ -285,7 +291,7 @@ const RoiCalculationPage: React.FC = () => {
 
   async function handleSave() {
     try {
-      const res = await fetch('/api/user-defined-metrics', {
+      const res = await apiFetch('/api/user-defined-metrics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

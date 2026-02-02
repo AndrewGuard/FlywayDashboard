@@ -28,6 +28,7 @@ export interface UserMetricsInput {
   developerHoursPerDeployment: number;
   dbaAnnualSalary: number;
   developerAnnualSalary: number;
+  roiAlgorithm?: string;
 }
 
 export interface FlywayMetricsInput {

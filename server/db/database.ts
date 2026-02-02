@@ -90,6 +90,27 @@ db.exec(`
   INSERT OR IGNORE INTO user_defined_metrics (id) VALUES (1);
 `);
 
+// Migration: Add missing columns to existing databases
+const addColumnIfNotExists = (tableName: string, columnName: string, columnDef: string) => {
+  try {
+    const tableInfo = db.pragma(`table_info(${tableName})`) as Array<{ name: string }>;
+    const columnExists = tableInfo.some((col) => col.name === columnName);
+    if (!columnExists) {
+      console.log(`Adding column ${columnName} to ${tableName}`);
+      db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDef}`);
+    }
+  } catch (e) {
+    console.error(`Error checking/adding column ${columnName}:`, e);
+  }
+};
+
+// Add columns that may be missing from older database versions
+addColumnIfNotExists('user_defined_metrics', 'roi_algorithm', 'TEXT DEFAULT \'dora\'');
+addColumnIfNotExists('user_defined_metrics', 'labor_automation_pct', 'REAL DEFAULT 75');
+addColumnIfNotExists('user_defined_metrics', 'failure_cost_multiplier', 'REAL DEFAULT 1.0');
+addColumnIfNotExists('user_defined_metrics', 'cost_of_delay_multiplier', 'REAL DEFAULT 1.0');
+addColumnIfNotExists('user_defined_metrics', 'deployment_value_factor', 'REAL DEFAULT 0.5');
+
 interface UserMetricsRow {
   business_size: string;
   deployments_per_quarter: number;

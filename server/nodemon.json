@@ -1,13 +1,13 @@
 {
   "watch": [
-    "index.js",
-    "routes/**/*.js",
-    "db/**/*.js",
-    "flywayHistory.js",
+    "index.ts",
+    "routes/**/*.ts",
+    "db/**/*.ts",
+    "flywayHistory.ts",
     "jdbc-connections.json",
     ".env"
   ],
-  "ext": "js,json",
+  "ext": "ts,js,json",
   "ignore": [
     "node_modules/**",
     "db/flyway-dashboard.db",
