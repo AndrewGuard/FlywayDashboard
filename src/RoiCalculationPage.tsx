@@ -204,8 +204,9 @@ const RoiCalculationPage: React.FC = () => {
       deploymentValueFactor
     };
     
-    // Implementation cost is based on baseline annual savings, not current parameters
-    const actualImplementationCost = baselineAnnualSavings * (implementationCostPct / 100);
+    // Implementation cost is based on baseline annual savings, with a minimum of license cost
+    const calculatedCost = baselineAnnualSavings * (implementationCostPct / 100);
+    const actualImplementationCost = Math.max(calculatedCost, userMetrics.flywayLicenseCost || 0);
     
     // Calculate ROI with current parameters and fixed implementation cost
     const finalMetrics = { ...userMetrics, implementationCost: actualImplementationCost };
@@ -1275,7 +1276,15 @@ OPTION 2: Using Extended Events (More Involved)
                     {roi && (
                       <>
                         <br />
-                        <strong>Calculated cost: ${(roi.annualSavings * (implementationCostPct / 100)).toLocaleString()}</strong>
+                        <strong>Calculated cost: ${Math.max(
+                          roi.annualSavings * (implementationCostPct / 100),
+                          userMetrics.flywayLicenseCost || 0
+                        ).toLocaleString()}</strong>
+                        {(roi.annualSavings * (implementationCostPct / 100)) < (userMetrics.flywayLicenseCost || 0) && (
+                          <span style={{ color: '#f57c00', marginLeft: '8px' }}>
+                            (minimum: license cost)
+                          </span>
+                        )}
                       </>
                     )}
                   </Typography>

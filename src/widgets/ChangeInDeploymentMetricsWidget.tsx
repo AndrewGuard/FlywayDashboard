@@ -164,7 +164,8 @@ export default function ChangeInDeploymentMetricsWidget() {
             // Calculate baseline annual savings to derive implementation cost (same as ROI page)
             const baselineROI = calculateROI(baselineMetrics, currentMetrics, DEFAULT_ROI_PARAMETERS);
             const implementationCostPct = Number(userData.implementationCostPct) || 10; // Use saved value or default
-            const actualImplementationCost = baselineROI.annualSavings * (implementationCostPct / 100);
+            const calculatedCost = baselineROI.annualSavings * (implementationCostPct / 100);
+            const actualImplementationCost = Math.max(calculatedCost, Number(userData.flywayLicenseCost) || 0);
             
             // Now calculate final ROI with dynamic implementation cost
             const finalMetrics = { ...baselineMetrics, implementationCost: actualImplementationCost };
