@@ -57,6 +57,9 @@ const RoiCalculationPage: React.FC = () => {
     developerHoursPerDeployment: 4,
     dbaAnnualSalary: 175000,
     developerAnnualSalary: 155000,
+    developerCount: 5,
+    dbaCount: 2,
+    flywayLicenseCost: 21000, // 7 users x $3,000
     roiAlgorithm: 'dora'
   });
 
@@ -98,6 +101,9 @@ const RoiCalculationPage: React.FC = () => {
         developerHoursPerDeployment: 2,
         dbaAnnualSalary: 120000,
         developerAnnualSalary: 110000,
+        developerCount: 3,
+        dbaCount: 1,
+        flywayLicenseCost: 12000, // 4 users x $3,000
         roiAlgorithm: 'dora'
       },
       medium: {
@@ -111,6 +117,9 @@ const RoiCalculationPage: React.FC = () => {
         developerHoursPerDeployment: 5,
         dbaAnnualSalary: 175000,
         developerAnnualSalary: 155000,
+        developerCount: 5,
+        dbaCount: 2,
+        flywayLicenseCost: 21000, // 7 users x $3,000
         roiAlgorithm: 'dora'
       },
       large: {
@@ -124,6 +133,9 @@ const RoiCalculationPage: React.FC = () => {
         developerHoursPerDeployment: 10,
         dbaAnnualSalary: 220000,
         developerAnnualSalary: 190000,
+        developerCount: 10,
+        dbaCount: 3,
+        flywayLicenseCost: 39000, // 13 users x $3,000
         roiAlgorithm: 'dora'
       }
     };
@@ -146,6 +158,18 @@ const RoiCalculationPage: React.FC = () => {
     loadFlywayMetrics();
   }, []);
 
+  // Auto-calculate license cost based on user counts if not explicitly set
+  useEffect(() => {
+    const totalUsers = (userMetrics.developerCount || 0) + (userMetrics.dbaCount || 0);
+    const calculatedLicenseCost = totalUsers * 3000;
+    // Only update if the current license cost is 0 or matches the old calculation
+    if (userMetrics.flywayLicenseCost === 0 || userMetrics.flywayLicenseCost === calculatedLicenseCost) {
+      if (userMetrics.flywayLicenseCost !== calculatedLicenseCost) {
+        setUserMetrics(prev => ({ ...prev, flywayLicenseCost: calculatedLicenseCost }));
+      }
+    }
+  }, [userMetrics.developerCount, userMetrics.dbaCount]);
+
   // Separate effect to calculate baseline annual savings (used to derive implementation cost)
   // This only recalculates when baseline metrics change, not when ROI parameters change
   const [baselineAnnualSavings, setBaselineAnnualSavings] = useState<number>(0);
@@ -163,6 +187,9 @@ const RoiCalculationPage: React.FC = () => {
     userMetrics.developerHoursPerDeployment,
     userMetrics.dbaAnnualSalary,
     userMetrics.developerAnnualSalary,
+    userMetrics.developerCount,
+    userMetrics.dbaCount,
+    userMetrics.flywayLicenseCost,
     flywayMetrics.deploymentsPerQuarter,
     flywayMetrics.leadTimeDays,
     flywayMetrics.scriptFailureRate
@@ -230,6 +257,10 @@ const RoiCalculationPage: React.FC = () => {
             );
             setSelectedPreset(matchingPreset ? matchingPreset[0] : 'custom');
           }
+          // Load implementation cost percentage if it exists
+          if (data.implementationCostPct !== undefined) {
+            setImplementationCostPct(data.implementationCostPct ?? 10);
+          }
           // Load all user metrics from saved data
           setUserMetrics({
             deploymentsPerQuarter: Number(data.deploymentsPerQuarter) || 12,
@@ -242,6 +273,9 @@ const RoiCalculationPage: React.FC = () => {
             developerHoursPerDeployment: Number(data.developerHoursPerDeployment) || 4,
             dbaAnnualSalary: Number(data.dbaAnnualSalary) || 175000,
             developerAnnualSalary: Number(data.developerAnnualSalary) || 155000,
+            developerCount: Number(data.developerCount) || 5,
+            dbaCount: Number(data.dbaCount) || 2,
+            flywayLicenseCost: Number(data.flywayLicenseCost) || 0,
             roiAlgorithm: data.roiAlgorithm || 'dora'
           });
         }
@@ -300,7 +334,8 @@ const RoiCalculationPage: React.FC = () => {
           laborAutomationPct,
           failureCostMultiplier,
           costOfDelayMultiplier,
-          deploymentValueFactor
+          deploymentValueFactor,
+          implementationCostPct
         })
       });
 
@@ -308,6 +343,9 @@ const RoiCalculationPage: React.FC = () => {
         setSaved(true);
         setHasUnsavedChanges(false);
         setTimeout(() => setSaved(false), 3000);
+        
+        // Notify other components that user metrics have been updated
+        window.dispatchEvent(new CustomEvent('userMetricsUpdated'));
       } else {
         throw new Error('Failed to save');
       }
@@ -1523,6 +1561,50 @@ OPTION 2: Using Extended Events (More Involved)
                     value={userMetrics.developerAnnualSalary}
                     onChange={(e) => handleMetricChange({ developerAnnualSalary: Number(e.target.value) })}
                     helperText="Fully-loaded cost including benefits (US avg: $130K-180K for mid-level)"
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Number of Developers"
+                    type="number"
+                    value={userMetrics.developerCount || 5}
+                    onChange={(e) => {
+                      const newDevCount = Number(e.target.value);
+                      const totalUsers = newDevCount + (userMetrics.dbaCount || 2);
+                      handleMetricChange({ 
+                        developerCount: newDevCount,
+                        flywayLicenseCost: totalUsers * 3000
+                      });
+                    }}
+                    helperText="Number of developers using Flyway"
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Number of DBAs"
+                    type="number"
+                    value={userMetrics.dbaCount || 2}
+                    onChange={(e) => {
+                      const newDbaCount = Number(e.target.value);
+                      const totalUsers = (userMetrics.developerCount || 5) + newDbaCount;
+                      handleMetricChange({ 
+                        dbaCount: newDbaCount,
+                        flywayLicenseCost: totalUsers * 3000
+                      });
+                    }}
+                    helperText="Number of DBAs using Flyway"
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Flyway Annual License Cost ($)"
+                    type="number"
+                    value={userMetrics.flywayLicenseCost || 0}
+                    onChange={(e) => handleMetricChange({ flywayLicenseCost: Number(e.target.value) })}
+                    helperText="Auto-calculated as $3,000 per user (devs + DBAs), or enter custom value"
                   />
                 </Grid>
                 <Grid item xs={12}>

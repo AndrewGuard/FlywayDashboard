@@ -60,6 +60,18 @@ export default function ChangeInDeploymentMetricsWidget() {
 
   useEffect(() => {
     fetchMetrics();
+    
+    // Listen for user metrics updates from ROI page
+    const handleMetricsUpdate = () => {
+      console.log('User metrics updated, refreshing widget...');
+      fetchMetrics();
+    };
+    
+    window.addEventListener('userMetricsUpdated', handleMetricsUpdate);
+    
+    return () => {
+      window.removeEventListener('userMetricsUpdated', handleMetricsUpdate);
+    };
   }, []);
 
   async function fetchMetrics() {
@@ -121,12 +133,15 @@ export default function ChangeInDeploymentMetricsWidget() {
           leadTimeDays: Number(userData.leadTimeDays) || 20,
           scriptFailureRate: Number(userData.scriptFailureRate) || 5,
           savingsPerDeployment: Number(userData.savingsPerDeployment) || 1000,
-          implementationCost: Number(userData.implementationCost) || 9751,
+          implementationCost: 0, // Will be calculated dynamically below
           costOfDelayPerDay: Number(userData.costOfDelayPerDay) || 250,
           dbaHoursPerDeployment: Number(userData.dbaHoursPerDeployment) || 8,
           developerHoursPerDeployment: Number(userData.developerHoursPerDeployment) || 4,
           dbaAnnualSalary: Number(userData.dbaAnnualSalary) || 175000,
-          developerAnnualSalary: Number(userData.developerAnnualSalary) || 155000
+          developerAnnualSalary: Number(userData.developerAnnualSalary) || 155000,
+          developerCount: Number(userData.developerCount) || 5,
+          dbaCount: Number(userData.dbaCount) || 2,
+          flywayLicenseCost: Number(userData.flywayLicenseCost) || ((Number(userData.developerCount) || 5) + (Number(userData.dbaCount) || 2)) * 3000
         };
 
         const currentMetrics: FlywayMetricsInput = {
@@ -145,7 +160,15 @@ export default function ChangeInDeploymentMetricsWidget() {
               costOfDelayMultiplier: userData.costOfDelayMultiplier ?? DEFAULT_ROI_PARAMETERS.costOfDelayMultiplier,
               deploymentValueFactor: userData.deploymentValueFactor ?? DEFAULT_ROI_PARAMETERS.deploymentValueFactor
             };
-            const roiResult = calculateROI(baselineMetrics, currentMetrics, parameters);
+            
+            // Calculate baseline annual savings to derive implementation cost (same as ROI page)
+            const baselineROI = calculateROI(baselineMetrics, currentMetrics, DEFAULT_ROI_PARAMETERS);
+            const implementationCostPct = Number(userData.implementationCostPct) || 10; // Use saved value or default
+            const actualImplementationCost = baselineROI.annualSavings * (implementationCostPct / 100);
+            
+            // Now calculate final ROI with dynamic implementation cost
+            const finalMetrics = { ...baselineMetrics, implementationCost: actualImplementationCost };
+            const roiResult = calculateROI(finalMetrics, currentMetrics, parameters);
             if (roiResult) {
               setRoi({
                 percentage: roiResult.roiPercentage,

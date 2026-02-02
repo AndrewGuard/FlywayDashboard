@@ -28,6 +28,10 @@ export interface UserMetricsInput {
   developerHoursPerDeployment: number;
   dbaAnnualSalary: number;
   developerAnnualSalary: number;
+  developerCount?: number;
+  dbaCount?: number;
+  flywayLicenseCost?: number;
+  implementationCostPct?: number;
   roiAlgorithm?: string;
 }
 
@@ -73,6 +77,7 @@ export function calculateROI(
   const savingsPerDep = baselineMetrics.savingsPerDeployment;
   const implCost = baselineMetrics.implementationCost;
   const costOfDelay = baselineMetrics.costOfDelayPerDay;
+  const licenseCost = baselineMetrics.flywayLicenseCost || 0;
 
   // Current Flyway values
   const flywayDep = flywayMetrics.deploymentsPerQuarter;
@@ -105,11 +110,12 @@ export function calculateROI(
   // Total quarterly savings
   const totalQuarterlySavings = timeSavingsPerQuarter + failureSavingsPerQuarter + efficiencySavings + laborSavingsPerQuarter;
 
-  // Annual ROI
+  // Annual ROI (subtract annual license cost from savings)
   const annualSavings = totalQuarterlySavings * 4;
-  const netBenefit = annualSavings - implCost;
+  const annualSavingsAfterLicense = annualSavings - licenseCost;
+  const netBenefit = annualSavingsAfterLicense - implCost;
   const roiPercentage = implCost > 0 ? (netBenefit / implCost) * 100 : 0;
-  const paybackMonths = annualSavings > 0 ? Math.ceil((implCost / annualSavings) * 12) : 0;
+  const paybackMonths = annualSavingsAfterLicense > 0 ? Math.ceil((implCost / annualSavingsAfterLicense) * 12) : 0;
 
   return {
     leadTimeReduction,
@@ -120,7 +126,7 @@ export function calculateROI(
     efficiencySavings,
     laborSavingsPerQuarter,
     totalQuarterlySavings,
-    annualSavings,
+    annualSavings: annualSavingsAfterLicense, // Annual savings after license cost
     netBenefit,
     roiPercentage: Math.round(roiPercentage),
     paybackMonths

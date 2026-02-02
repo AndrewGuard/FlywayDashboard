@@ -34,6 +34,10 @@ db.exec(`
     developer_hours_per_deployment REAL DEFAULT 4,
     dba_annual_salary REAL DEFAULT 175000,
     developer_annual_salary REAL DEFAULT 155000,
+    developer_count INTEGER DEFAULT 5,
+    dba_count INTEGER DEFAULT 2,
+    flyway_license_cost REAL DEFAULT 0,
+    implementation_cost_pct REAL DEFAULT 10,
     roi_algorithm TEXT DEFAULT 'dora',
     labor_automation_pct REAL DEFAULT 75,
     failure_cost_multiplier REAL DEFAULT 1.0,
@@ -105,6 +109,10 @@ const addColumnIfNotExists = (tableName: string, columnName: string, columnDef: 
 };
 
 // Add columns that may be missing from older database versions
+addColumnIfNotExists('user_defined_metrics', 'developer_count', 'INTEGER DEFAULT 5');
+addColumnIfNotExists('user_defined_metrics', 'dba_count', 'INTEGER DEFAULT 2');
+addColumnIfNotExists('user_defined_metrics', 'flyway_license_cost', 'REAL DEFAULT 0');
+addColumnIfNotExists('user_defined_metrics', 'implementation_cost_pct', 'REAL DEFAULT 10');
 addColumnIfNotExists('user_defined_metrics', 'roi_algorithm', 'TEXT DEFAULT \'dora\'');
 addColumnIfNotExists('user_defined_metrics', 'labor_automation_pct', 'REAL DEFAULT 75');
 addColumnIfNotExists('user_defined_metrics', 'failure_cost_multiplier', 'REAL DEFAULT 1.0');
@@ -123,6 +131,10 @@ interface UserMetricsRow {
   developer_hours_per_deployment: number;
   dba_annual_salary: number;
   developer_annual_salary: number;
+  developer_count: number;
+  dba_count: number;
+  flyway_license_cost: number;
+  implementation_cost_pct: number;
   roi_algorithm: string;
   labor_automation_pct: number;
   failure_cost_multiplier: number;
@@ -183,6 +195,10 @@ export const dbHelpers = {
       developerHoursPerDeployment: row.developer_hours_per_deployment,
       dbaAnnualSalary: row.dba_annual_salary,
       developerAnnualSalary: row.developer_annual_salary,
+      developerCount: row.developer_count,
+      dbaCount: row.dba_count,
+      flywayLicenseCost: row.flyway_license_cost,
+      implementationCostPct: row.implementation_cost_pct,
       roiAlgorithm: row.roi_algorithm,
       laborAutomationPct: row.labor_automation_pct,
       failureCostMultiplier: row.failure_cost_multiplier,
@@ -206,6 +222,10 @@ export const dbHelpers = {
         developer_hours_per_deployment = ?,
         dba_annual_salary = ?,
         developer_annual_salary = ?,
+        developer_count = ?,
+        dba_count = ?,
+        flyway_license_cost = ?,
+        implementation_cost_pct = ?,
         roi_algorithm = ?,
         labor_automation_pct = ?,
         failure_cost_multiplier = ?,
@@ -226,6 +246,10 @@ export const dbHelpers = {
       metrics.developerHoursPerDeployment ?? 4,
       metrics.dbaAnnualSalary ?? 175000,
       metrics.developerAnnualSalary ?? 155000,
+      metrics.developerCount ?? 5,
+      metrics.dbaCount ?? 2,
+      metrics.flywayLicenseCost ?? 0,
+      metrics.implementationCostPct ?? 10,
       metrics.roiAlgorithm ?? 'dora',
       metrics.laborAutomationPct ?? 75,
       metrics.failureCostMultiplier ?? 1.0,
