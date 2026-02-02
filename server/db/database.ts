@@ -37,7 +37,8 @@ db.exec(`
     developer_count INTEGER DEFAULT 5,
     dba_count INTEGER DEFAULT 2,
     flyway_license_cost REAL DEFAULT 0,
-    implementation_cost_pct REAL DEFAULT 10,
+    dba_training_hours REAL DEFAULT 10,
+    developer_training_hours REAL DEFAULT 5,
     roi_algorithm TEXT DEFAULT 'dora',
     labor_automation_pct REAL DEFAULT 75,
     failure_cost_multiplier REAL DEFAULT 1.0,
@@ -112,12 +113,14 @@ const addColumnIfNotExists = (tableName: string, columnName: string, columnDef: 
 addColumnIfNotExists('user_defined_metrics', 'developer_count', 'INTEGER DEFAULT 5');
 addColumnIfNotExists('user_defined_metrics', 'dba_count', 'INTEGER DEFAULT 2');
 addColumnIfNotExists('user_defined_metrics', 'flyway_license_cost', 'REAL DEFAULT 0');
-addColumnIfNotExists('user_defined_metrics', 'implementation_cost_pct', 'REAL DEFAULT 10');
+addColumnIfNotExists('user_defined_metrics', 'dba_training_hours', 'REAL DEFAULT 10');
+addColumnIfNotExists('user_defined_metrics', 'developer_training_hours', 'REAL DEFAULT 5');
 addColumnIfNotExists('user_defined_metrics', 'roi_algorithm', 'TEXT DEFAULT \'dora\'');
 addColumnIfNotExists('user_defined_metrics', 'labor_automation_pct', 'REAL DEFAULT 75');
 addColumnIfNotExists('user_defined_metrics', 'failure_cost_multiplier', 'REAL DEFAULT 1.0');
 addColumnIfNotExists('user_defined_metrics', 'cost_of_delay_multiplier', 'REAL DEFAULT 1.0');
 addColumnIfNotExists('user_defined_metrics', 'deployment_value_factor', 'REAL DEFAULT 0.5');
+addColumnIfNotExists('user_defined_metrics', 'ramp_up_factor', 'REAL DEFAULT 0.5');
 
 interface UserMetricsRow {
   business_size: string;
@@ -134,12 +137,14 @@ interface UserMetricsRow {
   developer_count: number;
   dba_count: number;
   flyway_license_cost: number;
-  implementation_cost_pct: number;
+  dba_training_hours: number;
+  developer_training_hours: number;
   roi_algorithm: string;
   labor_automation_pct: number;
   failure_cost_multiplier: number;
   cost_of_delay_multiplier: number;
   deployment_value_factor: number;
+  ramp_up_factor: number;
   updated_at: string;
 }
 
@@ -198,12 +203,14 @@ export const dbHelpers = {
       developerCount: row.developer_count,
       dbaCount: row.dba_count,
       flywayLicenseCost: row.flyway_license_cost,
-      implementationCostPct: row.implementation_cost_pct,
+      dbaTrainingHours: row.dba_training_hours,
+      developerTrainingHours: row.developer_training_hours,
       roiAlgorithm: row.roi_algorithm,
       laborAutomationPct: row.labor_automation_pct,
       failureCostMultiplier: row.failure_cost_multiplier,
       costOfDelayMultiplier: row.cost_of_delay_multiplier,
       deploymentValueFactor: row.deployment_value_factor,
+      rampUpFactor: row.ramp_up_factor,
       updatedAt: row.updated_at
     };
   },
@@ -225,12 +232,14 @@ export const dbHelpers = {
         developer_count = ?,
         dba_count = ?,
         flyway_license_cost = ?,
-        implementation_cost_pct = ?,
+        dba_training_hours = ?,
+        developer_training_hours = ?,
         roi_algorithm = ?,
         labor_automation_pct = ?,
         failure_cost_multiplier = ?,
         cost_of_delay_multiplier = ?,
         deployment_value_factor = ?,
+        ramp_up_factor = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = 1
     `);
@@ -249,12 +258,14 @@ export const dbHelpers = {
       metrics.developerCount ?? 5,
       metrics.dbaCount ?? 2,
       metrics.flywayLicenseCost ?? 0,
-      metrics.implementationCostPct ?? 10,
+      metrics.dbaTrainingHours ?? 10,
+      metrics.developerTrainingHours ?? 5,
       metrics.roiAlgorithm ?? 'dora',
       metrics.laborAutomationPct ?? 75,
       metrics.failureCostMultiplier ?? 1.0,
       metrics.costOfDelayMultiplier ?? 1.0,
-      metrics.deploymentValueFactor ?? 0.5
+      metrics.deploymentValueFactor ?? 0.5,
+      metrics.rampUpFactor ?? 0.5
     );
     return this.getUserMetrics();
   },

@@ -14,12 +14,14 @@ export interface UserMetrics {
   developerCount?: number;
   dbaCount?: number;
   flywayLicenseCost?: number;
-  implementationCostPct?: number;
+  dbaTrainingHours?: number;
+  developerTrainingHours?: number;
   roiAlgorithm?: string;
   laborAutomationPct?: number;
   failureCostMultiplier?: number;
   costOfDelayMultiplier?: number;
   deploymentValueFactor?: number;
+  rampUpFactor?: number;
   updatedAt?: string;
 }
 

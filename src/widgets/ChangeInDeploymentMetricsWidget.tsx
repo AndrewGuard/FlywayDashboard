@@ -153,21 +153,26 @@ export default function ChangeInDeploymentMetricsWidget() {
         // Only calculate if we have actual Flyway data
         if (currentMetrics.deploymentsPerQuarter > 0 || currentMetrics.leadTimeDays > 0) {
           try {
-            // Use the saved parameters, default to balanced DORA
+            // Use the saved parameters, default to realistic preset
             const parameters: ROIParameters = {
               laborAutomationPct: userData.laborAutomationPct ?? DEFAULT_ROI_PARAMETERS.laborAutomationPct,
               failureCostMultiplier: userData.failureCostMultiplier ?? DEFAULT_ROI_PARAMETERS.failureCostMultiplier,
               costOfDelayMultiplier: userData.costOfDelayMultiplier ?? DEFAULT_ROI_PARAMETERS.costOfDelayMultiplier,
-              deploymentValueFactor: userData.deploymentValueFactor ?? DEFAULT_ROI_PARAMETERS.deploymentValueFactor
+              deploymentValueFactor: userData.deploymentValueFactor ?? DEFAULT_ROI_PARAMETERS.deploymentValueFactor,
+              rampUpFactor: userData.rampUpFactor ?? DEFAULT_ROI_PARAMETERS.rampUpFactor
             };
             
-            // Calculate baseline annual savings to derive implementation cost (same as ROI page)
+            // Calculate implementation cost based on training hours plus license (same as ROI page)
             const baselineROI = calculateROI(baselineMetrics, currentMetrics, DEFAULT_ROI_PARAMETERS);
-            const implementationCostPct = Number(userData.implementationCostPct) || 10; // Use saved value or default
-            const calculatedCost = baselineROI.annualSavings * (implementationCostPct / 100);
-            const actualImplementationCost = Math.max(calculatedCost, Number(userData.flywayLicenseCost) || 0);
+            const dbaTrainingHours = Number(userData.dbaTrainingHours) || 10;
+            const developerTrainingHours = Number(userData.developerTrainingHours) || 5;
+            const dbaHourlyRate = (Number(userData.dbaAnnualSalary) || 175000) / 2080;
+            const devHourlyRate = (Number(userData.developerAnnualSalary) || 155000) / 2080;
+            const dbaTrainingCost = (Number(userData.dbaCount) || 2) * dbaTrainingHours * dbaHourlyRate;
+            const devTrainingCost = (Number(userData.developerCount) || 5) * developerTrainingHours * devHourlyRate;
+            const actualImplementationCost = dbaTrainingCost + devTrainingCost + (Number(userData.flywayLicenseCost) || 0);
             
-            // Now calculate final ROI with dynamic implementation cost
+            // Now calculate final ROI with training-based implementation cost
             const finalMetrics = { ...baselineMetrics, implementationCost: actualImplementationCost };
             const roiResult = calculateROI(finalMetrics, currentMetrics, parameters);
             if (roiResult) {

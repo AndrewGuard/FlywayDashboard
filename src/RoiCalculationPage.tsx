@@ -41,11 +41,12 @@ interface UserMetrics extends UserMetricsInput {}
 const RoiCalculationPage: React.FC = () => {
   const pageRef = useRef<HTMLDivElement>(null);
   const [businessSize, setBusinessSize] = useState<'small' | 'medium' | 'large'>('medium');
-  const [laborAutomationPct, setLaborAutomationPct] = useState<number>(75);
-  const [failureCostMultiplier, setFailureCostMultiplier] = useState<number>(1.0);
-  const [costOfDelayMultiplier, setCostOfDelayMultiplier] = useState<number>(1.0);
-  const [deploymentValueFactor, setDeploymentValueFactor] = useState<number>(0.5);
-  const [selectedPreset, setSelectedPreset] = useState<string>('balanced');
+  const [laborAutomationPct, setLaborAutomationPct] = useState<number>(35);
+  const [failureCostMultiplier, setFailureCostMultiplier] = useState<number>(0.8);
+  const [costOfDelayMultiplier, setCostOfDelayMultiplier] = useState<number>(0.6);
+  const [deploymentValueFactor, setDeploymentValueFactor] = useState<number>(0.3);
+  const [rampUpFactor, setRampUpFactor] = useState<number>(0.5);
+  const [selectedPreset, setSelectedPreset] = useState<string>('realistic');
   const [userMetrics, setUserMetrics] = useState<UserMetrics>({
     deploymentsPerQuarter: 12,
     leadTimeDays: 30,
@@ -74,7 +75,8 @@ const RoiCalculationPage: React.FC = () => {
   const [exporting, setExporting] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showCalculationInfo, setShowCalculationInfo] = useState(false);
-  const [implementationCostPct, setImplementationCostPct] = useState<number>(10);
+  const [dbaTrainingHours, setDbaTrainingHours] = useState<number>(10);
+  const [developerTrainingHours, setDeveloperTrainingHours] = useState<number>(5);
 
   const handleExport = async () => {
     if (!pageRef.current) return;
@@ -92,7 +94,7 @@ const RoiCalculationPage: React.FC = () => {
     const defaults = {
       small: {
         deploymentsPerQuarter: 8,
-        leadTimeDays: 20,          // Small: simpler, easier to manage manually
+        leadTimeDays: 8,           // Small: simpler systems, less coordination (was 20 days - too high)
         scriptFailureRate: 10,     // Fewer systems = fewer failure points
         savingsPerDeployment: 2000,
         implementationCost: 25000,
@@ -108,7 +110,7 @@ const RoiCalculationPage: React.FC = () => {
       },
       medium: {
         deploymentsPerQuarter: 12,
-        leadTimeDays: 35,          // Medium: more complexity, coordination overhead
+        leadTimeDays: 12,          // Medium: realistic baseline (was 35 days - too high)
         scriptFailureRate: 18,     // More systems = more failure points
         savingsPerDeployment: 5000,
         implementationCost: 50000,
@@ -124,7 +126,7 @@ const RoiCalculationPage: React.FC = () => {
       },
       large: {
         deploymentsPerQuarter: 20,
-        leadTimeDays: 60,          // Large: high complexity, many stakeholders, slow manual processes
+        leadTimeDays: 25,          // Large: enterprise complexity but modern practices (was 60 days - overly pessimistic)
         scriptFailureRate: 25,     // Many systems, environments, teams = highest failure rate
         savingsPerDeployment: 12000,
         implementationCost: 100000,
@@ -170,6 +172,9 @@ const RoiCalculationPage: React.FC = () => {
     }
   }, [userMetrics.developerCount, userMetrics.dbaCount]);
 
+  // Validation warnings for unrealistic improvements
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
+
   // Separate effect to calculate baseline annual savings (used to derive implementation cost)
   // This only recalculates when baseline metrics change, not when ROI parameters change
   const [baselineAnnualSavings, setBaselineAnnualSavings] = useState<number>(0);
@@ -177,6 +182,32 @@ const RoiCalculationPage: React.FC = () => {
   useEffect(() => {
     const baselineROI = calculateROI(userMetrics, flywayMetrics, DEFAULT_ROI_PARAMETERS);
     setBaselineAnnualSavings(baselineROI.annualSavings);
+
+    // Validate for unrealistic improvements
+    const warnings: string[] = [];
+    
+    // Check lead time improvement
+    if (userMetrics.leadTimeDays > 0 && flywayMetrics.leadTimeDays >= 0) {
+      const leadTimeReduction = ((userMetrics.leadTimeDays - flywayMetrics.leadTimeDays) / userMetrics.leadTimeDays) * 100;
+      if (leadTimeReduction > 70) {
+        warnings.push(`Lead time improvement of ${leadTimeReduction.toFixed(0)}% is unusually high. Industry average is 40-60%.`);
+      }
+    }
+
+    // Check labor automation
+    if (laborAutomationPct > 50) {
+      warnings.push(`Labor automation of ${laborAutomationPct}% may be optimistic. Realistic first-year adoption is typically 30-40%.`);
+    }
+
+    // Check failure rate improvement
+    if (userMetrics.scriptFailureRate > 0 && flywayMetrics.scriptFailureRate >= 0) {
+      const failureReduction = ((userMetrics.scriptFailureRate - flywayMetrics.scriptFailureRate) / userMetrics.scriptFailureRate) * 100;
+      if (failureReduction > 80) {
+        warnings.push(`Failure rate reduction of ${failureReduction.toFixed(0)}% is very aggressive. Typical improvements are 50-70%.`);
+      }
+    }
+
+    setValidationWarnings(warnings);
   }, [
     userMetrics.deploymentsPerQuarter,
     userMetrics.leadTimeDays,
@@ -192,7 +223,8 @@ const RoiCalculationPage: React.FC = () => {
     userMetrics.flywayLicenseCost,
     flywayMetrics.deploymentsPerQuarter,
     flywayMetrics.leadTimeDays,
-    flywayMetrics.scriptFailureRate
+    flywayMetrics.scriptFailureRate,
+    laborAutomationPct
   ]);
 
   // Main ROI calculation effect
@@ -201,14 +233,18 @@ const RoiCalculationPage: React.FC = () => {
       laborAutomationPct,
       failureCostMultiplier,
       costOfDelayMultiplier,
-      deploymentValueFactor
+      deploymentValueFactor,
+      rampUpFactor
     };
     
-    // Implementation cost is based on baseline annual savings, with a minimum of license cost
-    const calculatedCost = baselineAnnualSavings * (implementationCostPct / 100);
-    const actualImplementationCost = Math.max(calculatedCost, userMetrics.flywayLicenseCost || 0);
+    // Implementation cost based on training hours plus first-year license cost
+    const dbaHourlyRate = userMetrics.dbaAnnualSalary / 2080;
+    const devHourlyRate = userMetrics.developerAnnualSalary / 2080;
+    const dbaTrainingCost = (userMetrics.dbaCount || 0) * dbaTrainingHours * dbaHourlyRate;
+    const devTrainingCost = (userMetrics.developerCount || 0) * developerTrainingHours * devHourlyRate;
+    const actualImplementationCost = dbaTrainingCost + devTrainingCost + (userMetrics.flywayLicenseCost || 0);
     
-    // Calculate ROI with current parameters and fixed implementation cost
+    // Calculate ROI with current parameters and training-based implementation cost
     const finalMetrics = { ...userMetrics, implementationCost: actualImplementationCost };
     const roiResult = calculateROI(finalMetrics, flywayMetrics, roiParameters);
     setRoi(roiResult);
@@ -222,6 +258,9 @@ const RoiCalculationPage: React.FC = () => {
     userMetrics.developerHoursPerDeployment,
     userMetrics.dbaAnnualSalary,
     userMetrics.developerAnnualSalary,
+    userMetrics.developerCount,
+    userMetrics.dbaCount,
+    userMetrics.flywayLicenseCost,
     flywayMetrics.deploymentsPerQuarter,
     flywayMetrics.leadTimeDays,
     flywayMetrics.scriptFailureRate,
@@ -230,7 +269,9 @@ const RoiCalculationPage: React.FC = () => {
     failureCostMultiplier,
     costOfDelayMultiplier,
     deploymentValueFactor,
-    implementationCostPct
+    rampUpFactor,
+    dbaTrainingHours,
+    developerTrainingHours
   ]);
 
   async function loadUserMetrics() {
@@ -249,18 +290,23 @@ const RoiCalculationPage: React.FC = () => {
             setFailureCostMultiplier(data.failureCostMultiplier ?? 1.0);
             setCostOfDelayMultiplier(data.costOfDelayMultiplier ?? 1.0);
             setDeploymentValueFactor(data.deploymentValueFactor ?? 0.5);
+            setRampUpFactor(data.rampUpFactor ?? 0.5);
             // Check if it matches a preset
             const matchingPreset = Object.entries(ROI_PRESETS).find(([_, preset]) =>
               preset.parameters.laborAutomationPct === data.laborAutomationPct &&
               preset.parameters.failureCostMultiplier === data.failureCostMultiplier &&
               preset.parameters.costOfDelayMultiplier === data.costOfDelayMultiplier &&
-              preset.parameters.deploymentValueFactor === data.deploymentValueFactor
+              preset.parameters.deploymentValueFactor === data.deploymentValueFactor &&
+              preset.parameters.rampUpFactor === data.rampUpFactor
             );
             setSelectedPreset(matchingPreset ? matchingPreset[0] : 'custom');
           }
           // Load implementation cost percentage if it exists
-          if (data.implementationCostPct !== undefined) {
-            setImplementationCostPct(data.implementationCostPct ?? 10);
+          if (data.dbaTrainingHours !== undefined) {
+            setDbaTrainingHours(data.dbaTrainingHours ?? 10);
+          }
+          if (data.developerTrainingHours !== undefined) {
+            setDeveloperTrainingHours(data.developerTrainingHours ?? 5);
           }
           // Load all user metrics from saved data
           setUserMetrics({
@@ -336,7 +382,9 @@ const RoiCalculationPage: React.FC = () => {
           failureCostMultiplier,
           costOfDelayMultiplier,
           deploymentValueFactor,
-          implementationCostPct
+          rampUpFactor,
+          dbaTrainingHours,
+          developerTrainingHours
         })
       });
 
@@ -374,6 +422,15 @@ const RoiCalculationPage: React.FC = () => {
       {saved && (
         <Alert severity="success" sx={{ mb: 3 }}>
           Configuration saved successfully!
+        </Alert>
+      )}
+
+      {validationWarnings.length > 0 && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" gutterBottom><strong>⚠️ Validation Warnings</strong></Typography>
+          {validationWarnings.map((warning, idx) => (
+            <Typography key={idx} variant="body2" sx={{ mb: 0.5 }}>• {warning}</Typography>
+          ))}
         </Alert>
       )}
 
@@ -518,7 +575,7 @@ const RoiCalculationPage: React.FC = () => {
             <Typography variant="body2" color="text.secondary" component="div" sx={{ lineHeight: 1.8 }}>
               • <strong>8 deployments/quarter:</strong> Monthly to bi-weekly cadence for smaller teams with simpler systems (<Link href="https://dora.dev/research/2023/dora-report/" target="_blank" rel="noopener">2023 State of DevOps Report</Link>)
               <br/>
-              • <strong>20-day lead time:</strong> Simpler systems with fewer stakeholders enable faster manual deployments (<Link href="https://cloud.google.com/architecture/devops/devops-measurement-metrics" target="_blank" rel="noopener">Google Cloud DevOps</Link>)
+              • <strong>8-day lead time:</strong> Simpler systems with less coordination overhead (was 20 days - overly pessimistic)
               <br/>
               • <strong>10% failure rate:</strong> Lower complexity and fewer integration points reduce failures (<Link href="https://dora.dev/research/2023/dora-report/" target="_blank" rel="noopener">DORA Research</Link>)
               <br/>
@@ -539,7 +596,7 @@ const RoiCalculationPage: React.FC = () => {
             <Typography variant="body2" color="text.secondary" component="div" sx={{ lineHeight: 1.8 }}>
               • <strong>12 deployments/quarter:</strong> Weekly cadence representing DORA "Low" performer baseline (<Link href="https://dora.dev/research/2023/dora-report/" target="_blank" rel="noopener">2023 State of DevOps Report</Link>)
               <br/>
-              • <strong>35-day lead time:</strong> Multi-team coordination and approval processes typical of growing organizations
+              • <strong>12-day lead time:</strong> Realistic baseline for teams with some coordination but manageable complexity (was 35 days - overly pessimistic)
               <br/>
               • <strong>18% failure rate:</strong> Moderate complexity with multiple environments and integration points (<Link href="https://dora.dev/research/2023/dora-report/" target="_blank" rel="noopener">DORA Research</Link>)
               <br/>
@@ -560,7 +617,7 @@ const RoiCalculationPage: React.FC = () => {
             <Typography variant="body2" color="text.secondary" component="div" sx={{ lineHeight: 1.8 }}>
               • <strong>20 deployments/quarter:</strong> Higher deployment frequency but with significant manual overhead across many teams (<Link href="https://dora.dev/research/2023/dora-report/" target="_blank" rel="noopener">2023 State of DevOps Report</Link>)
               <br/>
-              • <strong>60-day lead time:</strong> Enterprise complexity: extensive approvals, compliance reviews, and multi-team coordination (<Link href="https://cloud.google.com/architecture/devops/devops-measurement-metrics" target="_blank" rel="noopener">Google Cloud DevOps</Link>)
+              • <strong>25-day lead time:</strong> Enterprise with modern practices but multi-team coordination (was 60 days - overly pessimistic)
               <br/>
               • <strong>25% failure rate:</strong> High complexity with numerous systems, environments, dependencies, and integration points (<Link href="https://dora.dev/research/2023/dora-report/" target="_blank" rel="noopener">DORA Research</Link>)
               <br/>
@@ -1026,12 +1083,31 @@ OPTION 2: Using Extended Events (More Involved)
 
               {roi && (
                 <>
+                  {flywayMetrics.deploymentsPerQuarter === 0 && flywayMetrics.leadTimeDays === 0 && (
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                      <strong>No Flyway Data Available:</strong> ROI calculations require actual Flyway deployment metrics. 
+                      The dashboard cannot calculate ROI until you have Flyway history data.
+                      <br /><br />
+                      All benefit calculations depend on your Flyway deployment frequency and lead times.
+                    </Alert>
+                  )}
+
+                  {roi.capped && (
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                      <strong>Lead Time Improvement Capped:</strong> Your current lead time improvement ({roi.leadTimeImprovementPct}%) exceeds the realistic 60% cap. 
+                      Calculations use 60% to reflect industry-standard outcomes.
+                    </Alert>
+                  )}
+
                   <Box sx={{ textAlign: 'center', mb: 3 }}>
                     <Typography variant="h3" color="primary" gutterBottom>
                       {roi.roiPercentage}%
                     </Typography>
                     <Typography variant="h6" color="text.secondary">
-                      Return on Investment
+                      Return on Investment (Year 1)
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {(rampUpFactor * 100).toFixed(0)}% ramp-up factor applied
                     </Typography>
                   </Box>
 
@@ -1041,6 +1117,9 @@ OPTION 2: Using Extended Events (More Involved)
                         <Typography variant="caption" color="success.dark">Annual Savings</Typography>
                         <Typography variant="h6" color="success.dark">
                           ${roi.annualSavings.toLocaleString()}
+                        </Typography>
+                        <Typography variant="caption" color="success.dark">
+                          After ${roi.recurringLicenseCost.toLocaleString()}/yr license
                         </Typography>
                       </Paper>
                     </Grid>
@@ -1057,20 +1136,37 @@ OPTION 2: Using Extended Events (More Involved)
                   <Divider sx={{ my: 2 }} />
 
                   <Typography variant="subtitle2" gutterBottom>
+                    Cost Breakdown
+                  </Typography>
+                  <Box sx={{ pl: 2, mb: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      <strong>One-Time Training:</strong> ${roi.oneTimeTrainingCost.toLocaleString()}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      <strong>Recurring License (Annual):</strong> ${roi.recurringLicenseCost.toLocaleString()}/year
+                    </Typography>
+                    <Typography variant="body2" fontWeight="bold" sx={{ mt: 1 }}>
+                      Total Implementation Cost: ${roi.totalImplementationCost.toLocaleString()}
+                    </Typography>
+                  </Box>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  <Typography variant="subtitle2" gutterBottom>
                     Quarterly Savings Breakdown
                   </Typography>
                   <Box sx={{ pl: 2 }}>
                     <Typography variant="body2" color="text.secondary">
-                      <strong>Lead time reduction:</strong> {roi.leadTimeReduction.toFixed(1)} days × ${(userMetrics.costOfDelayPerDay * costOfDelayMultiplier).toFixed(0)}/day × {flywayMetrics.deploymentsPerQuarter} deps = ${roi.timeSavingsPerQuarter.toLocaleString()}/quarter
+                      <strong>Lead time reduction:</strong> {roi.leadTimeReduction.toFixed(1)} days × ${(userMetrics.costOfDelayPerDay * costOfDelayMultiplier).toFixed(0)}/day × {flywayMetrics.deploymentsPerQuarter} deps × {(rampUpFactor * 100).toFixed(0)}% = ${roi.timeSavingsPerQuarter.toLocaleString()}/quarter
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      <strong>Failure rate reduction:</strong> {roi.failureRateReduction.toFixed(1)}% × ${(userMetrics.savingsPerDeployment * failureCostMultiplier).toFixed(0)} cost × {flywayMetrics.deploymentsPerQuarter} deps = ${roi.failureSavingsPerQuarter.toLocaleString()}/quarter
+                      <strong>Failure rate reduction:</strong> {roi.failureRateReduction.toFixed(1)}% × ${(userMetrics.savingsPerDeployment * failureCostMultiplier).toFixed(0)} cost × {flywayMetrics.deploymentsPerQuarter} deps × {(rampUpFactor * 100).toFixed(0)}% = ${roi.failureSavingsPerQuarter.toLocaleString()}/quarter
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      <strong>Deployment efficiency:</strong> +{roi.deploymentIncrease} deployments × ${(userMetrics.savingsPerDeployment * deploymentValueFactor).toFixed(0)} value = ${roi.efficiencySavings.toLocaleString()}/quarter
+                      <strong>Deployment efficiency:</strong> +{roi.deploymentIncrease} deployments × ${(userMetrics.savingsPerDeployment * deploymentValueFactor).toFixed(0)} value × {(rampUpFactor * 100).toFixed(0)}% = ${roi.efficiencySavings.toLocaleString()}/quarter
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      <strong>DBA & developer labor savings:</strong> {laborAutomationPct}% automation → ${roi.laborSavingsPerQuarter.toLocaleString()}/quarter
+                      <strong>DBA & developer labor savings:</strong> {laborAutomationPct}% automation × {(rampUpFactor * 100).toFixed(0)}% ramp-up → ${roi.laborSavingsPerQuarter.toLocaleString()}/quarter
                     </Typography>
                     <Typography variant="body2" fontWeight="bold" sx={{ mt: 1 }}>
                       Total quarterly savings: ${roi.totalQuarterlySavings.toLocaleString()}
@@ -1120,6 +1216,24 @@ OPTION 2: Using Extended Events (More Involved)
                 Adjust how ROI is calculated using DORA metrics
               </Typography>
 
+              {flywayMetrics.deploymentsPerQuarter === 0 && flywayMetrics.leadTimeDays === 0 && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  <strong>⚠️ No Flyway Metrics Loaded</strong>
+                  <br />
+                  ROI sliders will have no effect until you have actual Flyway deployment data.
+                  <br /><br />
+                  <strong>All savings calculations require:</strong>
+                  <br />
+                  • Flyway deployment frequency (currently: {flywayMetrics.deploymentsPerQuarter})
+                  <br />
+                  • Flyway lead times (currently: {flywayMetrics.leadTimeDays} days)
+                  <br />
+                  • Flyway failure rate (currently: {flywayMetrics.scriptFailureRate}%)
+                  <br /><br />
+                  These values are loaded from your Flyway history. Run some migrations first!
+                </Alert>
+              )}
+
               <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <FormControl fullWidth>
@@ -1136,6 +1250,7 @@ OPTION 2: Using Extended Events (More Involved)
                           setFailureCostMultiplier(params.failureCostMultiplier);
                           setCostOfDelayMultiplier(params.costOfDelayMultiplier);
                           setDeploymentValueFactor(params.deploymentValueFactor);
+                          setRampUpFactor(params.rampUpFactor);
                           setHasUnsavedChanges(true);
                         }
                       }}
@@ -1256,44 +1371,111 @@ OPTION 2: Using Extended Events (More Involved)
                 </Grid>
 
                 <Grid item xs={12}>
-                  <Divider sx={{ my: 1 }} />
-                  <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
-                    Cost of Implementation
+                  <Typography variant="subtitle2" gutterBottom>
+                    First-Year Ramp-Up: {(rampUpFactor * 100).toFixed(0)}%
+                  </Typography>
+                  <Box sx={{ px: 1 }}>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="5"
+                      value={rampUpFactor * 100}
+                      onChange={(e) => {
+                        setRampUpFactor(Number(e.target.value) / 100);
+                        setHasUnsavedChanges(true);
+                        setSelectedPreset('custom');
+                      }}
+                      style={{ width: '100%' }}
+                    />
+                  </Box>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                    Percentage of benefits achieved in first year (50% = realistic 6-month ramp-up)
                   </Typography>
                 </Grid>
 
                 <Grid item xs={12}>
+                  <Divider sx={{ my: 1 }} />
+                  <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
+                    Cost of Implementation (Training Time)
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
                   <Typography variant="subtitle2" gutterBottom>
-                    Implementation Cost: {implementationCostPct}% of Annual Savings
+                    DBA Training Hours: {dbaTrainingHours} hours
                   </Typography>
                   <Box sx={{ px: 1 }}>  
                     <input
                       type="range"
                       min="0"
-                      max="50"
+                      max="40"
                       step="1"
-                      value={implementationCostPct}
+                      value={dbaTrainingHours}
                       onChange={(e) => {
-                        setImplementationCostPct(Number(e.target.value));
+                        setDbaTrainingHours(Number(e.target.value));
                         setHasUnsavedChanges(true);
                       }}
                       style={{ width: '100%' }}
                     />
                   </Box>
                   <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
-                    Implementation cost as percentage of annual savings (licenses, consulting, training, setup)
+                    Training hours per DBA ({userMetrics.dbaCount || 0} DBAs × {dbaTrainingHours} hrs × ${((userMetrics.dbaAnnualSalary || 0) / 2080).toFixed(2)}/hr)
                     {roi && (
                       <>
                         <br />
-                        <strong>Calculated cost: ${Math.max(
-                          roi.annualSavings * (implementationCostPct / 100),
-                          userMetrics.flywayLicenseCost || 0
-                        ).toLocaleString()}</strong>
-                        {(roi.annualSavings * (implementationCostPct / 100)) < (userMetrics.flywayLicenseCost || 0) && (
-                          <span style={{ color: '#f57c00', marginLeft: '8px' }}>
-                            (minimum: license cost)
-                          </span>
-                        )}
+                        <strong>Cost: ${((userMetrics.dbaCount || 0) * dbaTrainingHours * ((userMetrics.dbaAnnualSalary || 0) / 2080)).toLocaleString(undefined, {maximumFractionDigits: 0})}</strong>
+                      </>
+                    )}
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Developer Training Hours: {developerTrainingHours} hours
+                  </Typography>
+                  <Box sx={{ px: 1 }}>  
+                    <input
+                      type="range"
+                      min="0"
+                      max="40"
+                      step="1"
+                      value={developerTrainingHours}
+                      onChange={(e) => {
+                        setDeveloperTrainingHours(Number(e.target.value));
+                        setHasUnsavedChanges(true);
+                      }}
+                      style={{ width: '100%' }}
+                    />
+                  </Box>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                    Training hours per developer ({userMetrics.developerCount || 0} devs × {developerTrainingHours} hrs × ${((userMetrics.developerAnnualSalary || 0) / 2080).toFixed(2)}/hr)
+                    {roi && (
+                      <>
+                        <br />
+                        <strong>Cost: ${((userMetrics.developerCount || 0) * developerTrainingHours * ((userMetrics.developerAnnualSalary || 0) / 2080)).toLocaleString(undefined, {maximumFractionDigits: 0})}</strong>
+                      </>
+                    )}
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+                    {roi && (
+                      <>
+                        <strong>Total Implementation Cost: ${roi.totalImplementationCost.toLocaleString()}</strong>
+                        <br />
+                        <span style={{ fontSize: '0.85em', fontStyle: 'italic' }}>
+                          One-Time Training: ${roi.oneTimeTrainingCost.toLocaleString()} + 
+                          Annual License: ${roi.recurringLicenseCost.toLocaleString()}/year
+                        </span>
+                        <br />
+                        <span style={{ fontSize: '0.85em', color: '#666' }}>
+                          (DBA: {userMetrics.dbaCount || 0} × {dbaTrainingHours} hrs × ${((userMetrics.dbaAnnualSalary || 0) / 2080).toFixed(2)}/hr = 
+                          ${((userMetrics.dbaCount || 0) * dbaTrainingHours * ((userMetrics.dbaAnnualSalary || 0) / 2080)).toLocaleString(undefined, {maximumFractionDigits: 0})}, 
+                          Dev: {userMetrics.developerCount || 0} × {developerTrainingHours} hrs × ${((userMetrics.developerAnnualSalary || 0) / 2080).toFixed(2)}/hr = 
+                          ${((userMetrics.developerCount || 0) * developerTrainingHours * ((userMetrics.developerAnnualSalary || 0) / 2080)).toLocaleString(undefined, {maximumFractionDigits: 0})})
+                        </span>
                       </>
                     )}
                   </Typography>

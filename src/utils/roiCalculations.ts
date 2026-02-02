@@ -8,13 +8,15 @@ export interface ROIParameters {
   failureCostMultiplier: number;     // How much failures cost vs successful deployments
   costOfDelayMultiplier: number;     // Multiplier for opportunity costs
   deploymentValueFactor: number;     // Value factor for additional deployments (0-1)
+  rampUpFactor: number;              // First-year adoption ramp-up (0.5 = 50% of benefits in year 1)
 }
 
 export const DEFAULT_ROI_PARAMETERS: ROIParameters = {
-  laborAutomationPct: 75,
-  failureCostMultiplier: 1.0,
-  costOfDelayMultiplier: 1.0,
-  deploymentValueFactor: 0.5
+  laborAutomationPct: 35,    // Realistic first-year adoption
+  failureCostMultiplier: 0.8,
+  costOfDelayMultiplier: 0.6, // Teams rarely capture full theoretical value
+  deploymentValueFactor: 0.3,
+  rampUpFactor: 0.5          // 50% of benefits achieved in first year
 };
 
 export interface UserMetricsInput {
@@ -31,7 +33,8 @@ export interface UserMetricsInput {
   developerCount?: number;
   dbaCount?: number;
   flywayLicenseCost?: number;
-  implementationCostPct?: number;
+  dbaTrainingHours?: number;
+  developerTrainingHours?: number;
   roiAlgorithm?: string;
 }
 
@@ -54,6 +57,13 @@ export interface ROIBreakdown {
   netBenefit: number;
   roiPercentage: number;
   paybackMonths: number;
+  // Cost breakdown
+  oneTimeTrainingCost: number;
+  recurringLicenseCost: number;
+  totalImplementationCost: number;
+  // Improvement percentages
+  leadTimeImprovementPct: number;
+  capped: boolean;  // True if lead time was capped at 60%
 }
 
 /**
@@ -84,28 +94,37 @@ export function calculateROI(
   const flywayLead = flywayMetrics.leadTimeDays;
   const flywayFail = flywayMetrics.scriptFailureRate;
 
-  // 1. Lead time savings (DORA-aligned) with adjustable cost of delay multiplier
-  const leadTimeReduction = Math.max(0, nonFlywayLead - flywayLead);
+  // 1. Lead time savings (DORA-aligned) with 60% cap and adjustable cost of delay multiplier
+  let leadTimeReduction = Math.max(0, nonFlywayLead - flywayLead);
+  const leadTimeImprovementPct = nonFlywayLead > 0 ? (leadTimeReduction / nonFlywayLead) * 100 : 0;
+  let capped = false;
+  
+  // Cap lead time improvement at 60% (realistic for most teams)
+  if (leadTimeImprovementPct > 60 && nonFlywayLead > 0) {
+    leadTimeReduction = nonFlywayLead * 0.6; // Cap at 60% improvement
+    capped = true;
+  }
+  
   const adjustedCostOfDelay = costOfDelay * parameters.costOfDelayMultiplier;
   const leadTimeSavingsPerDeployment = leadTimeReduction * adjustedCostOfDelay;
-  const timeSavingsPerQuarter = leadTimeSavingsPerDeployment * flywayDep;
+  const timeSavingsPerQuarter = leadTimeSavingsPerDeployment * flywayDep * parameters.rampUpFactor;
 
-  // 2. Cost savings from reduced failures with adjustable multiplier
+  // 2. Cost savings from reduced failures with adjustable multiplier and ramp-up
   const failureRateReduction = Math.max(0, nonFlywayFail - flywayFail) / 100;
   const adjustedFailureCost = savingsPerDep * parameters.failureCostMultiplier;
-  const failureSavingsPerQuarter = failureRateReduction * flywayDep * adjustedFailureCost;
+  const failureSavingsPerQuarter = failureRateReduction * flywayDep * adjustedFailureCost * parameters.rampUpFactor;
 
-  // 3. Deployment efficiency savings with adjustable value factor
+  // 3. Deployment efficiency savings with adjustable value factor and ramp-up
   const deploymentIncrease = Math.max(0, flywayDep - nonFlywayDep);
-  const efficiencySavings = deploymentIncrease * (savingsPerDep * parameters.deploymentValueFactor);
+  const efficiencySavings = deploymentIncrease * (savingsPerDep * parameters.deploymentValueFactor) * parameters.rampUpFactor;
 
-  // 4. DBA and developer time savings with adjustable automation percentage
+  // 4. DBA and developer time savings with adjustable automation percentage and ramp-up
   const dbaHourlyRate = baselineMetrics.dbaAnnualSalary / 2080; // 2080 working hours per year
   const devHourlyRate = baselineMetrics.developerAnnualSalary / 2080;
   const automationFactor = parameters.laborAutomationPct / 100; // Convert percentage to decimal
   const dbaTimeSavingsPerDeployment = baselineMetrics.dbaHoursPerDeployment * automationFactor * dbaHourlyRate;
   const devTimeSavingsPerDeployment = baselineMetrics.developerHoursPerDeployment * automationFactor * devHourlyRate;
-  const laborSavingsPerQuarter = (dbaTimeSavingsPerDeployment + devTimeSavingsPerDeployment) * flywayDep;
+  const laborSavingsPerQuarter = (dbaTimeSavingsPerDeployment + devTimeSavingsPerDeployment) * flywayDep * parameters.rampUpFactor;
 
   // Total quarterly savings
   const totalQuarterlySavings = timeSavingsPerQuarter + failureSavingsPerQuarter + efficiencySavings + laborSavingsPerQuarter;
@@ -117,6 +136,10 @@ export function calculateROI(
   const roiPercentage = implCost > 0 ? (netBenefit / implCost) * 100 : 0;
   const paybackMonths = annualSavingsAfterLicense > 0 ? Math.ceil((implCost / annualSavingsAfterLicense) * 12) : 0;
 
+  // Calculate cost breakdown
+  const oneTimeTrainingCost = implCost - licenseCost; // Training is one-time
+  const recurringLicenseCost = licenseCost; // License is annual recurring
+  
   return {
     leadTimeReduction,
     timeSavingsPerQuarter,
@@ -129,7 +152,12 @@ export function calculateROI(
     annualSavings: annualSavingsAfterLicense, // Annual savings after license cost
     netBenefit,
     roiPercentage: Math.round(roiPercentage),
-    paybackMonths
+    paybackMonths,
+    oneTimeTrainingCost,
+    recurringLicenseCost,
+    totalImplementationCost: implCost,
+    leadTimeImprovementPct: Math.round(leadTimeImprovementPct),
+    capped
   };
 }
 
@@ -137,6 +165,17 @@ export function calculateROI(
  * ROI Parameter Presets for different calculation approaches
  */
 export const ROI_PRESETS: Record<string, { name: string; description: string; parameters: ROIParameters }> = {
+  realistic: {
+    name: 'Realistic',
+    description: 'Real-world outcomes with 6-month ramp-up (recommended for most teams)',
+    parameters: {
+      laborAutomationPct: 35,           // 35% labor automation (realistic first-year adoption)
+      failureCostMultiplier: 0.8,       // Failures cost 80% of successful deployments
+      costOfDelayMultiplier: 0.6,       // 60% of theoretical value (teams rarely capture full value)
+      deploymentValueFactor: 0.3,       // 30% value from additional deployments
+      rampUpFactor: 0.5                 // 50% of benefits in first year
+    }
+  },
   conservative: {
     name: 'Conservative',
     description: 'Lower estimates for cautious ROI projections',
@@ -144,17 +183,19 @@ export const ROI_PRESETS: Record<string, { name: string; description: string; pa
       laborAutomationPct: 50,           // 50% labor automation
       failureCostMultiplier: 0.75,      // Failures cost 75% of successful deployments
       costOfDelayMultiplier: 0.8,       // 80% of base opportunity cost
-      deploymentValueFactor: 0.3        // 30% value from additional deployments
+      deploymentValueFactor: 0.3,       // 30% value from additional deployments
+      rampUpFactor: 0.6                 // 60% of benefits in first year
     }
   },
   balanced: {
     name: 'Balanced',
-    description: 'Standard DORA-aligned estimates (recommended)',
+    description: 'Standard DORA-aligned estimates',
     parameters: {
       laborAutomationPct: 75,           // 75% labor automation (DORA standard)
       failureCostMultiplier: 1.0,       // Failures cost same as deployments
       costOfDelayMultiplier: 1.0,       // Base opportunity cost
-      deploymentValueFactor: 0.5        // 50% value from additional deployments
+      deploymentValueFactor: 0.5,       // 50% value from additional deployments
+      rampUpFactor: 0.8                 // 80% of benefits in first year
     }
   },
   aggressive: {
@@ -164,7 +205,8 @@ export const ROI_PRESETS: Record<string, { name: string; description: string; pa
       laborAutomationPct: 90,           // 90% labor automation with full commitment
       failureCostMultiplier: 2.0,       // Failures cost 2x successful deployments
       costOfDelayMultiplier: 1.5,       // 150% opportunity cost (includes indirect impact)
-      deploymentValueFactor: 0.7        // 70% value from additional deployments
+      deploymentValueFactor: 0.7,       // 70% value from additional deployments
+      rampUpFactor: 1.0                 // 100% of benefits in first year (optimistic)
     }
   }
 };
