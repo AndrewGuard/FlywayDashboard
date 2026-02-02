@@ -1243,6 +1243,15 @@ OPTION 2: Using Extended Events (More Involved)
                   </Box>
                   <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
                     Value of additional deployments (50% = each deployment worth 50% of savings)
+                    {flywayMetrics.deploymentsPerQuarter <= userMetrics.deploymentsPerQuarter && (
+                      <>
+                        <br />
+                        <Box component="span" sx={{ color: 'warning.main', fontWeight: 'medium' }}>
+                          ⚠️ Currently no effect: Flyway deployments ({flywayMetrics.deploymentsPerQuarter}) ≤ baseline ({userMetrics.deploymentsPerQuarter}). 
+                          This factor only applies when deploying MORE frequently with Flyway.
+                        </Box>
+                      </>
+                    )}
                   </Typography>
                 </Grid>
 

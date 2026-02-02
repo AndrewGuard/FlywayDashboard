@@ -177,6 +177,9 @@ const LeadTimeOverTimeWidget: React.FC = () => {
         <Typography variant="body2" color="text.secondary" gutterBottom>
           Comparing Flyway vs Baseline vs Industry Standards (DORA) • Performance tier based on last 60 days • <Box component="span" sx={{ color: 'success.main', fontWeight: 'medium' }}>Lower is better</Box>
         </Typography>
+        <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1, fontStyle: 'italic' }}>
+          Flyway lead time is calculated as the time delta between when a migration script is generated (timestamp) and when it is deployed to production.
+        </Typography>
         <Box sx={{ height: 400, mt: 2 }}>
           <LineChart
             xAxis={[{ 
