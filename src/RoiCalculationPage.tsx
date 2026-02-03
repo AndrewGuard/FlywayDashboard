@@ -1100,15 +1100,30 @@ OPTION 2: Using Extended Events (More Involved)
                   )}
 
                   <Box sx={{ textAlign: 'center', mb: 3 }}>
-                    <Typography variant="h3" color="primary" gutterBottom>
-                      {roi.roiPercentage}%
-                    </Typography>
-                    <Typography variant="h6" color="text.secondary">
-                      Return on Investment (Year 1)
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {(rampUpFactor * 100).toFixed(0)}% ramp-up factor applied
-                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={6}>
+                        <Paper elevation={2} sx={{ p: 3, bgcolor: 'primary.lighter', borderLeft: 4, borderColor: 'primary.main' }}>
+                          <Typography variant="overline" color="text.secondary">Year 1 ROI</Typography>
+                          <Typography variant="h3" color="primary" gutterBottom>
+                            {roi.roiPercentage}%
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {(rampUpFactor * 100).toFixed(0)}% ramp-up factor applied
+                          </Typography>
+                        </Paper>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Paper elevation={2} sx={{ p: 3, bgcolor: 'success.lighter', borderLeft: 4, borderColor: 'success.main' }}>
+                          <Typography variant="overline" color="text.secondary">3-Year ROI</Typography>
+                          <Typography variant="h3" color="success.dark" gutterBottom>
+                            {roi.threeYearROI}%
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Full adoption in years 2-3
+                          </Typography>
+                        </Paper>
+                      </Grid>
+                    </Grid>
                   </Box>
 
                   <Grid container spacing={2}>
@@ -1146,14 +1161,48 @@ OPTION 2: Using Extended Events (More Involved)
                       <strong>Recurring License (Annual):</strong> ${roi.recurringLicenseCost.toLocaleString()}/year
                     </Typography>
                     <Typography variant="body2" fontWeight="bold" sx={{ mt: 1 }}>
-                      Total Implementation Cost: ${roi.totalImplementationCost.toLocaleString()}
+                      Year 1 Total: ${roi.totalImplementationCost.toLocaleString()}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85em', fontStyle: 'italic' }}>
+                      3-Year Total: ${(roi.oneTimeTrainingCost + (roi.recurringLicenseCost * 3)).toLocaleString()} (training + 3 years license)
                     </Typography>
                   </Box>
 
                   <Divider sx={{ my: 2 }} />
 
+                  <Accordion sx={{ bgcolor: 'grey.50', mb: 2 }}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Typography variant="subtitle2" color="primary">
+                        📊 3-Year Projection Details
+                      </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Box sx={{ pl: 2 }}>
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          <strong>Year 1 Savings:</strong> ${roi.annualSavings.toLocaleString()} ({(rampUpFactor * 100).toFixed(0)}% ramp-up)
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          <strong>Year 2 Savings:</strong> ${((roi.annualSavings / rampUpFactor) - roi.recurringLicenseCost).toLocaleString()} (100% adoption)
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          <strong>Year 3 Savings:</strong> ${((roi.annualSavings / rampUpFactor) - roi.recurringLicenseCost).toLocaleString()} (100% adoption)
+                        </Typography>
+                        <Divider sx={{ my: 1 }} />
+                        <Typography variant="body2" fontWeight="bold" color="success.dark" gutterBottom>
+                          Total 3-Year Savings: ${roi.threeYearSavings.toLocaleString()}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          Total 3-Year Cost: ${(roi.oneTimeTrainingCost + (roi.recurringLicenseCost * 3)).toLocaleString()}
+                        </Typography>
+                        <Typography variant="body2" fontWeight="bold" color="primary.main">
+                          3-Year Net Benefit: ${roi.threeYearNetBenefit.toLocaleString()}
+                        </Typography>
+                      </Box>
+                    </AccordionDetails>
+                  </Accordion>
+
                   <Typography variant="subtitle2" gutterBottom>
-                    Quarterly Savings Breakdown
+                    Quarterly Savings Breakdown (Year 1)
                   </Typography>
                   <Box sx={{ pl: 2 }}>
                     <Typography variant="body2" color="text.secondary">

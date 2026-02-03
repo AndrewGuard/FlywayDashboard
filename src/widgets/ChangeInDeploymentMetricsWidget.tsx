@@ -36,6 +36,7 @@ interface ROI {
   leadTimeSavings: number;
   failureSavings: number;
   frequencySavings: number;
+  threeYearROI: number;
 }
 
 export default function ChangeInDeploymentMetricsWidget() {
@@ -183,7 +184,8 @@ export default function ChangeInDeploymentMetricsWidget() {
                 paybackMonths: roiResult.paybackMonths,
                 leadTimeSavings: roiResult.timeSavingsPerQuarter,
                 failureSavings: roiResult.failureSavingsPerQuarter,
-                frequencySavings: roiResult.efficiencySavings
+                frequencySavings: roiResult.efficiencySavings,
+                threeYearROI: roiResult.threeYearROI
               });
             } else {
               setRoi(null);
@@ -298,19 +300,29 @@ export default function ChangeInDeploymentMetricsWidget() {
                 
                 {/* ROI Summary */}
                 <Grid container spacing={2} sx={{ mb: 3 }}>
-                  <Grid item xs={12} md={3}>
+                  <Grid item xs={12} md={2.4}>
                     <Paper elevation={0} sx={{ p: 2, bgcolor: 'primary.lighter', textAlign: 'center', borderLeft: 4, borderColor: 'primary.main' }}>
-                      <Typography variant="h4" color="primary.dark" fontWeight="bold">
+                      <Typography variant="h5" color="primary.dark" fontWeight="bold">
                         {roi.percentage}%
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        Return on Investment
+                        Year 1 ROI
                       </Typography>
                     </Paper>
                   </Grid>
-                  <Grid item xs={12} md={3}>
+                  <Grid item xs={12} md={2.4}>
                     <Paper elevation={0} sx={{ p: 2, bgcolor: 'success.lighter', textAlign: 'center', borderLeft: 4, borderColor: 'success.main' }}>
                       <Typography variant="h5" color="success.dark" fontWeight="bold">
+                        {roi.threeYearROI}%
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        3-Year ROI
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                  <Grid item xs={12} md={2.4}>
+                    <Paper elevation={0} sx={{ p: 2, bgcolor: 'info.lighter', textAlign: 'center', borderLeft: 4, borderColor: 'info.main' }}>
+                      <Typography variant="h6" color="info.dark" fontWeight="bold">
                         ${roi.annual.toLocaleString()}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
@@ -318,9 +330,9 @@ export default function ChangeInDeploymentMetricsWidget() {
                       </Typography>
                     </Paper>
                   </Grid>
-                  <Grid item xs={12} md={3}>
-                    <Paper elevation={0} sx={{ p: 2, bgcolor: 'info.lighter', textAlign: 'center', borderLeft: 4, borderColor: 'info.main' }}>
-                      <Typography variant="h5" color="info.dark" fontWeight="bold">
+                  <Grid item xs={12} md={2.4}>
+                    <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.200', textAlign: 'center', borderLeft: 4, borderColor: 'grey.500' }}>
+                      <Typography variant="h6" color="text.primary" fontWeight="bold">
                         ${roi.quarterly.toLocaleString()}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
@@ -328,9 +340,9 @@ export default function ChangeInDeploymentMetricsWidget() {
                       </Typography>
                     </Paper>
                   </Grid>
-                  <Grid item xs={12} md={3}>
+                  <Grid item xs={12} md={2.4}>
                     <Paper elevation={0} sx={{ p: 2, bgcolor: 'warning.lighter', textAlign: 'center', borderLeft: 4, borderColor: 'warning.main' }}>
-                      <Typography variant="h5" color="warning.dark" fontWeight="bold">
+                      <Typography variant="h6" color="warning.dark" fontWeight="bold">
                         {roi.paybackMonths} mo
                       </Typography>
                       <Typography variant="caption" color="text.secondary">

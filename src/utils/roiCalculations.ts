@@ -64,6 +64,10 @@ export interface ROIBreakdown {
   // Improvement percentages
   leadTimeImprovementPct: number;
   capped: boolean;  // True if lead time was capped at 60%
+  // 3-year projection
+  threeYearSavings: number;
+  threeYearNetBenefit: number;
+  threeYearROI: number;
 }
 
 /**
@@ -140,6 +144,16 @@ export function calculateROI(
   const oneTimeTrainingCost = implCost - licenseCost; // Training is one-time
   const recurringLicenseCost = licenseCost; // License is annual recurring
   
+  // 3-year projection (Year 1 with ramp-up, Years 2-3 at full capacity)
+  const fullAnnualSavings = (timeSavingsPerQuarter / parameters.rampUpFactor) * 4; // Savings without ramp-up factor
+  const year1Savings = annualSavingsAfterLicense; // Year 1 with ramp-up applied
+  const year2Savings = fullAnnualSavings - licenseCost; // Year 2 at 100%
+  const year3Savings = fullAnnualSavings - licenseCost; // Year 3 at 100%
+  const threeYearSavings = year1Savings + year2Savings + year3Savings;
+  const threeYearCost = implCost + (licenseCost * 2); // Training + 3 years license (already included in impl for year 1)
+  const threeYearNetBenefit = threeYearSavings - threeYearCost;
+  const threeYearROI = threeYearCost > 0 ? (threeYearNetBenefit / threeYearCost) * 100 : 0;
+  
   return {
     leadTimeReduction,
     timeSavingsPerQuarter,
@@ -157,7 +171,10 @@ export function calculateROI(
     recurringLicenseCost,
     totalImplementationCost: implCost,
     leadTimeImprovementPct: Math.round(leadTimeImprovementPct),
-    capped
+    capped,
+    threeYearSavings,
+    threeYearNetBenefit,
+    threeYearROI: Math.round(threeYearROI)
   };
 }
 
