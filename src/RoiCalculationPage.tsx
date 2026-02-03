@@ -667,6 +667,288 @@ const RoiCalculationPage: React.FC = () => {
 
           <Accordion>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="subtitle2">📊 SQL Server Release Frequency Script</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                Click to copy the SQL Server script:
+              </Typography>
+              <Paper 
+                elevation={0} 
+                sx={{ 
+                  p: 2, 
+                  bgcolor: 'grey.100', 
+                  fontFamily: 'monospace', 
+                  fontSize: '0.75rem',
+                  maxHeight: '400px',
+                  overflow: 'auto',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  '&:hover': { bgcolor: 'grey.200' }
+                }}
+                onClick={(e) => {
+                  const text = (e.currentTarget as HTMLElement).querySelector('pre')?.textContent || '';
+                  navigator.clipboard.writeText(text);
+                }}
+              >
+                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{`-- Without auditing turned on, this is as close as we get, (last change to an object) similar to Oracle LAST_DDL_TIME.
+-- What is SQL Server Auditing and how to configure?  https://learn.microsoft.com/en-us/sql/relational-databases/security/auditing/sql-server-audit-database-engine?view=sql-server-ver17
+
+
+-- this shows how many objects changed in a given day. this is to help understand how many releases happen in a unit of time.
+-- number of releases can be inferred from average number of objects touched per release - this gives number of objects altered over a unit of time.
+-- multiple changes to a single object only count as 1
+-- the number you get is the minimum number of releases that happened over a unit of time
+
+/* Configuration: How many months back to analyze */
+DECLARE @MonthsBack int = 3;
+
+/* Daily count of unique objects touched by DDL */
+DECLARE @StartDate date = DATEADD(month, -@MonthsBack, CONVERT(date, GETDATE()));
+
+SELECT
+    CONVERT(date, o.modify_date) AS change_date,
+    COUNT(*) AS objects_modified
+FROM sys.objects o
+JOIN sys.schemas s ON s.schema_id = o.schema_id
+WHERE o.modify_date >= @StartDate
+  AND s.name NOT IN ('sys')
+  AND o.type IN ('U','V','P','FN','TF','IF','TR')  -- tables, views, procs, funcs, triggers
+GROUP BY CONVERT(date, o.modify_date)
+ORDER BY change_date;`}</pre>
+              </Paper>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                💡 Adjust the <code>@MonthsBack</code> variable at the top to change the analysis time window
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="subtitle2">📊 SQL Server Release Failure Rate Script</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                <Typography variant="body2" fontWeight="bold">
+                  ⚠️ Requires SQL Server Audit or Extended Events
+                </Typography>
+                <Typography variant="body2">
+                  This script uses SQL Server Audit or Extended Events to track DDL failures.
+                  See <Link href="https://learn.microsoft.com/en-us/sql/relational-databases/security/auditing/sql-server-audit-database-engine?view=sql-server-ver17" target="_blank" rel="noopener">Microsoft documentation</Link> for setup instructions.
+                </Typography>
+              </Alert>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                Click to copy the SQL Server failure rate script (includes both Audit and Extended Events options):
+              </Typography>
+              <Paper 
+                elevation={0} 
+                sx={{ 
+                  p: 2, 
+                  bgcolor: 'grey.100', 
+                  fontFamily: 'monospace', 
+                  fontSize: '0.75rem',
+                  maxHeight: '600px',
+                  overflow: 'auto',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  '&:hover': { bgcolor: 'grey.200' }
+                }}
+                onClick={(e) => {
+                  const text = (e.currentTarget as HTMLElement).querySelector('pre')?.textContent || '';
+                  navigator.clipboard.writeText(text);
+                }}
+              >
+                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{`-- SQL Server Release Failure Rate Script
+-- ============================================
+-- We're back to SQL Server Audit or Extended Events for this kind of information
+-- What is SQL Server Auditing? https://learn.microsoft.com/en-us/sql/relational-databases/security/auditing/sql-server-audit-database-engine?view=sql-server-ver17
+-- ============================================
+
+/*============================================================================
+OPTION 1: Using SQL Server Audit
+=============================================================================*/
+
+DECLARE @start datetime2(0) = '2026-01-01 00:00:00';
+DECLARE @end   datetime2(0) = '2026-01-28 00:00:00';
+
+SELECT
+    CAST(event_time AS date) AS [day],
+    CASE
+        WHEN statement LIKE 'CREATE %' THEN 'CREATE'
+        WHEN statement LIKE 'DROP %'   THEN 'DROP'
+        ELSE 'OTHER'
+    END AS ddl_verb,
+    COUNT(*) AS failed_count
+FROM sys.fn_get_audit_file('D:\\SqlAudit\\MyAudit\\*.sqlaudit', DEFAULT, DEFAULT)
+WHERE event_time >= @start
+  AND event_time <  @end
+  AND succeeded = 0
+  AND (statement LIKE 'CREATE %' OR statement LIKE 'DROP %')
+GROUP BY CAST(event_time AS date),
+         CASE
+            WHEN statement LIKE 'CREATE %' THEN 'CREATE'
+            WHEN statement LIKE 'DROP %'   THEN 'DROP'
+            ELSE 'OTHER'
+         END
+ORDER BY [day], ddl_verb;
+
+
+/*============================================================================
+OPTION 2: Using Extended Events (More Involved)
+=============================================================================*/
+
+-------------------------------------------------------------------------------
+-- 0) CONFIG
+-------------------------------------------------------------------------------
+DECLARE @DbName        sysname        = N'YourDatabaseName';
+DECLARE @SessionName   sysname        = N'XE_FailedDDL_' + REPLACE(@DbName, N']', N'');
+DECLARE @TargetFolder  nvarchar(260)  = N'D:\\XEvents\\';  -- ensure SQL Server service account can write here
+DECLARE @FileBase      nvarchar(520)  = @TargetFolder + @SessionName;
+
+-- Optional: keep this small-ish and let it roll
+DECLARE @MaxFileSizeMB int            = 256;
+DECLARE @MaxRollover   int            = 10;
+
+-------------------------------------------------------------------------------
+-- 1) CREATE (or RECREATE) EVENT SESSION
+-------------------------------------------------------------------------------
+IF EXISTS (SELECT 1 FROM sys.server_event_sessions WHERE name = @SessionName)
+BEGIN
+    DECLARE @drop nvarchar(max) = N'DROP EVENT SESSION ' + QUOTENAME(@SessionName) + N' ON SERVER;';
+    EXEC sys.sp_executesql @drop;
+END
+GO
+
+DECLARE @DbName        sysname        = N'YourDatabaseName';
+DECLARE @SessionName   sysname        = N'XE_FailedDDL_' + REPLACE(@DbName, N']', N'');
+DECLARE @TargetFolder  nvarchar(260)  = N'D:\\XEvents\\';
+DECLARE @FileBase      nvarchar(520)  = @TargetFolder + @SessionName;
+DECLARE @MaxFileSizeMB int            = 256;
+DECLARE @MaxRollover   int            = 10;
+
+DECLARE @sql nvarchar(max) = N'
+CREATE EVENT SESSION ' + QUOTENAME(@SessionName) + N' ON SERVER
+ADD EVENT sqlserver.error_reported
+(
+    ACTION
+    (
+        sqlserver.sql_text,
+        sqlserver.database_id,
+        sqlserver.username,
+        sqlserver.client_app_name,
+        sqlserver.client_hostname,
+        sqlserver.session_id
+    )
+    WHERE
+    (
+        -- Only this DB
+        sqlserver.database_id = DB_ID(N''' + REPLACE(@DbName, '''', '''''') + N''')
+        -- Only true errors (severity >= 11)
+        AND [severity] >= 11
+        -- Heuristic filter for DDL in the submitted batch
+        AND
+        (
+            sqlserver.sql_text LIKE N''%CREATE%'' OR
+            sqlserver.sql_text LIKE N''%ALTER%''  OR
+            sqlserver.sql_text LIKE N''%DROP%''
+        )
+    )
+)
+ADD TARGET package0.event_file
+(
+    SET filename = N''' + REPLACE(@FileBase, '''', '''''') + N''',
+        max_file_size = ' + CAST(@MaxFileSizeMB AS nvarchar(20)) + N',
+        max_rollover_files = ' + CAST(@MaxRollover AS nvarchar(20)) + N'
+)
+WITH
+(
+    STARTUP_STATE = ON
+);';
+
+EXEC sys.sp_executesql @sql;
+GO
+
+-------------------------------------------------------------------------------
+-- 2) START SESSION
+-------------------------------------------------------------------------------
+DECLARE @DbName      sysname      = N'YourDatabaseName';
+DECLARE @SessionName sysname      = N'XE_FailedDDL_' + REPLACE(@DbName, N']', N'');
+
+DECLARE @start nvarchar(max) = N'ALTER EVENT SESSION ' + QUOTENAME(@SessionName) + N' ON SERVER STATE = START;';
+EXEC sys.sp_executesql @start;
+GO
+
+/*============================================================================
+3) REPORTING QUERY: bucket failures by DAY and by HOUR
+=============================================================================*/
+DECLARE @DbName       sysname       = N'YourDatabaseName';
+DECLARE @SessionName  sysname       = N'XE_FailedDDL_' + REPLACE(@DbName, N']', N'');
+DECLARE @TargetFolder nvarchar(260) = N'D:\\XEvents\\';
+DECLARE @XelPattern   nvarchar(520) = @TargetFolder + @SessionName + N'*.xel';
+
+-- Time window (optional)
+DECLARE @StartTime datetime2(0) = DATEADD(DAY, -30, SYSUTCDATETIME());  -- last 30 days
+DECLARE @EndTime   datetime2(0) = SYSUTCDATETIME();
+
+;WITH xe AS
+(
+    SELECT CAST(event_data AS xml) AS x
+    FROM sys.fn_xe_file_target_read_file(@XelPattern, NULL, NULL, NULL)
+),
+parsed AS
+(
+    SELECT
+        x.value('(event/@timestamp)[1]', 'datetime2(7)')                           AS event_time_utc,
+        x.value('(event/data[@name="error_number"]/value)[1]', 'int')             AS error_number,
+        x.value('(event/data[@name="severity"]/value)[1]', 'int')                 AS severity,
+        x.value('(event/data[@name="message"]/value)[1]', 'nvarchar(2048)')       AS [message],
+        x.value('(event/action[@name="database_id"]/value)[1]', 'int')            AS database_id,
+        DB_NAME(x.value('(event/action[@name="database_id"]/value)[1]', 'int'))   AS database_name,
+        x.value('(event/action[@name="username"]/value)[1]', 'sysname')           AS username,
+        x.value('(event/action[@name="client_app_name"]/value)[1]', 'nvarchar(256)') AS client_app_name,
+        x.value('(event/action[@name="client_hostname"]/value)[1]', 'nvarchar(256)') AS client_hostname,
+        x.value('(event/action[@name="session_id"]/value)[1]', 'int')             AS session_id,
+        x.value('(event/action[@name="sql_text"]/value)[1]', 'nvarchar(max)')     AS sql_text
+    FROM xe
+)
+SELECT
+    CAST(event_time_utc AS date) AS [day_utc],
+    DATEADD(HOUR, DATEDIFF(HOUR, '20000101', event_time_utc), '20000101') AS hour_bucket_utc,
+    COUNT(*) AS failed_ddl_count,
+    SUM(CASE WHEN sql_text LIKE N'%CREATE%' THEN 1 ELSE 0 END) AS create_like,
+    SUM(CASE WHEN sql_text LIKE N'%ALTER%'  THEN 1 ELSE 0 END) AS alter_like,
+    SUM(CASE WHEN sql_text LIKE N'%DROP%'   THEN 1 ELSE 0 END) AS drop_like
+FROM parsed
+WHERE database_name = @DbName
+  AND event_time_utc >= @StartTime
+  AND event_time_utc <  @EndTime
+  AND severity >= 11
+  AND (
+        sql_text LIKE N'%CREATE%' OR
+        sql_text LIKE N'%ALTER%'  OR
+        sql_text LIKE N'%DROP%'
+      )
+GROUP BY
+    CAST(event_time_utc AS date),
+    DATEADD(HOUR, DATEDIFF(HOUR, '20000101', event_time_utc), '20000101')
+ORDER BY
+    hour_bucket_utc DESC;
+GO`}</pre>
+              </Paper>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                💡 <strong>OPTION 1 (Audit):</strong> Adjust <code>@start</code> and <code>@end</code> dates, and update the audit file path
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                💡 <strong>OPTION 2 (Extended Events):</strong> Requires more setup but provides detailed tracking - see full script
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                📈 This script tracks DDL failures to help estimate your script failure rate baseline
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Typography variant="subtitle2">📊 Oracle Release Frequency Script</Typography>
             </AccordionSummary>
             <AccordionDetails>
@@ -805,64 +1087,6 @@ ORDER BY TRUNC(event_timestamp);`}</pre>
 
           <Accordion>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography variant="subtitle2">📊 SQL Server Release Frequency Script</Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-                Click to copy the SQL Server script:
-              </Typography>
-              <Paper 
-                elevation={0} 
-                sx={{ 
-                  p: 2, 
-                  bgcolor: 'grey.100', 
-                  fontFamily: 'monospace', 
-                  fontSize: '0.75rem',
-                  maxHeight: '400px',
-                  overflow: 'auto',
-                  position: 'relative',
-                  cursor: 'pointer',
-                  '&:hover': { bgcolor: 'grey.200' }
-                }}
-                onClick={(e) => {
-                  const text = (e.currentTarget as HTMLElement).querySelector('pre')?.textContent || '';
-                  navigator.clipboard.writeText(text);
-                }}
-              >
-                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{`-- Without auditing turned on, this is as close as we get, (last change to an object) similar to Oracle LAST_DDL_TIME.
--- What is SQL Server Auditing and how to configure?  https://learn.microsoft.com/en-us/sql/relational-databases/security/auditing/sql-server-audit-database-engine?view=sql-server-ver17
-
-
--- this shows how many objects changed in a given day. this is to help understand how many releases happen in a unit of time.
--- number of releases can be inferred from average number of objects touched per release - this gives number of objects altered over a unit of time.
--- multiple changes to a single object only count as 1
--- the number you get is the minimum number of releases that happened over a unit of time
-
-/* Configuration: How many months back to analyze */
-DECLARE @MonthsBack int = 3;
-
-/* Daily count of unique objects touched by DDL */
-DECLARE @StartDate date = DATEADD(month, -@MonthsBack, CONVERT(date, GETDATE()));
-
-SELECT
-    CONVERT(date, o.modify_date) AS change_date,
-    COUNT(*) AS objects_modified
-FROM sys.objects o
-JOIN sys.schemas s ON s.schema_id = o.schema_id
-WHERE o.modify_date >= @StartDate
-  AND s.name NOT IN ('sys')
-  AND o.type IN ('U','V','P','FN','TF','IF','TR')  -- tables, views, procs, funcs, triggers
-GROUP BY CONVERT(date, o.modify_date)
-ORDER BY change_date;`}</pre>
-              </Paper>
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                💡 Adjust the <code>@MonthsBack</code> variable at the top to change the analysis time window
-              </Typography>
-            </AccordionDetails>
-          </Accordion>
-
-          <Accordion>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Typography variant="subtitle2">📊 Oracle Release Failure Rate Script</Typography>
             </AccordionSummary>
             <AccordionDetails>
@@ -947,20 +1171,20 @@ ORDER BY day;`}</pre>
 
           <Accordion>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography variant="subtitle2">📊 SQL Server Release Failure Rate Script</Typography>
+              <Typography variant="subtitle2">📊 PostgreSQL Release Frequency Script</Typography>
             </AccordionSummary>
             <AccordionDetails>
-              <Alert severity="warning" sx={{ mb: 2 }}>
+              <Alert severity="info" sx={{ mb: 2 }}>
                 <Typography variant="body2" fontWeight="bold">
-                  ⚠️ Requires SQL Server Audit or Extended Events
+                  ℹ️ Requires PGAudit Extension
                 </Typography>
                 <Typography variant="body2">
-                  This script uses SQL Server Audit or Extended Events to track DDL failures.
-                  See <Link href="https://learn.microsoft.com/en-us/sql/relational-databases/security/auditing/sql-server-audit-database-engine?view=sql-server-ver17" target="_blank" rel="noopener">Microsoft documentation</Link> for setup instructions.
+                  This script requires PGAudit to be configured.
+                  See <Link href="https://www.pgaudit.org/" target="_blank" rel="noopener">PGAudit documentation</Link> for setup instructions.
                 </Typography>
               </Alert>
               <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-                Click to copy the SQL Server failure rate script (includes both Audit and Extended Events options):
+                Click to copy the PostgreSQL release frequency script:
               </Typography>
               <Paper 
                 elevation={0} 
@@ -980,65 +1204,197 @@ ORDER BY day;`}</pre>
                   navigator.clipboard.writeText(text);
                 }}
               >
-                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{`-- SQL Server Release Failure Rate Script
+                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{`-- PostgreSQL Release Frequency Script
 -- ============================================
--- We're back to SQL Server Audit or Extended Events for this kind of information
--- What is SQL Server Auditing? https://learn.microsoft.com/en-us/sql/relational-databases/security/auditing/sql-server-audit-database-engine?view=sql-server-ver17
+-- Requires PGAudit extension
+-- What is PGAudit? https://www.pgaudit.org/
 -- ============================================
 
-/*============================================================================
-OPTION 1: Using SQL Server Audit
-=============================================================================*/
-
-DECLARE @start datetime2(0) = '2026-01-01 00:00:00';
-DECLARE @end   datetime2(0) = '2026-01-28 00:00:00';
-
+-- Example if you ingest logs into a table like: audit_log(ts timestamptz, message text)
 SELECT
-    CAST(event_time AS date) AS [day],
-    CASE
-        WHEN statement LIKE 'CREATE %' THEN 'CREATE'
-        WHEN statement LIKE 'DROP %'   THEN 'DROP'
-        ELSE 'OTHER'
-    END AS ddl_verb,
-    COUNT(*) AS failed_count
-FROM sys.fn_get_audit_file('D:\\SqlAudit\\MyAudit\\*.sqlaudit', DEFAULT, DEFAULT)
-WHERE event_time >= @start
-  AND event_time <  @end
-  AND succeeded = 0
-  AND (statement LIKE 'CREATE %' OR statement LIKE 'DROP %')
-GROUP BY CAST(event_time AS date),
-         CASE
-            WHEN statement LIKE 'CREATE %' THEN 'CREATE'
-            WHEN statement LIKE 'DROP %'   THEN 'DROP'
-            ELSE 'OTHER'
-         END
-ORDER BY [day], ddl_verb;
+  date_trunc('day', ts) AS change_day,
+  count(*)              AS ddl_events
+FROM audit_log
+WHERE ts >= now() - interval '3 months'
+  AND message ILIKE '%AUDIT:%'
+  AND message ~* '\\b(ALTER|CREATE|DROP|TRUNCATE)\\b'
+GROUP BY 1
+ORDER BY 1;
 
+-- If DDL event tracking table is enabled, use this approach:
 
-/*============================================================================
-OPTION 2: Using Extended Events (More Involved)
-=============================================================================*/
+CREATE SCHEMA IF NOT EXISTS audit;
 
--- See full script for complete Extended Events setup including:
--- - Event session creation for error_reported events
--- - Filtering for DDL operations (CREATE/ALTER/DROP)
--- - Reporting queries to bucket failures by day and hour
--- 
--- The full script includes:
--- 1. Configuration variables (@DbName, @TargetFolder, etc.)
--- 2. Event session creation with error filtering
--- 3. Reporting query using sys.fn_xe_file_target_read_file
---
--- Copy this entire script to a .sql file for the complete implementation.`}</pre>
+CREATE TABLE IF NOT EXISTS audit.ddl_events (
+  event_id      bigserial PRIMARY KEY,
+  event_ts      timestamptz NOT NULL DEFAULT now(),
+  username      text        NOT NULL DEFAULT session_user,
+  database_name text        NOT NULL DEFAULT current_database(),
+  client_addr   inet        NULL     DEFAULT inet_client_addr(),
+  application   text        NULL     DEFAULT current_setting('application_name', true),
+
+  event_type    text        NOT NULL,   -- e.g. ddl_command_end
+  command_tag   text        NOT NULL,   -- e.g. CREATE TABLE, ALTER TABLE
+  object_type   text        NULL,
+  schema_name   text        NULL,
+  object_name   text        NULL
+);
+
+-- Query the audit table for daily release frequency
+SELECT
+  date_trunc('day', event_ts) AS change_day,
+  count(*)                    AS ddl_events,
+  count(DISTINCT command_tag) AS unique_commands
+FROM audit.ddl_events
+WHERE event_ts >= now() - interval '3 months'
+  AND command_tag IN ('CREATE TABLE', 'ALTER TABLE', 'DROP TABLE', 
+                       'CREATE INDEX', 'DROP INDEX',
+                       'CREATE VIEW', 'DROP VIEW',
+                       'CREATE FUNCTION', 'DROP FUNCTION',
+                       'CREATE PROCEDURE', 'DROP PROCEDURE')
+GROUP BY 1
+ORDER BY 1;`}</pre>
               </Paper>
               <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                💡 <strong>OPTION 1 (Audit):</strong> Adjust <code>@start</code> and <code>@end</code> dates, and update the audit file path
+                💡 Adjust the time interval (<code>3 months</code>) to change the analysis window
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="subtitle2">📊 PostgreSQL Release Failure Rate Script</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                <Typography variant="body2" fontWeight="bold">
+                  ⚠️ Requires PGAudit and CSV Logging
+                </Typography>
+                <Typography variant="body2">
+                  This script requires PGAudit extension and CSV logging to be configured in postgresql.conf.
+                  See <Link href="https://www.pgaudit.org/" target="_blank" rel="noopener">PGAudit documentation</Link> for setup.
+                </Typography>
+              </Alert>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                Click to copy the PostgreSQL failure rate script:
+              </Typography>
+              <Paper 
+                elevation={0} 
+                sx={{ 
+                  p: 2, 
+                  bgcolor: 'grey.100', 
+                  fontFamily: 'monospace', 
+                  fontSize: '0.75rem',
+                  maxHeight: '600px',
+                  overflow: 'auto',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  '&:hover': { bgcolor: 'grey.200' }
+                }}
+                onClick={(e) => {
+                  const text = (e.currentTarget as HTMLElement).querySelector('pre')?.textContent || '';
+                  navigator.clipboard.writeText(text);
+                }}
+              >
+                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{`-- PostgreSQL Release Failure Rate Script
+-- ============================================
+-- Requires PGAudit and CSV logging configured
+-- ============================================
+
+-- STEP 1: Configure postgresql.conf with these settings:
+-- ============================================
+-- shared_preload_libraries = 'pgaudit'
+-- 
+-- # Capture DDL via pgaudit
+-- pgaudit.log = 'ddl'
+-- pgaudit.log_catalog = off
+-- pgaudit.log_relation = on
+-- pgaudit.log_statement = on
+-- 
+-- # Make logs queryable (CSV is easiest to ingest)
+-- logging_collector = on
+-- log_destination = 'csvlog'
+-- log_directory = 'log'
+-- log_filename = 'postgresql-%Y-%m-%d_%H%M%S.csv'
+-- 
+-- # Ensure statement text is present on errors
+-- log_min_error_statement = error
+-- 
+-- # Helpful for correlation (optional but recommended)
+-- log_line_prefix = '%m [%p] %u@%d tx=%x '
+-- ============================================
+
+-- STEP 2: Create file_fdw extension
+CREATE EXTENSION IF NOT EXISTS file_fdw;
+
+-- STEP 3: Create foreign server
+CREATE SERVER IF NOT EXISTS pglog FOREIGN DATA WRAPPER file_fdw;
+
+-- STEP 4: Create foreign table pointing to CSV log file
+-- Point this at a specific log file (update filename to match your log)
+CREATE FOREIGN TABLE IF NOT EXISTS pg_csvlog (
+  log_time                timestamp(3) with time zone,
+  user_name               text,
+  database_name           text,
+  process_id              integer,
+  connection_from         text,
+  session_id              text,
+  session_line_num        bigint,
+  command_tag             text,
+  session_start_time      timestamp with time zone,
+  virtual_transaction_id  text,
+  transaction_id          bigint,
+  error_severity          text,
+  sql_state_code          text,
+  message                 text,
+  detail                  text,
+  hint                    text,
+  internal_query          text,
+  internal_query_pos      integer,
+  context                 text,
+  query                   text,
+  query_pos               integer,
+  location                text,
+  application_name        text,
+  backend_type            text,
+  leader_pid              integer,
+  query_id                bigint
+)
+SERVER pglog
+OPTIONS (
+  filename '/var/lib/postgresql/data/log/postgresql-2026-01-27_000000.csv',
+  format 'csv',
+  header 'false'
+);
+
+-- STEP 5: Query failed DDL events by hour
+SELECT
+  date_trunc('hour', log_time) AS hour_bucket,
+  count(*) AS failed_ddl
+FROM pg_csvlog
+WHERE error_severity = 'ERROR'
+  AND coalesce(query, '') ~* '^\\s*(create|drop|alter)\\b'
+GROUP BY 1
+ORDER BY 1 DESC;
+
+-- STEP 6: Daily summary with DDL verb breakdown
+SELECT
+  date_trunc('day', log_time) AS day_bucket,
+  count(*) AS total_failed_ddl,
+  sum(CASE WHEN query ~* '^\\s*create\\b' THEN 1 ELSE 0 END) AS create_failures,
+  sum(CASE WHEN query ~* '^\\s*alter\\b' THEN 1 ELSE 0 END) AS alter_failures,
+  sum(CASE WHEN query ~* '^\\s*drop\\b' THEN 1 ELSE 0 END) AS drop_failures
+FROM pg_csvlog
+WHERE error_severity = 'ERROR'
+  AND coalesce(query, '') ~* '^\\s*(create|drop|alter)\\b'
+GROUP BY 1
+ORDER BY 1 DESC;`}</pre>
+              </Paper>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                💡 Update the <code>filename</code> in the foreign table definition to match your actual log file path
               </Typography>
               <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                💡 <strong>OPTION 2 (Extended Events):</strong> Requires more setup but provides detailed tracking - see full script
-              </Typography>
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                📈 This script tracks DDL failures to help estimate your script failure rate baseline
+                📈 This script tracks DDL failures from PostgreSQL logs to help estimate your script failure rate baseline
               </Typography>
             </AccordionDetails>
           </Accordion>
