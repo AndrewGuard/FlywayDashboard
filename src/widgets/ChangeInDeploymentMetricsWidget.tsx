@@ -160,7 +160,8 @@ export default function ChangeInDeploymentMetricsWidget() {
               failureCostMultiplier: userData.failureCostMultiplier ?? DEFAULT_ROI_PARAMETERS.failureCostMultiplier,
               costOfDelayMultiplier: userData.costOfDelayMultiplier ?? DEFAULT_ROI_PARAMETERS.costOfDelayMultiplier,
               deploymentValueFactor: userData.deploymentValueFactor ?? DEFAULT_ROI_PARAMETERS.deploymentValueFactor,
-              rampUpFactor: userData.rampUpFactor ?? DEFAULT_ROI_PARAMETERS.rampUpFactor
+              rampUpFactor: userData.rampUpFactor ?? DEFAULT_ROI_PARAMETERS.rampUpFactor,
+              leadTimeCapPct: userData.leadTimeCapPct ?? DEFAULT_ROI_PARAMETERS.leadTimeCapPct
             };
             
             // Calculate implementation cost based on training hours plus license (same as ROI page)

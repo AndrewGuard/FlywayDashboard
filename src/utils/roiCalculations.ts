@@ -9,6 +9,7 @@ export interface ROIParameters {
   costOfDelayMultiplier: number;     // Multiplier for opportunity costs
   deploymentValueFactor: number;     // Value factor for additional deployments (0-1)
   rampUpFactor: number;              // First-year adoption ramp-up (0.5 = 50% of benefits in year 1)
+  leadTimeCapPct: number;            // Maximum lead time improvement percentage (default 60)
 }
 
 export const DEFAULT_ROI_PARAMETERS: ROIParameters = {
@@ -16,7 +17,8 @@ export const DEFAULT_ROI_PARAMETERS: ROIParameters = {
   failureCostMultiplier: 0.8,
   costOfDelayMultiplier: 0.6, // Teams rarely capture full theoretical value
   deploymentValueFactor: 0.3,
-  rampUpFactor: 0.5          // 50% of benefits achieved in first year
+  rampUpFactor: 0.5,         // 50% of benefits achieved in first year
+  leadTimeCapPct: 60         // Cap lead time improvement at 60%
 };
 
 export interface UserMetricsInput {
@@ -98,14 +100,15 @@ export function calculateROI(
   const flywayLead = flywayMetrics.leadTimeDays;
   const flywayFail = flywayMetrics.scriptFailureRate;
 
-  // 1. Lead time savings (DORA-aligned) with 60% cap and adjustable cost of delay multiplier
+  // 1. Lead time savings (DORA-aligned) with configurable cap and adjustable cost of delay multiplier
   let leadTimeReduction = Math.max(0, nonFlywayLead - flywayLead);
   const leadTimeImprovementPct = nonFlywayLead > 0 ? (leadTimeReduction / nonFlywayLead) * 100 : 0;
   let capped = false;
   
-  // Cap lead time improvement at 60% (realistic for most teams)
-  if (leadTimeImprovementPct > 60 && nonFlywayLead > 0) {
-    leadTimeReduction = nonFlywayLead * 0.6; // Cap at 60% improvement
+  // Cap lead time improvement at configured percentage (default 60%)
+  const capPct = parameters.leadTimeCapPct || 60;
+  if (leadTimeImprovementPct > capPct && nonFlywayLead > 0) {
+    leadTimeReduction = nonFlywayLead * (capPct / 100);
     capped = true;
   }
   
@@ -190,7 +193,8 @@ export const ROI_PRESETS: Record<string, { name: string; description: string; pa
       failureCostMultiplier: 0.8,       // Failures cost 80% of successful deployments
       costOfDelayMultiplier: 0.6,       // 60% of theoretical value (teams rarely capture full value)
       deploymentValueFactor: 0.3,       // 30% value from additional deployments
-      rampUpFactor: 0.5                 // 50% of benefits in first year
+      rampUpFactor: 0.5,                // 50% of benefits in first year
+      leadTimeCapPct: 60                // 60% lead time improvement cap (industry standard)
     }
   },
   conservative: {
@@ -201,7 +205,8 @@ export const ROI_PRESETS: Record<string, { name: string; description: string; pa
       failureCostMultiplier: 0.75,      // Failures cost 75% of successful deployments
       costOfDelayMultiplier: 0.8,       // 80% of base opportunity cost
       deploymentValueFactor: 0.3,       // 30% value from additional deployments
-      rampUpFactor: 0.6                 // 60% of benefits in first year
+      rampUpFactor: 0.6,                // 60% of benefits in first year
+      leadTimeCapPct: 50                // 50% lead time improvement cap (conservative)
     }
   },
   balanced: {
@@ -212,7 +217,8 @@ export const ROI_PRESETS: Record<string, { name: string; description: string; pa
       failureCostMultiplier: 1.0,       // Failures cost same as deployments
       costOfDelayMultiplier: 1.0,       // Base opportunity cost
       deploymentValueFactor: 0.5,       // 50% value from additional deployments
-      rampUpFactor: 0.8                 // 80% of benefits in first year
+      rampUpFactor: 0.8,                // 80% of benefits in first year
+      leadTimeCapPct: 70                // 70% lead time improvement cap (balanced)
     }
   },
   aggressive: {
@@ -223,7 +229,8 @@ export const ROI_PRESETS: Record<string, { name: string; description: string; pa
       failureCostMultiplier: 2.0,       // Failures cost 2x successful deployments
       costOfDelayMultiplier: 1.5,       // 150% opportunity cost (includes indirect impact)
       deploymentValueFactor: 0.7,       // 70% value from additional deployments
-      rampUpFactor: 1.0                 // 100% of benefits in first year (optimistic)
+      rampUpFactor: 1.0,                // 100% of benefits in first year (optimistic)
+      leadTimeCapPct: 85                // 85% lead time improvement cap (aggressive)
     }
   }
 };

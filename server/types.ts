@@ -22,6 +22,7 @@ export interface UserMetrics {
   costOfDelayMultiplier?: number;
   deploymentValueFactor?: number;
   rampUpFactor?: number;
+  leadTimeCapPct?: number;
   updatedAt?: string;
 }
 

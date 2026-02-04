@@ -121,6 +121,7 @@ addColumnIfNotExists('user_defined_metrics', 'failure_cost_multiplier', 'REAL DE
 addColumnIfNotExists('user_defined_metrics', 'cost_of_delay_multiplier', 'REAL DEFAULT 1.0');
 addColumnIfNotExists('user_defined_metrics', 'deployment_value_factor', 'REAL DEFAULT 0.5');
 addColumnIfNotExists('user_defined_metrics', 'ramp_up_factor', 'REAL DEFAULT 0.5');
+addColumnIfNotExists('user_defined_metrics', 'lead_time_cap_pct', 'REAL DEFAULT 60');
 
 interface UserMetricsRow {
   business_size: string;
@@ -145,6 +146,7 @@ interface UserMetricsRow {
   cost_of_delay_multiplier: number;
   deployment_value_factor: number;
   ramp_up_factor: number;
+  lead_time_cap_pct: number;
   updated_at: string;
 }
 
@@ -211,6 +213,7 @@ export const dbHelpers = {
       costOfDelayMultiplier: row.cost_of_delay_multiplier,
       deploymentValueFactor: row.deployment_value_factor,
       rampUpFactor: row.ramp_up_factor,
+      leadTimeCapPct: row.lead_time_cap_pct,
       updatedAt: row.updated_at
     };
   },
@@ -240,6 +243,7 @@ export const dbHelpers = {
         cost_of_delay_multiplier = ?,
         deployment_value_factor = ?,
         ramp_up_factor = ?,
+        lead_time_cap_pct = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = 1
     `);
@@ -265,7 +269,8 @@ export const dbHelpers = {
       metrics.failureCostMultiplier ?? 1.0,
       metrics.costOfDelayMultiplier ?? 1.0,
       metrics.deploymentValueFactor ?? 0.5,
-      metrics.rampUpFactor ?? 0.5
+      metrics.rampUpFactor ?? 0.5,
+      metrics.leadTimeCapPct ?? 60
     );
     return this.getUserMetrics();
   },

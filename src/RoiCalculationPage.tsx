@@ -46,6 +46,7 @@ const RoiCalculationPage: React.FC = () => {
   const [costOfDelayMultiplier, setCostOfDelayMultiplier] = useState<number>(0.6);
   const [deploymentValueFactor, setDeploymentValueFactor] = useState<number>(0.3);
   const [rampUpFactor, setRampUpFactor] = useState<number>(0.5);
+  const [leadTimeCapPct, setLeadTimeCapPct] = useState<number>(60);
   const [selectedPreset, setSelectedPreset] = useState<string>('realistic');
   const [userMetrics, setUserMetrics] = useState<UserMetrics>({
     deploymentsPerQuarter: 12,
@@ -234,7 +235,8 @@ const RoiCalculationPage: React.FC = () => {
       failureCostMultiplier,
       costOfDelayMultiplier,
       deploymentValueFactor,
-      rampUpFactor
+      rampUpFactor,
+      leadTimeCapPct
     };
     
     // Implementation cost based on training hours plus first-year license cost
@@ -270,6 +272,7 @@ const RoiCalculationPage: React.FC = () => {
     costOfDelayMultiplier,
     deploymentValueFactor,
     rampUpFactor,
+    leadTimeCapPct,
     dbaTrainingHours,
     developerTrainingHours
   ]);
@@ -291,13 +294,15 @@ const RoiCalculationPage: React.FC = () => {
             setCostOfDelayMultiplier(data.costOfDelayMultiplier ?? 1.0);
             setDeploymentValueFactor(data.deploymentValueFactor ?? 0.5);
             setRampUpFactor(data.rampUpFactor ?? 0.5);
+            setLeadTimeCapPct(data.leadTimeCapPct ?? 60);
             // Check if it matches a preset
             const matchingPreset = Object.entries(ROI_PRESETS).find(([_, preset]) =>
               preset.parameters.laborAutomationPct === data.laborAutomationPct &&
               preset.parameters.failureCostMultiplier === data.failureCostMultiplier &&
               preset.parameters.costOfDelayMultiplier === data.costOfDelayMultiplier &&
               preset.parameters.deploymentValueFactor === data.deploymentValueFactor &&
-              preset.parameters.rampUpFactor === data.rampUpFactor
+              preset.parameters.rampUpFactor === data.rampUpFactor &&
+              preset.parameters.leadTimeCapPct === data.leadTimeCapPct
             );
             setSelectedPreset(matchingPreset ? matchingPreset[0] : 'custom');
           }
@@ -383,6 +388,7 @@ const RoiCalculationPage: React.FC = () => {
           costOfDelayMultiplier,
           deploymentValueFactor,
           rampUpFactor,
+          leadTimeCapPct,
           dbaTrainingHours,
           developerTrainingHours
         })
@@ -1450,8 +1456,8 @@ ORDER BY 1 DESC;`}</pre>
 
                   {roi.capped && (
                     <Alert severity="info" sx={{ mb: 2 }}>
-                      <strong>Lead Time Improvement Capped:</strong> Your current lead time improvement ({roi.leadTimeImprovementPct}%) exceeds the realistic 60% cap. 
-                      Calculations use 60% to reflect industry-standard outcomes.
+                      <strong>Lead Time Improvement Capped:</strong> Your current lead time improvement ({roi.leadTimeImprovementPct.toFixed(0)}%) exceeds the configured {leadTimeCapPct}% cap. 
+                      Calculations use {leadTimeCapPct}% to reflect realistic industry outcomes.
                     </Alert>
                   )}
 
@@ -1656,6 +1662,7 @@ ORDER BY 1 DESC;`}</pre>
                           setCostOfDelayMultiplier(params.costOfDelayMultiplier);
                           setDeploymentValueFactor(params.deploymentValueFactor);
                           setRampUpFactor(params.rampUpFactor);
+                          setLeadTimeCapPct(params.leadTimeCapPct);
                           setHasUnsavedChanges(true);
                         }
                       }}
@@ -1796,6 +1803,38 @@ ORDER BY 1 DESC;`}</pre>
                   </Box>
                   <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
                     Percentage of benefits achieved in first year (50% = realistic 6-month ramp-up)
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Lead Time Improvement Cap: {leadTimeCapPct.toFixed(0)}%
+                  </Typography>
+                  <Box sx={{ px: 1 }}>
+                    <input
+                      type="range"
+                      min="30"
+                      max="100"
+                      step="5"
+                      value={leadTimeCapPct}
+                      onChange={(e) => {
+                        setLeadTimeCapPct(Number(e.target.value));
+                        setHasUnsavedChanges(true);
+                        setSelectedPreset('custom');
+                      }}
+                      style={{ width: '100%' }}
+                    />
+                  </Box>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                    Maximum realistic lead time improvement (60% = industry standard, higher values may be unrealistic)
+                    {roi && roi.capped && (
+                      <>
+                        <br />
+                        <Box component="span" sx={{ color: 'warning.main', fontWeight: 'medium' }}>
+                          ⚠️ Currently capped: Your actual improvement exceeds {leadTimeCapPct}%, using {leadTimeCapPct}% in calculations
+                        </Box>
+                      </>
+                    )}
                   </Typography>
                 </Grid>
 
