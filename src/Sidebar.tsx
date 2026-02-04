@@ -12,7 +12,6 @@ import UndoIcon from '@mui/icons-material/Undo';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import SettingsIcon from '@mui/icons-material/Settings';
-import logo from './logo.svg';
 import { Box, Typography, Divider } from '@mui/material';
 
 interface NavItem {
@@ -61,7 +60,7 @@ const Sidebar: React.FC = () => {
   return (
     <Drawer variant="permanent" anchor="left" sx={{ width: 220, flexShrink: 0, '& .MuiDrawer-paper': { width: 220, boxSizing: 'border-box', backgroundColor: '#22223b', color: '#fff' } }}>
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 3, mb: 2 }}>
-        <img src={logo} alt="Flyway Logo" style={{ width: 48, marginBottom: 8 }} />
+        <img src="/logo192.png" alt="Flyway Logo" style={{ width: 48, height: 48, marginBottom: 8 }} />
         <Typography variant="h6" sx={{ fontWeight: 700, color: '#d7263d', letterSpacing: 1 }}>
           Flyway
         </Typography>
