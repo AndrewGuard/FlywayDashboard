@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { dbHelpers } from '../db/database';
 import * as flywayHistory from '../flywayHistory';
 import { calculateDeploymentsPerQuarter, sendErrorResponse } from '../utils/migrationDataProcessing';
+import { cacheMiddleware } from '../middleware/cacheMiddleware';
 
 const router = Router();
 const DEMO_MODE = process.env.DEMO_MODE === 'true';
@@ -17,7 +18,7 @@ router.get('/api/metrics/deployments-over-time', (_req: Request, res: Response) 
 });
 
 // GET deployments per quarter
-router.get('/api/metrics/deployments-per-quarter', async (_req: Request, res: Response) => {
+router.get('/api/metrics/deployments-per-quarter', cacheMiddleware(30), async (_req: Request, res: Response) => {
   try {
     let history: any[] = [];
 

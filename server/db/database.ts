@@ -91,6 +91,15 @@ db.exec(`
     timestamp TEXT DEFAULT CURRENT_TIMESTAMP
   );
 
+  -- Computed metrics cache for expensive calculations
+  CREATE TABLE IF NOT EXISTS computed_metrics_cache (
+    metric_name TEXT PRIMARY KEY,
+    value REAL,
+    metadata_json TEXT,
+    computed_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    expires_at TEXT
+  );
+
   -- Insert default user metrics if not exists
   INSERT OR IGNORE INTO user_defined_metrics (id) VALUES (1);
 `);
@@ -424,5 +433,40 @@ export const dbHelpers = {
     });
     insertMany(leadTimes);
     return this.getMigrationLeadTimes();
+  },
+
+  // Computed metrics cache
+  getCachedMetric(metricName: string): { value: number; metadata?: any } | null {
+    const row = db.prepare('SELECT value, metadata_json, expires_at FROM computed_metrics_cache WHERE metric_name = ?').get(metricName) as any;
+    if (!row) return null;
+    
+    // Check if expired
+    if (row.expires_at && new Date(row.expires_at) < new Date()) {
+      this.deleteCachedMetric(metricName);
+      return null;
+    }
+    
+    return {
+      value: row.value,
+      metadata: row.metadata_json ? JSON.parse(row.metadata_json) : undefined
+    };
+  },
+
+  setCachedMetric(metricName: string, value: number, metadata?: any, ttlSeconds: number = 300): void {
+    const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
+    const metadataJson = metadata ? JSON.stringify(metadata) : null;
+    
+    db.prepare(`
+      INSERT OR REPLACE INTO computed_metrics_cache (metric_name, value, metadata_json, computed_at, expires_at)
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)
+    `).run(metricName, value, metadataJson, expiresAt);
+  },
+
+  deleteCachedMetric(metricName: string): void {
+    db.prepare('DELETE FROM computed_metrics_cache WHERE metric_name = ?').run(metricName);
+  },
+
+  clearExpiredCache(): void {
+    db.prepare('DELETE FROM computed_metrics_cache WHERE expires_at < CURRENT_TIMESTAMP').run();
   }
 };

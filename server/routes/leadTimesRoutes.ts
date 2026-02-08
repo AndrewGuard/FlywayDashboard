@@ -2,11 +2,12 @@ import { Router, Request, Response } from 'express';
 import { dbHelpers } from '../db/database';
 import * as flywayHistory from '../flywayHistory';
 import { calculateLeadTimes, sendErrorResponse } from '../utils/migrationDataProcessing';
+import { cacheMiddleware } from '../middleware/cacheMiddleware';
 
 const router = Router();
 
 // GET lead times
-router.get('/api/metrics/lead-times', (_req: Request, res: Response) => {
+router.get('/api/metrics/lead-times', cacheMiddleware(30), (_req: Request, res: Response) => {
   try {
     const data = dbHelpers.getLeadTimes();
     res.json(data);
