@@ -14,6 +14,25 @@ interface CacheEntry<T> {
 
 const cache = new Map<string, CacheEntry<any>>();
 const CACHE_DURATION = 30000; // 30 seconds
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
+
+/**
+ * Retry a fetch operation with exponential backoff
+ */
+async function fetchWithRetry<T>(
+  fetcher: () => Promise<T>,
+  retries: number = MAX_RETRIES
+): Promise<T> {
+  try {
+    return await fetcher();
+  } catch (error) {
+    if (retries === 0) throw error;
+    
+    await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (MAX_RETRIES - retries + 1)));
+    return fetchWithRetry(fetcher, retries - 1);
+  }
+}
 
 /**
  * Generic cached data fetcher
@@ -38,7 +57,7 @@ function useCachedData<T>(
       }
 
       setLoading(true);
-      const result = await fetcher();
+      const result = await fetchWithRetry(fetcher);
       
       // Update cache
       cache.set(key, { data: result, timestamp: Date.now() });

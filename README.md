@@ -1,4 +1,55 @@
+# Flyway Dashboard
+
 A comprehensive dashboard for visualizing and analyzing Flyway database migration metrics with DORA-aligned performance indicators and ROI calculations.
+
+## ⚡ Quick Start with Docker (Recommended)
+
+The fastest way to get started:
+
+```bash
+docker-compose up
+```
+
+Open http://localhost:3000 in your browser. That's it!
+
+The app runs in **demo mode** by default with sample data. See [DOCKER_INSTALL.md](DOCKER_INSTALL.md) for production setup.
+
+**Why Docker?**
+- ✅ One command installation
+- ✅ No manual Node.js setup
+- ✅ Consistent environment across all systems
+- ✅ Production-ready nginx configuration
+- ✅ Health checks and auto-restart
+- ✅ Easy scaling and deployment
+
+---
+
+## Alternative Installation Methods
+
+### Manual Development Setup
+
+For developers who want to modify the code:
+
+**Prerequisites:** Node.js 16+
+
+```bash
+# Install dependencies
+npm install
+cd server && npm install && cd ..
+
+# Start development servers
+npm run dev
+```
+
+See sections below for detailed manual setup instructions.
+
+### Production Deployments
+
+- **Server Only**: [INSTALL_SERVER.md](INSTALL_SERVER.md) - Deploy Express server on Windows/Linux
+- **UI Only**: [INSTALL_UI.md](INSTALL_UI.md) - Deploy React UI to IIS, nginx, Netlify, Vercel, S3
+- **Docker**: [DOCKER_INSTALL.md](DOCKER_INSTALL.md) - Complete Docker deployment guide
+
+---
 
 ## Architecture
 

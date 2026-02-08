@@ -21,10 +21,18 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
     "eject": "react-scripts eject",
     "server": "cd server && npm run dev",
     "dev": "concurrently \"npm run server\" \"npm start\" --names \"SERVER,CLIENT\" --prefix-colors \"blue,green\"",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up",
+    "docker:down": "docker-compose down",
+    "docker:start": "docker-compose up -d",
+    "docker:logs": "docker-compose logs -f",
     "package-ui": "node build-ui-package.js",
     "electron": "electron .",
     "electron-build": "npm run build && electron-builder",
@@ -48,30 +56,34 @@
       {
         "from": "server",
         "to": "resources/server",
-        "filter": ["**/*", "!node_modules/**/*"]
-      }
-    ],
-    "extraFiles": [
-      {
-        "from": "server",
-        "to": "resources/server",
-        "filter": ["**/*", "!node_modules/**/*"]
+        "filter": [
+          "**/*",
+          "!node_modules/**/*"
+        ]
       }
     ],
     "asarUnpack": [
       "resources/server/**/*"
     ],
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "icon": "assets/icon.ico"
     },
     "mac": {
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "icon": "assets/icon.icns",
       "category": "public.app-category.developer-tools"
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "icon": "assets/icon.png",
       "category": "Development"
     },
@@ -98,8 +110,15 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
     "@types/jest": "^30.0.0",
+    "@types/node": "^22.13.3",
+    "@types/react": "^19.0.6",
+    "@types/react-dom": "^19.0.3",
+    "@vitejs/plugin-react": "^4.7.0",
+    "@vitest/ui": "^2.1.9",
     "concurrently": "^9.2.1",
     "electron": "^28.1.0",
-    "electron-builder": "^24.9.1"
+    "electron-builder": "^24.9.1",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.9"
   }
 }

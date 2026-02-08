@@ -9,8 +9,11 @@ import Dashboard from './Dashboard';
 import MigrationHistory from './MigrationHistory';
 import RoiCalculationPage from './RoiCalculationPage';
 import ProjectConfiguration from './ProjectConfiguration';
+import { useNotification } from './hooks/useNotification';
 
 function App() {
+  const { NotificationComponent } = useNotification();
+
   return (
     <ThemeProvider theme={honeycombTheme}>
       <CssBaseline />
@@ -27,6 +30,7 @@ function App() {
           </Box>
         </Box>
       </Router>
+      <NotificationComponent />
     </ThemeProvider>
   );
 }
