@@ -16,7 +16,8 @@ import {
 import DownloadIcon from '@mui/icons-material/Download';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { exportAsImage } from '../utils/exportUtils';
-import { calculateROI, UserMetricsInput, FlywayMetricsInput, ROIParameters, DEFAULT_ROI_PARAMETERS } from '../utils/roiCalculations';
+import { useMigrationHistory, useUserMetrics, useLeadTimes, useDeploymentsPerQuarter } from '../hooks/useFlywayData';
+import { calculateCompleteROI, calculateAverageLeadTime, calculateFailureRate } from '../utils/roiService';
 
 interface Metrics {
   flywayDeployments: number;
@@ -43,9 +44,15 @@ export default function ChangeInDeploymentMetricsWidget() {
   const cardRef = useRef<HTMLDivElement>(null);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [roi, setRoi] = useState<ROI | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+
+  // Use shared data hooks with automatic caching
+  const { data: migrations, loading: migrationsLoading } = useMigrationHistory();
+  const { data: userData, loading: userLoading } = useUserMetrics();
+  const { data: leadTimesData, loading: leadTimesLoading } = useLeadTimes();
+  const { data: deploymentsData, loading: deploymentsLoading } = useDeploymentsPerQuarter();
+
+  const loading = migrationsLoading || userLoading || leadTimesLoading || deploymentsLoading;
 
   const handleExport = async () => {
     if (!cardRef.current) return;
@@ -59,13 +66,65 @@ export default function ChangeInDeploymentMetricsWidget() {
     }
   };
 
+  // Calculate metrics when data is available
   useEffect(() => {
-    fetchMetrics();
-    
-    // Listen for user metrics updates from ROI page
+    if (!userData || !migrations || !leadTimesData || !deploymentsData) return;
+    if (Object.keys(userData).length === 0) return;
+
+    // Calculate Flyway metrics using shared utilities
+    const flywayLeadTime = calculateAverageLeadTime(leadTimesData.leadTimes || []);
+    const flywayFailureRate = calculateFailureRate(migrations);
+
+    const metricsData = {
+      flywayDeployments: Number(deploymentsData.deploymentsPerQuarter) || 0,
+      nonFlywayDeployments: Number(userData.deploymentsPerQuarter) || 10,
+      flywayLeadTime: Math.round(flywayLeadTime * 10) / 10,
+      nonFlywayLeadTime: Number(userData.leadTimeDays) || 20,
+      flywayFailureRate: Math.round(flywayFailureRate * 10) / 10,
+      nonFlywayFailureRate: Number(userData.scriptFailureRate) || 5,
+      extrapolated: deploymentsData.extrapolated || false
+    };
+
+    setMetrics(metricsData);
+
+    // Calculate ROI using shared service
+    if (metricsData.flywayDeployments > 0 || metricsData.flywayLeadTime > 0) {
+      try {
+        const roiResult = calculateCompleteROI({
+          userData,
+          flywayDeploymentsPerQuarter: metricsData.flywayDeployments,
+          flywayLeadTime: metricsData.flywayLeadTime,
+          flywayFailureRate: metricsData.flywayFailureRate
+        });
+
+        if (roiResult) {
+          setRoi({
+            percentage: roiResult.roiPercentage,
+            annual: roiResult.annualSavings,
+            quarterly: roiResult.totalQuarterlySavings,
+            paybackMonths: roiResult.paybackMonths,
+            leadTimeSavings: roiResult.timeSavingsPerQuarter,
+            failureSavings: roiResult.failureSavingsPerQuarter,
+            frequencySavings: roiResult.efficiencySavings,
+            threeYearROI: roiResult.threeYearROI
+          });
+        } else {
+          setRoi(null);
+        }
+      } catch (roiError) {
+        console.error('ROI calculation error:', roiError);
+        setRoi(null);
+      }
+    } else {
+      setRoi(null);
+    }
+  }, [userData, migrations, leadTimesData, deploymentsData]);
+
+  // Listen for user metrics updates
+  useEffect(() => {
     const handleMetricsUpdate = () => {
       console.log('User metrics updated, refreshing widget...');
-      fetchMetrics();
+      // Data will auto-refresh through hooks
     };
     
     window.addEventListener('userMetricsUpdated', handleMetricsUpdate);
@@ -74,141 +133,6 @@ export default function ChangeInDeploymentMetricsWidget() {
       window.removeEventListener('userMetricsUpdated', handleMetricsUpdate);
     };
   }, []);
-
-  async function fetchMetrics() {
-    try {
-      // Fetch Flyway deployments per quarter
-      const flywayRes = await fetch('/api/metrics/deployments-per-quarter');
-      const flywayData = flywayRes.ok ? await flywayRes.json() : {};
-      
-      // Fetch user-defined metrics (non-Flyway baseline)
-      const userRes = await fetch('/api/user-defined-metrics');
-      const userData = userRes.ok ? await userRes.json() : {};
-
-      // Fetch Flyway lead times
-      const leadTimesRes = await fetch('/api/metrics/lead-times');
-      const leadTimesData = leadTimesRes.ok ? await leadTimesRes.json() : {};
-
-      // Calculate Flyway lead time average
-      let flywayLeadTime = 0;
-      const leadTimes = Array.isArray(leadTimesData?.leadTimes) ? leadTimesData.leadTimes : [];
-      if (leadTimes.length) {
-        const validTimes = leadTimes
-          .map(lt => Number(lt.leadTimeDays))
-          .filter(n => Number.isFinite(n) && n >= 0);
-        if (validTimes.length) {
-          flywayLeadTime = validTimes.reduce((sum, t) => sum + t, 0) / validTimes.length;
-        }
-      }
-
-      // Get Flyway failure rate from history
-      let flywayFailureRate = 0;
-      try {
-        const historyRes = await fetch('/api/flyway/history/all');
-        const historyData = historyRes.ok ? await historyRes.json() : [];
-        const history = Array.isArray(historyData) ? historyData : [];
-        if (history.length) {
-          const failed = history.filter(m => m.success === false).length;
-          flywayFailureRate = (failed / history.length) * 100;
-        }
-      } catch (e) {
-        console.warn('Failed to get failure rate:', e);
-      }
-
-      const metricsData = {
-        flywayDeployments: Number(flywayData?.deploymentsPerQuarter) || 0,
-        nonFlywayDeployments: Number(userData?.deploymentsPerQuarter) || 10,
-        flywayLeadTime: Math.round(flywayLeadTime * 10) / 10,
-        nonFlywayLeadTime: Number(userData?.leadTimeDays) || 20,
-        flywayFailureRate: Math.round(flywayFailureRate * 10) / 10,
-        nonFlywayFailureRate: Number(userData?.scriptFailureRate) || 5,
-        extrapolated: flywayData?.extrapolated || false
-      };
-
-      setMetrics(metricsData);
-
-      // Calculate ROI using shared utility
-      if (userData && Object.keys(userData).length > 0) {
-        const baselineMetrics: UserMetricsInput = {
-          deploymentsPerQuarter: Number(userData.deploymentsPerQuarter) || 10,
-          leadTimeDays: Number(userData.leadTimeDays) || 20,
-          scriptFailureRate: Number(userData.scriptFailureRate) || 5,
-          savingsPerDeployment: Number(userData.savingsPerDeployment) || 1000,
-          implementationCost: 0, // Will be calculated dynamically below
-          costOfDelayPerDay: Number(userData.costOfDelayPerDay) || 250,
-          dbaHoursPerDeployment: Number(userData.dbaHoursPerDeployment) || 8,
-          developerHoursPerDeployment: Number(userData.developerHoursPerDeployment) || 4,
-          dbaAnnualSalary: Number(userData.dbaAnnualSalary) || 175000,
-          developerAnnualSalary: Number(userData.developerAnnualSalary) || 155000,
-          developerCount: Number(userData.developerCount) || 5,
-          dbaCount: Number(userData.dbaCount) || 2,
-          flywayLicenseCost: Number(userData.flywayLicenseCost) || ((Number(userData.developerCount) || 5) + (Number(userData.dbaCount) || 2)) * 3000
-        };
-
-        const currentMetrics: FlywayMetricsInput = {
-          deploymentsPerQuarter: Number(flywayData?.deploymentsPerQuarter) || 0,
-          leadTimeDays: flywayLeadTime || 0,
-          scriptFailureRate: flywayFailureRate || 0
-        };
-
-        // Only calculate if we have actual Flyway data
-        if (currentMetrics.deploymentsPerQuarter > 0 || currentMetrics.leadTimeDays > 0) {
-          try {
-            // Use the saved parameters, default to realistic preset
-            const parameters: ROIParameters = {
-              laborAutomationPct: userData.laborAutomationPct ?? DEFAULT_ROI_PARAMETERS.laborAutomationPct,
-              failureCostMultiplier: userData.failureCostMultiplier ?? DEFAULT_ROI_PARAMETERS.failureCostMultiplier,
-              costOfDelayMultiplier: userData.costOfDelayMultiplier ?? DEFAULT_ROI_PARAMETERS.costOfDelayMultiplier,
-              deploymentValueFactor: userData.deploymentValueFactor ?? DEFAULT_ROI_PARAMETERS.deploymentValueFactor,
-              rampUpFactor: userData.rampUpFactor ?? DEFAULT_ROI_PARAMETERS.rampUpFactor,
-              leadTimeCapPct: userData.leadTimeCapPct ?? DEFAULT_ROI_PARAMETERS.leadTimeCapPct
-            };
-            
-            // Calculate implementation cost based on training hours plus license (same as ROI page)
-            const baselineROI = calculateROI(baselineMetrics, currentMetrics, DEFAULT_ROI_PARAMETERS);
-            const dbaTrainingHours = Number(userData.dbaTrainingHours) || 10;
-            const developerTrainingHours = Number(userData.developerTrainingHours) || 5;
-            const dbaHourlyRate = (Number(userData.dbaAnnualSalary) || 175000) / 2080;
-            const devHourlyRate = (Number(userData.developerAnnualSalary) || 155000) / 2080;
-            const dbaTrainingCost = (Number(userData.dbaCount) || 2) * dbaTrainingHours * dbaHourlyRate;
-            const devTrainingCost = (Number(userData.developerCount) || 5) * developerTrainingHours * devHourlyRate;
-            const actualImplementationCost = dbaTrainingCost + devTrainingCost + (Number(userData.flywayLicenseCost) || 0);
-            
-            // Now calculate final ROI with training-based implementation cost
-            const finalMetrics = { ...baselineMetrics, implementationCost: actualImplementationCost };
-            const roiResult = calculateROI(finalMetrics, currentMetrics, parameters);
-            if (roiResult) {
-              setRoi({
-                percentage: roiResult.roiPercentage,
-                annual: roiResult.annualSavings,
-                quarterly: roiResult.totalQuarterlySavings,
-                paybackMonths: roiResult.paybackMonths,
-                leadTimeSavings: roiResult.timeSavingsPerQuarter,
-                failureSavings: roiResult.failureSavingsPerQuarter,
-                frequencySavings: roiResult.efficiencySavings,
-                threeYearROI: roiResult.threeYearROI
-              });
-            } else {
-              setRoi(null);
-            }
-          } catch (roiError) {
-            console.error('ROI calculation error:', roiError);
-            setRoi(null);
-          }
-        } else {
-          setRoi(null);
-        }
-      } else {
-        setRoi(null);
-      }
-
-      setLoading(false);
-    } catch (err) {
-      console.error('Change in deployment metrics error:', err);
-      setError((err as Error).message || 'Failed to load metrics');
-      setLoading(false);
-    }
-  }
 
   const MetricCard = ({ title, flywayValue, nonFlywayValue, unit, lowerIsBetter = false }: {
     title: string;
@@ -261,8 +185,6 @@ export default function ChangeInDeploymentMetricsWidget() {
 
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}><CircularProgress /></Box>
-        ) : error ? (
-          <Typography color="error">{error}</Typography>
         ) : metrics ? (
           <>
             <Grid container spacing={2} sx={{ mt: 1 }}>

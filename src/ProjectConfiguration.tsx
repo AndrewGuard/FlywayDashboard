@@ -25,6 +25,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import AddIcon from '@mui/icons-material/Add';
 import SecurityIcon from '@mui/icons-material/Security';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 
 interface Connection {
   id: string;
@@ -87,6 +88,18 @@ const ProjectConfiguration: React.FC = () => {
 
   const handleDeleteConnection = (id: string) => {
     setConnections(connections.filter(c => c.id !== id));
+  };
+
+  const handleMoveConnection = (id: string) => {
+    setConnections(connections.map(c => {
+      if (c.id === id) {
+        return {
+          ...c,
+          environment: c.environment === 'prod' ? 'nonProd' : 'prod'
+        };
+      }
+      return c;
+    }));
   };
 
   const handleTestConnection = async (id: string) => {
@@ -195,6 +208,16 @@ const ProjectConfiguration: React.FC = () => {
           disabled={connection.status === 'testing'}
         >
           {connection.status === 'testing' ? <CircularProgress size={16} /> : 'Test'}
+        </Button>
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<SwapHorizIcon />}
+          onClick={() => handleMoveConnection(connection.id)}
+          color={connection.environment === 'prod' ? 'info' : 'error'}
+          title={connection.environment === 'prod' ? 'Move to Non-Production' : 'Move to Production'}
+        >
+          {connection.environment === 'prod' ? 'Non-Prod' : 'Prod'}
         </Button>
         <IconButton
           edge="end"

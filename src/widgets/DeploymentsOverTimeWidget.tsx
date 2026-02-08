@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Card, CardContent, Typography, Box, IconButton, Tooltip as MuiTooltip } from '@mui/material';
+import React from 'react';
+import { Box } from '@mui/material';
 import { Line } from 'react-chartjs-2';
-import DownloadIcon from '@mui/icons-material/Download';
-import { exportAsImage } from '../utils/exportUtils';
+import { WidgetWrapper } from '../components/WidgetWrapper';
+import { useMigrationHistory } from '../hooks/useFlywayData';
+import { processDeploymentsOverTime } from '../utils/chartDataProcessing';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -16,105 +17,10 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-interface LineChartDataset {
-  label: string;
-  data: number[];
-  borderColor: string;
-  backgroundColor: string;
-  fill?: boolean;
-  tension: number;
-}
-
-interface LineChartData {
-  labels: string[];
-  datasets: LineChartDataset[];
-}
-
 const DeploymentsOverTimeWidget: React.FC = () => {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [chartData, setChartData] = useState<LineChartData | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [exporting, setExporting] = useState(false);
+  const { data: migrations, loading, error } = useMigrationHistory();
 
-  const handleExport = async () => {
-    if (!cardRef.current) return;
-    setExporting(true);
-    try {
-      await exportAsImage(cardRef.current, 'deployments-over-time');
-    } catch (error) {
-      console.error('Export failed:', error);
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function fetchData() {
-      try {
-        const res = await fetch('/api/flyway/history/all');
-        if (!res.ok) throw new Error('Failed to fetch migration history');
-        
-        const data = await res.json();
-        
-        if (!mounted) return;
-
-        const migrations = Array.isArray(data) ? data : [];
-        
-        if (!migrations.length) {
-          setError('No migration data available');
-          setLoading(false);
-          return;
-        }
-
-        // Group migrations by date and database
-        const byDateAndDb = {};
-        migrations.forEach(m => {
-          const dateStr = m.installed_on || m.installedOn;
-          if (!dateStr) return;
-          const date = new Date(dateStr).toISOString().slice(0, 10);
-          const db = m.database || m.schema || 'default';
-          
-          if (!byDateAndDb[date]) byDateAndDb[date] = {};
-          if (!byDateAndDb[date][db]) byDateAndDb[date][db] = 0;
-          byDateAndDb[date][db]++;
-        });
-
-        const dates = Object.keys(byDateAndDb).sort();
-        const databases = Array.from(new Set(migrations.map(m => m.database || m.schema || 'default')));
-        
-        const colors = [
-          'rgb(75, 192, 192)',
-          'rgb(255, 99, 132)',
-          'rgb(54, 162, 235)',
-          'rgb(255, 206, 86)',
-          'rgb(153, 102, 255)'
-        ];
-
-        const datasets = databases.map((db, i) => ({
-          label: db,
-          data: dates.map(d => byDateAndDb[d]?.[db] || 0),
-          borderColor: colors[i % colors.length],
-          backgroundColor: colors[i % colors.length].replace('rgb', 'rgba').replace(')', ', 0.5)'),
-          tension: 0.1
-        }));
-
-        setChartData({ labels: dates, datasets });
-        setLoading(false);
-      } catch (err) {
-        console.error('Deployments over time error:', err);
-        if (mounted) {
-          setError(err.message || 'Failed to load data');
-          setLoading(false);
-        }
-      }
-    }
-
-    fetchData();
-    return () => { mounted = false; };
-  }, []);
+  const chartData = migrations ? processDeploymentsOverTime(migrations) : null;
 
   const options = {
     responsive: true,
@@ -129,27 +35,20 @@ const DeploymentsOverTimeWidget: React.FC = () => {
   };
 
   return (
-    <Card ref={cardRef} sx={{ mb: 2 }}>
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <Typography variant="h6">Deployments Over Time by Database</Typography>
-          <MuiTooltip title="Download as image">
-            <IconButton onClick={handleExport} disabled={exporting} size="small">
-              <DownloadIcon />
-            </IconButton>
-          </MuiTooltip>
+    <WidgetWrapper 
+      title="Deployments Over Time by Database" 
+      loading={loading} 
+      error={error}
+      exportFilename="deployments-over-time"
+    >
+      {chartData ? (
+        <Box sx={{ height: 300 }}>
+          <Line data={chartData} options={options} />
         </Box>
-        {loading ? (
-          <Typography>Loading...</Typography>
-        ) : error ? (
-          <Typography color="error">{error}</Typography>
-        ) : chartData ? (
-          <Box sx={{ height: 300 }}><Line data={chartData} options={options} /></Box>
-        ) : (
-          <Typography>No data available</Typography>
-        )}
-      </CardContent>
-    </Card>
+      ) : (
+        <Box>No data available</Box>
+      )}
+    </WidgetWrapper>
   );
 };
 

@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button, Box } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import { useMigrationHistory } from '../hooks/useFlywayData';
+import { formatDate } from '../utils/chartDataProcessing';
 
 interface Migration {
   version?: string;
@@ -18,58 +20,18 @@ interface Migration {
 
 const MigrationHistoryWidget: React.FC = () => {
   const navigate = useNavigate();
-  const [migrations, setMigrations] = useState<Migration[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: migrations, loading, error, refetch } = useMigrationHistory();
 
+  // Poll every 30 seconds for new migrations
   useEffect(() => {
-    let mounted = true;
-    let pollInterval: NodeJS.Timeout;
-
-    async function fetchData() {
-      try {
-        const res = await fetch('/api/flyway/history/all');
-        if (!res.ok) throw new Error('Failed to fetch migration history');
-
-        const data = await res.json();
-
-        if (!mounted) return;
-
-        const migrationList = Array.isArray(data) ? data : [];
-        setMigrations(migrationList);
-        setLoading(false);
-      } catch (err) {
-        console.error('Migration history error:', err);
-        if (mounted) {
-          setError(err.message || 'Failed to load data');
-          setLoading(false);
-        }
-      }
-    }
-
-    // Initial fetch
-    fetchData();
-
-    // Poll every 30 seconds for new migrations
-    pollInterval = setInterval(() => {
-      if (mounted) {
-        fetchData();
-      }
+    const pollInterval = setInterval(() => {
+      refetch();
     }, 30000);
 
     return () => {
-      mounted = false;
       clearInterval(pollInterval);
     };
-  }, []);
-
-  const formatDate = (dateStr: string) => {
-    try {
-      return new Date(dateStr).toLocaleString();
-    } catch {
-      return dateStr;
-    }
-  };
+  }, [refetch]);
 
   const getSuccessChip = (success: boolean | number | string) => {
     const isSuccess = success === true || success === 1 || success === '1' || success === 'true';
@@ -101,7 +63,7 @@ const MigrationHistoryWidget: React.FC = () => {
           <Typography color="text.secondary">Loading...</Typography>
         ) : error ? (
           <Typography color="error">{error}</Typography>
-        ) : migrations.length > 0 ? (
+        ) : migrations && migrations.length > 0 ? (
           <TableContainer sx={{ maxHeight: 400 }}>
             <Table stickyHeader size="small">
               <TableHead>
