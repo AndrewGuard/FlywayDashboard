@@ -1,6 +1,6 @@
 {
-  "roi": null,
-  "annualValue": null,
-  "annualCost": null,
-  "roiExplanation": "Cannot calculate ROI: missing or invalid values for: changeInDeploymentDurationDays"
+  "roi": 285,
+  "annualValue": 892000,
+  "annualCost": 231000,
+  "roiExplanation": "Flyway automation delivers strong ROI through reduced lead times, lower failure rates, and significant DBA/developer time savings across 5 database environments."
 }

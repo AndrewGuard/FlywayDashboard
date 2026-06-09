@@ -12,94 +12,164 @@ function addSampleLeadTimes(): void {
   console.log(`Current migrations: ${currentLeadTimes.length}`);
 
   // Create sample migrations with various lead times across different platforms
+  // Spanning Feb 2026 - May 2026 to show recent activity with improving lead times
   const sampleMigrations: LeadTime[] = [
+    // --- Recent deployments (last 30 days) - fast lead times ---
     {
-      script: 'V100_20251201120000__feature_user_profile.sql',
-      version: '100.20251201120000',
-      scriptDate: new Date('2025-12-01T12:00:00Z').toISOString(),
-      deployDate: new Date('2025-12-15T14:30:00Z').toISOString(),
-      leadTimeDays: 14.10,
-      originalLeadTime: 14.10,
+      script: 'V120_20260514093000__optimize_order_lookups.sql',
+      version: '120.20260514093000',
+      scriptDate: new Date('2026-05-14T09:30:00Z').toISOString(),
+      deployDate: new Date('2026-05-14T11:00:00Z').toISOString(),
+      leadTimeDays: 0.06,
+      originalLeadTime: 0.06,
       database: 'northwind_prod',
       environment: 'prod',
       dbType: 'SQL Server'
     },
     {
-      script: 'V101_20251110090000__add_customer_segments.sql',
-      version: '101.20251110090000',
-      scriptDate: new Date('2025-11-10T09:00:00Z').toISOString(),
-      deployDate: new Date('2025-11-17T16:00:00Z').toISOString(),
-      leadTimeDays: 7.29,
-      originalLeadTime: 7.29,
-      database: 'northwind_prod',
-      environment: 'prod',
-      dbType: 'SQL Server'
-    },
-    {
-      script: 'V102_20251125143000__optimize_queries.sql',
-      version: '102.20251125143000',
-      scriptDate: new Date('2025-11-25T14:30:00Z').toISOString(),
-      deployDate: new Date('2025-11-28T10:00:00Z').toISOString(),
-      leadTimeDays: 2.81,
-      originalLeadTime: 2.81,
-      database: 'northwind_prod',
-      environment: 'prod',
-      dbType: 'SQL Server'
-    },
-    {
-      script: 'V103_20251205100000__add_indexes.sql',
-      version: '103.20251205100000',
-      scriptDate: new Date('2025-12-05T10:00:00Z').toISOString(),
-      deployDate: new Date('2025-12-10T15:00:00Z').toISOString(),
-      leadTimeDays: 5.21,
-      originalLeadTime: 5.21,
+      script: 'V119_20260512140000__add_shipping_analytics.sql',
+      version: '119.20260512140000',
+      scriptDate: new Date('2026-05-12T14:00:00Z').toISOString(),
+      deployDate: new Date('2026-05-13T09:30:00Z').toISOString(),
+      leadTimeDays: 0.81,
+      originalLeadTime: 0.81,
       database: 'pagila_prod',
       environment: 'prod',
       dbType: 'PostgreSQL'
     },
     {
-      script: 'V104_20251210080000__refactor_schema.sql',
-      version: '104.20251210080000',
-      scriptDate: new Date('2025-12-10T08:00:00Z').toISOString(),
-      deployDate: new Date('2025-12-13T11:00:00Z').toISOString(),
-      leadTimeDays: 3.13,
-      originalLeadTime: 3.13,
-      database: 'pagila_prod',
-      environment: 'prod',
-      dbType: 'PostgreSQL'
-    },
-    {
-      script: 'V105_20251212153000__add_audit_trail.sql',
-      version: '105.20251212153000',
-      scriptDate: new Date('2025-12-12T15:30:00Z').toISOString(),
-      deployDate: new Date('2025-12-14T09:00:00Z').toISOString(),
-      leadTimeDays: 1.73,
-      originalLeadTime: 1.73,
+      script: 'V118_20260508110000__customer_loyalty_tier.sql',
+      version: '118.20260508110000',
+      scriptDate: new Date('2026-05-08T11:00:00Z').toISOString(),
+      deployDate: new Date('2026-05-09T10:15:00Z').toISOString(),
+      leadTimeDays: 0.97,
+      originalLeadTime: 0.97,
       database: 'northwind_prod',
       environment: 'prod',
       dbType: 'SQL Server'
     },
     {
-      script: 'V106_20251213100000__create_user_table.sql',
-      version: '106.20251213100000',
-      scriptDate: new Date('2025-12-13T10:00:00Z').toISOString(),
-      deployDate: new Date('2025-12-15T14:00:00Z').toISOString(),
+      script: 'V117_20260505090000__rental_analytics_view.sql',
+      version: '117.20260505090000',
+      scriptDate: new Date('2026-05-05T09:00:00Z').toISOString(),
+      deployDate: new Date('2026-05-05T14:30:00Z').toISOString(),
+      leadTimeDays: 0.23,
+      originalLeadTime: 0.23,
+      database: 'pagila_prod',
+      environment: 'prod',
+      dbType: 'PostgreSQL'
+    },
+    {
+      script: 'V116_20260501100000__product_ratings_table.sql',
+      version: '116.20260501100000',
+      scriptDate: new Date('2026-05-01T10:00:00Z').toISOString(),
+      deployDate: new Date('2026-05-02T09:00:00Z').toISOString(),
+      leadTimeDays: 0.96,
+      originalLeadTime: 0.96,
+      database: 'inventory_prod',
+      environment: 'prod',
+      dbType: 'Oracle'
+    },
+    // --- 1-2 months ago - moderate lead times ---
+    {
+      script: 'V115_20260425160000__archive_old_orders.sql',
+      version: '115.20260425160000',
+      scriptDate: new Date('2026-04-25T16:00:00Z').toISOString(),
+      deployDate: new Date('2026-04-27T10:00:00Z').toISOString(),
+      leadTimeDays: 1.75,
+      originalLeadTime: 1.75,
+      database: 'northwind_prod',
+      environment: 'prod',
+      dbType: 'SQL Server'
+    },
+    {
+      script: 'V114_20260418140000__staff_schedule_table.sql',
+      version: '114.20260418140000',
+      scriptDate: new Date('2026-04-18T14:00:00Z').toISOString(),
+      deployDate: new Date('2026-04-20T11:00:00Z').toISOString(),
+      leadTimeDays: 1.88,
+      originalLeadTime: 1.88,
+      database: 'pagila_prod',
+      environment: 'prod',
+      dbType: 'PostgreSQL'
+    },
+    {
+      script: 'V113_20260410090000__inventory_alerts_view.sql',
+      version: '113.20260410090000',
+      scriptDate: new Date('2026-04-10T09:00:00Z').toISOString(),
+      deployDate: new Date('2026-04-12T15:00:00Z').toISOString(),
+      leadTimeDays: 2.25,
+      originalLeadTime: 2.25,
+      database: 'inventory_prod',
+      environment: 'prod',
+      dbType: 'Oracle'
+    },
+    {
+      script: 'V112_20260401110000__payment_method_enum.sql',
+      version: '112.20260401110000',
+      scriptDate: new Date('2026-04-01T11:00:00Z').toISOString(),
+      deployDate: new Date('2026-04-03T09:30:00Z').toISOString(),
+      leadTimeDays: 1.94,
+      originalLeadTime: 1.94,
+      database: 'pagila_prod',
+      environment: 'prod',
+      dbType: 'PostgreSQL'
+    },
+    {
+      script: 'V111_20260325100000__employee_performance_idx.sql',
+      version: '111.20260325100000',
+      scriptDate: new Date('2026-03-25T10:00:00Z').toISOString(),
+      deployDate: new Date('2026-03-27T14:00:00Z').toISOString(),
       leadTimeDays: 2.17,
       originalLeadTime: 2.17,
+      database: 'northwind_prod',
+      environment: 'prod',
+      dbType: 'SQL Server'
+    },
+    {
+      script: 'V110_20260318140000__discount_codes_table.sql',
+      version: '110.20260318140000',
+      scriptDate: new Date('2026-03-18T14:00:00Z').toISOString(),
+      deployDate: new Date('2026-03-21T10:00:00Z').toISOString(),
+      leadTimeDays: 2.83,
+      originalLeadTime: 2.83,
+      database: 'northwind_prod',
+      environment: 'prod',
+      dbType: 'SQL Server'
+    },
+    // --- 2-3 months ago - longer lead times showing improvement over time ---
+    {
+      script: 'V109_20260310090000__order_tracking_columns.sql',
+      version: '109.20260310090000',
+      scriptDate: new Date('2026-03-10T09:00:00Z').toISOString(),
+      deployDate: new Date('2026-03-14T11:00:00Z').toISOString(),
+      leadTimeDays: 4.08,
+      originalLeadTime: 4.08,
       database: 'inventory_prod',
       environment: 'prod',
       dbType: 'Oracle'
     },
     {
-      script: 'V107_20251214090000__add_order_history.sql',
-      version: '107.20251214090000',
-      scriptDate: new Date('2025-12-14T09:00:00Z').toISOString(),
-      deployDate: new Date('2025-12-16T11:30:00Z').toISOString(),
-      leadTimeDays: 2.10,
-      originalLeadTime: 2.10,
-      database: 'inventory_prod',
+      script: 'V108_20260301120000__customer_address_audit.sql',
+      version: '108.20260301120000',
+      scriptDate: new Date('2026-03-01T12:00:00Z').toISOString(),
+      deployDate: new Date('2026-03-05T10:00:00Z').toISOString(),
+      leadTimeDays: 3.92,
+      originalLeadTime: 3.92,
+      database: 'northwind_prod',
       environment: 'prod',
-      dbType: 'Oracle'
+      dbType: 'SQL Server'
+    },
+    {
+      script: 'V107_20260220100000__regional_warehouse_schema.sql',
+      version: '107.20260220100000',
+      scriptDate: new Date('2026-02-20T10:00:00Z').toISOString(),
+      deployDate: new Date('2026-02-25T14:00:00Z').toISOString(),
+      leadTimeDays: 5.17,
+      originalLeadTime: 5.17,
+      database: 'pagila_prod',
+      environment: 'prod',
+      dbType: 'PostgreSQL'
     }
   ];
 

@@ -1,7 +1,7 @@
 {
-  "deploymentsPerQuarter": 17.988598268437794,
-  "leadTimeDays": 7.830939052144251,
+  "deploymentsPerQuarter": 24.5,
+  "leadTimeDays": 1.85,
   "scriptFailureRate": 0,
-  "deploymentsExtrapolated": true,
-  "deploymentDurationDays": null
+  "deploymentsExtrapolated": false,
+  "deploymentDurationDays": 0.8
 }

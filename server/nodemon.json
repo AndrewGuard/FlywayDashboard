@@ -2,7 +2,7 @@
   "watch": [
     "index.ts",
     "routes/**/*.ts",
-    "db/**/*.ts",
+    "db/database.ts",
     "flywayHistory.ts",
     "jdbc-connections.json",
     ".env"
@@ -10,10 +10,11 @@
   "ext": "ts,js,json",
   "ignore": [
     "node_modules/**",
-    "db/flyway-dashboard.db",
+    "db/*.db",
     "db/*.db-*"
   ],
-  "delay": "500",
+  "legacyWatch": true,
+  "delay": "1000",
   "verbose": true,
   "env": {
     "NODE_ENV": "development"

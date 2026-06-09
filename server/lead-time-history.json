@@ -1,10 +1,370 @@
 {
   "dataPoints": [
     {
-      "date": "2025-12-15",
-      "flywayLeadTime": 0,
-      "nonFlywayLeadTime": 0,
-      "timestamp": "2025-12-15T16:38:44.891Z"
+      "date": "2025-11-16",
+      "flywayLeadTime": 7.96,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2025-11-16T17:00:00.000Z"
+    },
+    {
+      "date": "2025-11-19",
+      "flywayLeadTime": 7.85,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2025-11-19T17:00:00.000Z"
+    },
+    {
+      "date": "2025-11-22",
+      "flywayLeadTime": 7.54,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2025-11-22T17:00:00.000Z"
+    },
+    {
+      "date": "2025-11-25",
+      "flywayLeadTime": 7.85,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2025-11-25T17:00:00.000Z"
+    },
+    {
+      "date": "2025-11-28",
+      "flywayLeadTime": 7.43,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2025-11-28T17:00:00.000Z"
+    },
+    {
+      "date": "2025-12-01",
+      "flywayLeadTime": 7.11,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2025-12-01T17:00:00.000Z"
+    },
+    {
+      "date": "2025-12-04",
+      "flywayLeadTime": 7.1,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2025-12-04T17:00:00.000Z"
+    },
+    {
+      "date": "2025-12-07",
+      "flywayLeadTime": 6.86,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2025-12-07T17:00:00.000Z"
+    },
+    {
+      "date": "2025-12-10",
+      "flywayLeadTime": 7.07,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2025-12-10T17:00:00.000Z"
+    },
+    {
+      "date": "2025-12-13",
+      "flywayLeadTime": 6.87,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2025-12-13T17:00:00.000Z"
+    },
+    {
+      "date": "2025-12-16",
+      "flywayLeadTime": 6.62,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2025-12-16T17:00:00.000Z"
+    },
+    {
+      "date": "2025-12-19",
+      "flywayLeadTime": 6.67,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2025-12-19T17:00:00.000Z"
+    },
+    {
+      "date": "2025-12-22",
+      "flywayLeadTime": 6.75,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2025-12-22T17:00:00.000Z"
+    },
+    {
+      "date": "2025-12-25",
+      "flywayLeadTime": 6.82,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2025-12-25T17:00:00.000Z"
+    },
+    {
+      "date": "2025-12-28",
+      "flywayLeadTime": 6.13,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2025-12-28T17:00:00.000Z"
+    },
+    {
+      "date": "2025-12-31",
+      "flywayLeadTime": 6.49,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2025-12-31T17:00:00.000Z"
+    },
+    {
+      "date": "2026-01-03",
+      "flywayLeadTime": 6.06,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-01-03T17:00:00.000Z"
+    },
+    {
+      "date": "2026-01-06",
+      "flywayLeadTime": 6.14,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-01-06T17:00:00.000Z"
+    },
+    {
+      "date": "2026-01-09",
+      "flywayLeadTime": 5.74,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-01-09T17:00:00.000Z"
+    },
+    {
+      "date": "2026-01-12",
+      "flywayLeadTime": 5.56,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-01-12T17:00:00.000Z"
+    },
+    {
+      "date": "2026-01-15",
+      "flywayLeadTime": 6.1,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-01-15T17:00:00.000Z"
+    },
+    {
+      "date": "2026-01-18",
+      "flywayLeadTime": 5.73,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-01-18T17:00:00.000Z"
+    },
+    {
+      "date": "2026-01-21",
+      "flywayLeadTime": 5.49,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-01-21T17:00:00.000Z"
+    },
+    {
+      "date": "2026-01-24",
+      "flywayLeadTime": 5.32,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-01-24T17:00:00.000Z"
+    },
+    {
+      "date": "2026-01-27",
+      "flywayLeadTime": 5.61,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-01-27T17:00:00.000Z"
+    },
+    {
+      "date": "2026-01-30",
+      "flywayLeadTime": 5.11,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-01-30T17:00:00.000Z"
+    },
+    {
+      "date": "2026-02-02",
+      "flywayLeadTime": 5.04,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-02-02T17:00:00.000Z"
+    },
+    {
+      "date": "2026-02-05",
+      "flywayLeadTime": 5.08,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-02-05T17:00:00.000Z"
+    },
+    {
+      "date": "2026-02-08",
+      "flywayLeadTime": 4.95,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-02-08T17:00:00.000Z"
+    },
+    {
+      "date": "2026-02-11",
+      "flywayLeadTime": 5.22,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-02-11T17:00:00.000Z"
+    },
+    {
+      "date": "2026-02-14",
+      "flywayLeadTime": 4.82,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-02-14T17:00:00.000Z"
+    },
+    {
+      "date": "2026-02-17",
+      "flywayLeadTime": 4.64,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-02-17T17:00:00.000Z"
+    },
+    {
+      "date": "2026-02-20",
+      "flywayLeadTime": 4.83,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-02-20T17:00:00.000Z"
+    },
+    {
+      "date": "2026-02-23",
+      "flywayLeadTime": 4.13,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-02-23T17:00:00.000Z"
+    },
+    {
+      "date": "2026-02-26",
+      "flywayLeadTime": 4.22,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-02-26T17:00:00.000Z"
+    },
+    {
+      "date": "2026-03-01",
+      "flywayLeadTime": 4.12,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-03-01T17:00:00.000Z"
+    },
+    {
+      "date": "2026-03-04",
+      "flywayLeadTime": 4.18,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-03-04T17:00:00.000Z"
+    },
+    {
+      "date": "2026-03-07",
+      "flywayLeadTime": 4.1,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-03-07T17:00:00.000Z"
+    },
+    {
+      "date": "2026-03-10",
+      "flywayLeadTime": 3.55,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-03-10T17:00:00.000Z"
+    },
+    {
+      "date": "2026-03-13",
+      "flywayLeadTime": 4.1,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-03-13T17:00:00.000Z"
+    },
+    {
+      "date": "2026-03-16",
+      "flywayLeadTime": 3.98,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-03-16T17:00:00.000Z"
+    },
+    {
+      "date": "2026-03-19",
+      "flywayLeadTime": 3.73,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-03-19T17:00:00.000Z"
+    },
+    {
+      "date": "2026-03-22",
+      "flywayLeadTime": 3.69,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-03-22T17:00:00.000Z"
+    },
+    {
+      "date": "2026-03-25",
+      "flywayLeadTime": 3.38,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-03-25T17:00:00.000Z"
+    },
+    {
+      "date": "2026-03-28",
+      "flywayLeadTime": 3.61,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-03-28T17:00:00.000Z"
+    },
+    {
+      "date": "2026-03-31",
+      "flywayLeadTime": 3.06,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-03-31T16:00:00.000Z"
+    },
+    {
+      "date": "2026-04-03",
+      "flywayLeadTime": 3.08,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-04-03T16:00:00.000Z"
+    },
+    {
+      "date": "2026-04-06",
+      "flywayLeadTime": 2.64,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-04-06T16:00:00.000Z"
+    },
+    {
+      "date": "2026-04-09",
+      "flywayLeadTime": 2.79,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-04-09T16:00:00.000Z"
+    },
+    {
+      "date": "2026-04-12",
+      "flywayLeadTime": 2.32,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-04-12T16:00:00.000Z"
+    },
+    {
+      "date": "2026-04-15",
+      "flywayLeadTime": 2.95,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-04-15T16:00:00.000Z"
+    },
+    {
+      "date": "2026-04-18",
+      "flywayLeadTime": 2.6,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-04-18T16:00:00.000Z"
+    },
+    {
+      "date": "2026-04-21",
+      "flywayLeadTime": 2.04,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-04-21T16:00:00.000Z"
+    },
+    {
+      "date": "2026-04-24",
+      "flywayLeadTime": 2.11,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-04-24T16:00:00.000Z"
+    },
+    {
+      "date": "2026-04-27",
+      "flywayLeadTime": 2.38,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-04-27T16:00:00.000Z"
+    },
+    {
+      "date": "2026-04-30",
+      "flywayLeadTime": 1.78,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-04-30T16:00:00.000Z"
+    },
+    {
+      "date": "2026-05-03",
+      "flywayLeadTime": 2.33,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-05-03T16:00:00.000Z"
+    },
+    {
+      "date": "2026-05-06",
+      "flywayLeadTime": 1.68,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-05-06T16:00:00.000Z"
+    },
+    {
+      "date": "2026-05-09",
+      "flywayLeadTime": 1.63,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-05-09T16:00:00.000Z"
+    },
+    {
+      "date": "2026-05-12",
+      "flywayLeadTime": 1.6,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-05-12T16:00:00.000Z"
+    },
+    {
+      "date": "2026-05-15",
+      "flywayLeadTime": 1.31,
+      "nonFlywayLeadTime": 20,
+      "timestamp": "2026-05-15T16:00:00.000Z"
     }
   ]
 }

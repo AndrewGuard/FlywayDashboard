@@ -7,6 +7,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
+    "stop": "powershell -Command \"Get-Process -Name node -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -like '*FlywayDashboard*server*' } | Stop-Process -Force\"",
     "dev": "nodemon --exec ts-node index.ts",
     "setup": "ts-node setup-wizard.ts",
     "diagnostics": "ts-node diagnostics.ts",

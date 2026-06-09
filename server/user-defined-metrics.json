@@ -13,5 +13,14 @@
   "developerCount": 50,
   "developerTimeSavedPercent": "15",
   "developerSalary": "100000",
-  "estimatedImplementationHours": 100
+  "estimatedImplementationHours": 100,
+  "savingsPerDeployment": 2500,
+  "costOfDelayPerDay": 500,
+  "dbaHoursPerDeployment": 8,
+  "developerHoursPerDeployment": 4,
+  "dbaAnnualSalary": 175000,
+  "developerAnnualSalary": 155000,
+  "dbaTrainingHours": 10,
+  "developerTrainingHours": 5,
+  "flywayLicenseCost": 21000
 }
