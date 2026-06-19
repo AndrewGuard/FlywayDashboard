@@ -25,7 +25,9 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow
+  TableRow,
+  Slider,
+  Stack
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import { apiFetch } from './apiClient';
@@ -1566,22 +1568,117 @@ ORDER BY 1 DESC;`}</pre>
                   <Typography variant="subtitle2" gutterBottom>
                     Quarterly Savings Breakdown (Year 1)
                   </Typography>
-                  <Box sx={{ pl: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>Lead time reduction:</strong> {roi.leadTimeReduction.toFixed(1)} days × ${(userMetrics.costOfDelayPerDay * costOfDelayMultiplier).toFixed(0)}/day × {flywayMetrics.deploymentsPerQuarter} deps × {(rampUpFactor * 100).toFixed(0)}% = ${roi.timeSavingsPerQuarter.toLocaleString()}/quarter
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>Failure rate reduction:</strong> {roi.failureRateReduction.toFixed(1)}% × ${(userMetrics.savingsPerDeployment * failureCostMultiplier).toFixed(0)} cost × {flywayMetrics.deploymentsPerQuarter} deps × {(rampUpFactor * 100).toFixed(0)}% = ${roi.failureSavingsPerQuarter.toLocaleString()}/quarter
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>Deployment efficiency:</strong> +{roi.deploymentIncrease} deployments × ${(userMetrics.savingsPerDeployment * deploymentValueFactor).toFixed(0)} value × {(rampUpFactor * 100).toFixed(0)}% = ${roi.efficiencySavings.toLocaleString()}/quarter
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>DBA & developer labor savings:</strong> {laborAutomationPct}% automation × {(rampUpFactor * 100).toFixed(0)}% ramp-up → ${roi.laborSavingsPerQuarter.toLocaleString()}/quarter
-                    </Typography>
-                    <Typography variant="body2" fontWeight="bold" sx={{ mt: 1 }}>
-                      Total quarterly savings: ${roi.totalQuarterlySavings.toLocaleString()}
-                    </Typography>
+                  <Grid container spacing={1.5}>
+                    <Grid item xs={12} md={6}>
+                      <Paper elevation={0} sx={{ p: 2.5, bgcolor: 'primary.lighter', borderLeft: 4, borderColor: 'primary.main', borderRadius: 1 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                          <Typography variant="body2" fontWeight="medium" color="text.secondary">
+                            Lead Time Reduction
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {roi && roi.totalQuarterlySavings > 0 ? Math.round((roi.timeSavingsPerQuarter / roi.totalQuarterlySavings) * 100) : 0}%
+                          </Typography>
+                        </Box>
+                        <Typography variant="h6" color="primary" sx={{ mb: 1 }}>
+                          ${roi.timeSavingsPerQuarter.toLocaleString()}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                          <Box sx={{ flex: 1, minWidth: '200px', height: 8, bgcolor: 'primary.lighter', borderRadius: 1, overflow: 'hidden' }}>
+                            <Box sx={{ 
+                              height: '100%', 
+                              width: `${roi && roi.totalQuarterlySavings > 0 ? Math.round((roi.timeSavingsPerQuarter / roi.totalQuarterlySavings) * 100) : 0}%`,
+                              bgcolor: 'primary.main',
+                              transition: 'width 0.3s ease'
+                            }} />
+                          </Box>
+                        </Box>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Paper elevation={0} sx={{ p: 2.5, bgcolor: 'success.lighter', borderLeft: 4, borderColor: 'success.main', borderRadius: 1 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                          <Typography variant="body2" fontWeight="medium" color="text.secondary">
+                            Failure Rate Reduction
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {roi && roi.totalQuarterlySavings > 0 ? Math.round((roi.failureSavingsPerQuarter / roi.totalQuarterlySavings) * 100) : 0}%
+                          </Typography>
+                        </Box>
+                        <Typography variant="h6" color="success.dark" sx={{ mb: 1 }}>
+                          ${roi.failureSavingsPerQuarter.toLocaleString()}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                          <Box sx={{ flex: 1, minWidth: '200px', height: 8, bgcolor: 'success.lighter', borderRadius: 1, overflow: 'hidden' }}>
+                            <Box sx={{ 
+                              height: '100%', 
+                              width: `${roi && roi.totalQuarterlySavings > 0 ? Math.round((roi.failureSavingsPerQuarter / roi.totalQuarterlySavings) * 100) : 0}%`,
+                              bgcolor: 'success.main',
+                              transition: 'width 0.3s ease'
+                            }} />
+                          </Box>
+                        </Box>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Paper elevation={0} sx={{ p: 2.5, bgcolor: 'info.lighter', borderLeft: 4, borderColor: 'info.main', borderRadius: 1 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                          <Typography variant="body2" fontWeight="medium" color="text.secondary">
+                            Deployment Efficiency
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {roi && roi.totalQuarterlySavings > 0 ? Math.round((roi.efficiencySavings / roi.totalQuarterlySavings) * 100) : 0}%
+                          </Typography>
+                        </Box>
+                        <Typography variant="h6" color="info.dark" sx={{ mb: 1 }}>
+                          ${roi.efficiencySavings.toLocaleString()}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                          <Box sx={{ flex: 1, minWidth: '200px', height: 8, bgcolor: 'info.lighter', borderRadius: 1, overflow: 'hidden' }}>
+                            <Box sx={{ 
+                              height: '100%', 
+                              width: `${roi && roi.totalQuarterlySavings > 0 ? Math.round((roi.efficiencySavings / roi.totalQuarterlySavings) * 100) : 0}%`,
+                              bgcolor: 'info.main',
+                              transition: 'width 0.3s ease'
+                            }} />
+                          </Box>
+                        </Box>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <Paper elevation={0} sx={{ p: 2.5, bgcolor: 'warning.lighter', borderLeft: 4, borderColor: 'warning.main', borderRadius: 1 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                          <Typography variant="body2" fontWeight="medium" color="text.secondary">
+                            DBA & Developer Labor Savings
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {roi && roi.totalQuarterlySavings > 0 ? Math.round((roi.laborSavingsPerQuarter / roi.totalQuarterlySavings) * 100) : 0}%
+                          </Typography>
+                        </Box>
+                        <Typography variant="h6" color="warning.dark" sx={{ mb: 1 }}>
+                          ${roi.laborSavingsPerQuarter.toLocaleString()}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                          <Box sx={{ flex: 1, minWidth: '200px', height: 8, bgcolor: 'warning.lighter', borderRadius: 1, overflow: 'hidden' }}>
+                            <Box sx={{ 
+                              height: '100%', 
+                              width: `${roi && roi.totalQuarterlySavings > 0 ? Math.round((roi.laborSavingsPerQuarter / roi.totalQuarterlySavings) * 100) : 0}%`,
+                              bgcolor: 'warning.main',
+                              transition: 'width 0.3s ease'
+                            }} />
+                          </Box>
+                        </Box>
+                      </Paper>
+                    </Grid>
+                  </Grid>
+                  <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="body2" fontWeight="bold">
+                        Total Quarterly Savings:
+                      </Typography>
+                      <Typography variant="h6" color="primary" fontWeight="bold">
+                        ${roi.totalQuarterlySavings.toLocaleString()}
+                      </Typography>
+                    </Box>
                   </Box>
 
                   <Divider sx={{ my: 2 }} />
@@ -1678,97 +1775,129 @@ ORDER BY 1 DESC;`}</pre>
                 </Grid>
 
                 <Grid item xs={12}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Labor Automation: {laborAutomationPct}%
-                  </Typography>
-                  <Box sx={{ px: 1 }}>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="5"
-                      value={laborAutomationPct}
-                      onChange={(e) => {
-                        setLaborAutomationPct(Number(e.target.value));
-                        setSelectedPreset('custom');
-                        setHasUnsavedChanges(true);
-                      }}
-                      style={{ width: '100%' }}
-                    />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="subtitle2">
+                      Labor Automation
+                    </Typography>
+                    <Typography variant="h6" color="primary" sx={{ minWidth: '60px', textAlign: 'right' }}>
+                      {laborAutomationPct}%
+                    </Typography>
                   </Box>
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                  <Slider
+                    value={laborAutomationPct}
+                    onChange={(_, newValue) => {
+                      setLaborAutomationPct(newValue as number);
+                      setSelectedPreset('custom');
+                      setHasUnsavedChanges(true);
+                    }}
+                    min={0}
+                    max={100}
+                    step={5}
+                    marks={[
+                      { value: 0, label: '0%' },
+                      { value: 50, label: '50%' },
+                      { value: 100, label: '100%' }
+                    ]}
+                    valueLabelDisplay="auto"
+                    sx={{ mt: 2 }}
+                  />
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
                     Percentage of manual labor automated by Flyway (recommended: 75%)
                   </Typography>
                 </Grid>
 
                 <Grid item xs={12}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Failure Cost Multiplier: {failureCostMultiplier.toFixed(2)}x
-                  </Typography>
-                  <Box sx={{ px: 1 }}>
-                    <input
-                      type="range"
-                      min="0.5"
-                      max="3"
-                      step="0.25"
-                      value={failureCostMultiplier}
-                      onChange={(e) => {
-                        setFailureCostMultiplier(Number(e.target.value));
-                        setSelectedPreset('custom');
-                        setHasUnsavedChanges(true);
-                      }}
-                      style={{ width: '100%' }}
-                    />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="subtitle2">
+                      Failure Cost Multiplier
+                    </Typography>
+                    <Typography variant="h6" color="primary" sx={{ minWidth: '60px', textAlign: 'right' }}>
+                      {failureCostMultiplier.toFixed(2)}x
+                    </Typography>
                   </Box>
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                  <Slider
+                    value={failureCostMultiplier}
+                    onChange={(_, newValue) => {
+                      setFailureCostMultiplier(newValue as number);
+                      setSelectedPreset('custom');
+                      setHasUnsavedChanges(true);
+                    }}
+                    min={0.5}
+                    max={3}
+                    step={0.25}
+                    marks={[
+                      { value: 0.5, label: '0.5x' },
+                      { value: 1.5, label: '1.5x' },
+                      { value: 3, label: '3x' }
+                    ]}
+                    valueLabelDisplay="auto"
+                    sx={{ mt: 2 }}
+                  />
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
                     How much failures cost vs successful deployments (1.0 = equal cost, 2.0 = failures cost 2x)
                   </Typography>
                 </Grid>
 
                 <Grid item xs={12}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Cost of Delay Multiplier: {costOfDelayMultiplier.toFixed(2)}x
-                  </Typography>
-                  <Box sx={{ px: 1 }}>
-                    <input
-                      type="range"
-                      min="0.5"
-                      max="2"
-                      step="0.1"
-                      value={costOfDelayMultiplier}
-                      onChange={(e) => {
-                        setCostOfDelayMultiplier(Number(e.target.value));
-                        setSelectedPreset('custom');
-                        setHasUnsavedChanges(true);
-                      }}
-                      style={{ width: '100%' }}
-                    />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="subtitle2">
+                      Cost of Delay Multiplier
+                    </Typography>
+                    <Typography variant="h6" color="primary" sx={{ minWidth: '60px', textAlign: 'right' }}>
+                      {costOfDelayMultiplier.toFixed(2)}x
+                    </Typography>
                   </Box>
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                  <Slider
+                    value={costOfDelayMultiplier}
+                    onChange={(_, newValue) => {
+                      setCostOfDelayMultiplier(newValue as number);
+                      setSelectedPreset('custom');
+                      setHasUnsavedChanges(true);
+                    }}
+                    min={0.5}
+                    max={2}
+                    step={0.1}
+                    marks={[
+                      { value: 0.5, label: '0.5x' },
+                      { value: 1.25, label: '1.25x' },
+                      { value: 2, label: '2x' }
+                    ]}
+                    valueLabelDisplay="auto"
+                    sx={{ mt: 2 }}
+                  />
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
                     Multiplier for opportunity costs (1.0 = base cost, 1.5 = includes indirect impact)
                   </Typography>
                 </Grid>
 
                 <Grid item xs={12}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Deployment Value Factor: {(deploymentValueFactor * 100).toFixed(0)}%
-                  </Typography>
-                  <Box sx={{ px: 1 }}>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.05"
-                      value={deploymentValueFactor}
-                      onChange={(e) => {
-                        setDeploymentValueFactor(Number(e.target.value));
-                        setSelectedPreset('custom');
-                        setHasUnsavedChanges(true);
-                      }}
-                      style={{ width: '100%' }}
-                    />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="subtitle2">
+                      Deployment Value Factor
+                    </Typography>
+                    <Typography variant="h6" color="primary" sx={{ minWidth: '60px', textAlign: 'right' }}>
+                      {(deploymentValueFactor * 100).toFixed(0)}%
+                    </Typography>
                   </Box>
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                  <Slider
+                    value={deploymentValueFactor}
+                    onChange={(_, newValue) => {
+                      setDeploymentValueFactor(newValue as number);
+                      setSelectedPreset('custom');
+                      setHasUnsavedChanges(true);
+                    }}
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    marks={[
+                      { value: 0, label: '0%' },
+                      { value: 0.5, label: '50%' },
+                      { value: 1, label: '100%' }
+                    ]}
+                    valueLabelDisplay="auto"
+                    sx={{ mt: 2 }}
+                  />
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
                     Value of additional deployments (50% = each deployment worth 50% of savings)
                     {flywayMetrics.deploymentsPerQuarter <= userMetrics.deploymentsPerQuarter && (
                       <>
@@ -1783,49 +1912,65 @@ ORDER BY 1 DESC;`}</pre>
                 </Grid>
 
                 <Grid item xs={12}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    First-Year Ramp-Up: {(rampUpFactor * 100).toFixed(0)}%
-                  </Typography>
-                  <Box sx={{ px: 1 }}>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="5"
-                      value={rampUpFactor * 100}
-                      onChange={(e) => {
-                        setRampUpFactor(Number(e.target.value) / 100);
-                        setHasUnsavedChanges(true);
-                        setSelectedPreset('custom');
-                      }}
-                      style={{ width: '100%' }}
-                    />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="subtitle2">
+                      First-Year Ramp-Up
+                    </Typography>
+                    <Typography variant="h6" color="primary" sx={{ minWidth: '60px', textAlign: 'right' }}>
+                      {(rampUpFactor * 100).toFixed(0)}%
+                    </Typography>
                   </Box>
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                  <Slider
+                    value={rampUpFactor * 100}
+                    onChange={(_, newValue) => {
+                      setRampUpFactor(Number(newValue) / 100);
+                      setHasUnsavedChanges(true);
+                      setSelectedPreset('custom');
+                    }}
+                    min={0}
+                    max={100}
+                    step={5}
+                    marks={[
+                      { value: 0, label: '0%' },
+                      { value: 50, label: '50%' },
+                      { value: 100, label: '100%' }
+                    ]}
+                    valueLabelDisplay="auto"
+                    sx={{ mt: 2 }}
+                  />
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
                     Percentage of benefits achieved in first year (50% = realistic 6-month ramp-up)
                   </Typography>
                 </Grid>
 
                 <Grid item xs={12}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Lead Time Improvement Cap: {leadTimeCapPct.toFixed(0)}%
-                  </Typography>
-                  <Box sx={{ px: 1 }}>
-                    <input
-                      type="range"
-                      min="30"
-                      max="100"
-                      step="5"
-                      value={leadTimeCapPct}
-                      onChange={(e) => {
-                        setLeadTimeCapPct(Number(e.target.value));
-                        setHasUnsavedChanges(true);
-                        setSelectedPreset('custom');
-                      }}
-                      style={{ width: '100%' }}
-                    />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="subtitle2">
+                      Lead Time Improvement Cap
+                    </Typography>
+                    <Typography variant="h6" color="primary" sx={{ minWidth: '60px', textAlign: 'right' }}>
+                      {leadTimeCapPct.toFixed(0)}%
+                    </Typography>
                   </Box>
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                  <Slider
+                    value={leadTimeCapPct}
+                    onChange={(_, newValue) => {
+                      setLeadTimeCapPct(newValue as number);
+                      setHasUnsavedChanges(true);
+                      setSelectedPreset('custom');
+                    }}
+                    min={30}
+                    max={100}
+                    step={5}
+                    marks={[
+                      { value: 30, label: '30%' },
+                      { value: 65, label: '65%' },
+                      { value: 100, label: '100%' }
+                    ]}
+                    valueLabelDisplay="auto"
+                    sx={{ mt: 2 }}
+                  />
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
                     Maximum realistic lead time improvement (60% = industry standard, higher values may be unrealistic)
                     {roi && roi.capped && (
                       <>
@@ -1846,24 +1991,32 @@ ORDER BY 1 DESC;`}</pre>
                 </Grid>
 
                 <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    DBA Training Hours: {dbaTrainingHours} hours
-                  </Typography>
-                  <Box sx={{ px: 1 }}>  
-                    <input
-                      type="range"
-                      min="0"
-                      max="40"
-                      step="1"
-                      value={dbaTrainingHours}
-                      onChange={(e) => {
-                        setDbaTrainingHours(Number(e.target.value));
-                        setHasUnsavedChanges(true);
-                      }}
-                      style={{ width: '100%' }}
-                    />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="subtitle2">
+                      DBA Training Hours
+                    </Typography>
+                    <Typography variant="h6" color="primary" sx={{ minWidth: '50px', textAlign: 'right' }}>
+                      {dbaTrainingHours}h
+                    </Typography>
                   </Box>
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                  <Slider
+                    value={dbaTrainingHours}
+                    onChange={(_, newValue) => {
+                      setDbaTrainingHours(newValue as number);
+                      setHasUnsavedChanges(true);
+                    }}
+                    min={0}
+                    max={40}
+                    step={1}
+                    marks={[
+                      { value: 0, label: '0' },
+                      { value: 20, label: '20' },
+                      { value: 40, label: '40' }
+                    ]}
+                    valueLabelDisplay="auto"
+                    sx={{ mt: 2 }}
+                  />
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
                     Training hours per DBA ({userMetrics.dbaCount || 0} DBAs × {dbaTrainingHours} hrs × ${((userMetrics.dbaAnnualSalary || 0) / 2080).toFixed(2)}/hr)
                     {roi && (
                       <>
@@ -1875,24 +2028,32 @@ ORDER BY 1 DESC;`}</pre>
                 </Grid>
 
                 <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Developer Training Hours: {developerTrainingHours} hours
-                  </Typography>
-                  <Box sx={{ px: 1 }}>  
-                    <input
-                      type="range"
-                      min="0"
-                      max="40"
-                      step="1"
-                      value={developerTrainingHours}
-                      onChange={(e) => {
-                        setDeveloperTrainingHours(Number(e.target.value));
-                        setHasUnsavedChanges(true);
-                      }}
-                      style={{ width: '100%' }}
-                    />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="subtitle2">
+                      Developer Training Hours
+                    </Typography>
+                    <Typography variant="h6" color="primary" sx={{ minWidth: '50px', textAlign: 'right' }}>
+                      {developerTrainingHours}h
+                    </Typography>
                   </Box>
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                  <Slider
+                    value={developerTrainingHours}
+                    onChange={(_, newValue) => {
+                      setDeveloperTrainingHours(newValue as number);
+                      setHasUnsavedChanges(true);
+                    }}
+                    min={0}
+                    max={40}
+                    step={1}
+                    marks={[
+                      { value: 0, label: '0' },
+                      { value: 20, label: '20' },
+                      { value: 40, label: '40' }
+                    ]}
+                    valueLabelDisplay="auto"
+                    sx={{ mt: 2 }}
+                  />
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
                     Training hours per developer ({userMetrics.developerCount || 0} devs × {developerTrainingHours} hrs × ${((userMetrics.developerAnnualSalary || 0) / 2080).toFixed(2)}/hr)
                     {roi && (
                       <>
